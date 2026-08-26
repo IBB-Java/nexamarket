@@ -2,6 +2,9 @@ package com.nexamarket.common.api;
 
 import com.nexamarket.catalog.application.CatalogConflictException;
 import com.nexamarket.catalog.application.CatalogNotFoundException;
+import com.nexamarket.catalog.application.InvalidProductImageException;
+import com.nexamarket.catalog.application.ThumbnailNotReadyException;
+import com.nexamarket.catalog.storage.ObjectStorageException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -24,6 +27,21 @@ public class ApiExceptionHandler {
     @ExceptionHandler(CatalogConflictException.class)
     ProblemDetail handleConflict(CatalogConflictException exception) {
         return problem(HttpStatus.CONFLICT, "Katalog çakışması", exception.getMessage());
+    }
+
+    @ExceptionHandler(InvalidProductImageException.class)
+    ProblemDetail handleInvalidImage(InvalidProductImageException exception) {
+        return problem(HttpStatus.BAD_REQUEST, "Geçersiz ürün görseli", exception.getMessage());
+    }
+
+    @ExceptionHandler(ThumbnailNotReadyException.class)
+    ProblemDetail handleThumbnailNotReady(ThumbnailNotReadyException exception) {
+        return problem(HttpStatus.TOO_EARLY, "Thumbnail hazır değil", exception.getMessage());
+    }
+
+    @ExceptionHandler(ObjectStorageException.class)
+    ProblemDetail handleStorage(ObjectStorageException exception) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "Nesne depolama kullanılamıyor", exception.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
