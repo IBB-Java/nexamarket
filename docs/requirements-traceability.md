@@ -34,7 +34,10 @@ proje boyunca güncellenecektir.
 | FR-ORD-02 | Devam ediyor | Ödeme bekleyen siparişleri zamanlayıcıyla iptal edip stok rezervasyonlarını serbest bırakan akış hazır; gerçek Catalog Service ile uçtan uca doğrulama eksik. |
 | FR-ORD-03 | Devam ediyor | İade talebi gerekçesiyle ayrı kaydediliyor; sadece satıcı/admin kararını temsil eden resolver onay/red verebiliyor. Kimlik/rol doğrulaması Auth modülüne bağlı. |
 | FR-ORD-04 | Planlandı | Durum olaylarının asenkron bildirim, stok ve admin paneli akışı. |
-| FR-PAY-01…04 | Planlandı | Mock provider, idempotent webhook, sorgulama ve kısmi ödeme. |
+| FR-PAY-01 | Devam ediyor | Yerel mock sağlayıcı kart ödemesini `PENDING` başlatır; kontrollü başarı/ret, gecikmeli callback ve aynı callback'in tekrar teslimini simüle eder. |
+| FR-PAY-02 | Devam ediyor | Sağlayıcının `providerEventId` değeri tekil kaydedilir; aynı webhook yeniden gelirse sipariş ya da cüzdan ikinci kez değişmez. |
+| FR-PAY-03 | Devam ediyor | Bekleyen kart işlemleri zamanlayıcıyla mock sağlayıcıdan sorgulanır ve `PENDING` sonuçları yeniden denemek üzere planlanır. Ağ hataları için dayanıklılık/observability katmanı sonraki teknik iş paketindedir. |
+| FR-PAY-04 | Devam ediyor | İstek cüzdan ve kart tutarlarını sipariş toplamına eşit olacak şekilde böler; kart ret olursa ayrılan cüzdan tutarı iade edilir. Cüzdan bakiye yükleme yalnızca yerel geliştirme amaçlı iç API'dir. |
 | FR-PROMO-01…02 | Planlandı | Veri odaklı indirim kuralları ve sadakat defteri. |
 | FR-NOTIF-01…02 | Planlandı | Kuyruk tüketicisi, e-posta/SMS/uygulama içi bildirim ve retry. |
 | FR-REP-01…02 | Planlandı | Arka plan PDF/XLSX raporları ve günlük yönetici özeti. |

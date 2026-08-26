@@ -90,6 +90,10 @@ public class CustomerOrder {
         return sourceCartId;
     }
 
+    public UUID getCustomerId() {
+        return customerId;
+    }
+
     public OrderStatus getStatus() {
         return status;
     }
