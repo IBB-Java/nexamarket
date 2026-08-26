@@ -3,6 +3,7 @@ package com.nexamarket.common.api;
 import com.nexamarket.catalog.application.CatalogConflictException;
 import com.nexamarket.catalog.application.CatalogNotFoundException;
 import com.nexamarket.catalog.application.InvalidProductImageException;
+import com.nexamarket.catalog.application.InvalidSearchCriteriaException;
 import com.nexamarket.catalog.application.ThumbnailNotReadyException;
 import com.nexamarket.catalog.storage.ObjectStorageException;
 import jakarta.validation.ConstraintViolationException;
@@ -32,6 +33,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InvalidProductImageException.class)
     ProblemDetail handleInvalidImage(InvalidProductImageException exception) {
         return problem(HttpStatus.BAD_REQUEST, "Geçersiz ürün görseli", exception.getMessage());
+    }
+
+    @ExceptionHandler(InvalidSearchCriteriaException.class)
+    ProblemDetail handleInvalidSearch(InvalidSearchCriteriaException exception) {
+        return problem(HttpStatus.BAD_REQUEST, "Geçersiz arama kriteri", exception.getMessage());
     }
 
     @ExceptionHandler(ThumbnailNotReadyException.class)

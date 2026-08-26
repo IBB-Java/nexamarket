@@ -13,6 +13,7 @@ import com.nexamarket.catalog.repository.CategoryRepository;
 import com.nexamarket.catalog.repository.ProductRepository;
 import com.nexamarket.catalog.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,7 @@ public class CatalogService {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public CategoryResponse createCategory(CreateCategoryRequest request) {
@@ -75,7 +77,9 @@ public class CatalogService {
                 .map(requestVariant -> toVariant(product, requestVariant))
                 .forEach(product.getVariants()::add);
 
-        return ProductResponse.from(productRepository.save(product));
+        Product saved = productRepository.save(product);
+        eventPublisher.publishEvent(new ProductCatalogChangedEvent(saved.getId()));
+        return ProductResponse.from(saved);
     }
 
     @Transactional(readOnly = true)

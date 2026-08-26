@@ -21,4 +21,15 @@ public class CatalogInfrastructureConfiguration {
         executor.initialize();
         return executor;
     }
+
+    @Bean(name = "catalogIndexTaskExecutor")
+    public Executor catalogIndexTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(2);
+        executor.setQueueCapacity(500);
+        executor.setThreadNamePrefix("catalog-index-");
+        executor.initialize();
+        return executor;
+    }
 }
