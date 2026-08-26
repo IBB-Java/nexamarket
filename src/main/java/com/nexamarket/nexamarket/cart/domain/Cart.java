@@ -34,6 +34,9 @@ public class Cart {
     @Column(name = "customer_id", nullable = false, updatable = false)
     private UUID customerId;
 
+    @Column(name = "active_customer_id")
+    private UUID activeCustomerId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private CartStatus status;
@@ -58,18 +61,29 @@ public class Cart {
 
     public Cart(UUID customerId) {
         this.customerId = Objects.requireNonNull(customerId, "Customer id is required.");
+        this.activeCustomerId = customerId;
         this.status = CartStatus.ACTIVE;
     }
 
-    public CartItem addItem(UUID productVariantId, UUID sellerId, int quantity, java.math.BigDecimal unitPrice) {
+    public CartItem addItem(UUID productVariantId, UUID sellerId, int quantity, java.math.BigDecimal unitPrice,
+                            UUID reservationId, Instant reservedUntil) {
         CartItem item = new CartItem(
                 this,
                 Objects.requireNonNull(productVariantId, "Product variant id is required."),
                 Objects.requireNonNull(sellerId, "Seller id is required."),
                 quantity,
-                Objects.requireNonNull(unitPrice, "Unit price is required."));
+                Objects.requireNonNull(unitPrice, "Unit price is required."),
+                Objects.requireNonNull(reservationId, "Reservation id is required."),
+                Objects.requireNonNull(reservedUntil, "Reservation expiration is required."));
         items.add(item);
         return item;
+    }
+
+    public CartItem findItem(UUID productVariantId, UUID sellerId) {
+        return items.stream()
+                .filter(item -> item.hasProductVariantAndSeller(productVariantId, sellerId))
+                .findFirst()
+                .orElse(null);
     }
 
     public UUID getId() {

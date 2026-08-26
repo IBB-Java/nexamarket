@@ -10,6 +10,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,7 +27,13 @@ class CartRepositoryIntegrationTest {
     void savesAnActiveCartWithItsItems() {
         UUID customerId = UUID.randomUUID();
         Cart cart = new Cart(customerId);
-        cart.addItem(UUID.randomUUID(), UUID.randomUUID(), 2, new BigDecimal("499.90"));
+        cart.addItem(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                2,
+                new BigDecimal("499.90"),
+                UUID.randomUUID(),
+                Instant.parse("2026-08-26T12:00:00Z"));
 
         Cart savedCart = cartRepository.saveAndFlush(cart);
 
