@@ -34,6 +34,11 @@ public class OrderStateMachine {
         subOrder.changeStatusTo(targetStatus);
     }
 
+    public void transition(CustomerOrder order, OrderStatus targetStatus) {
+        stateFor(order.getStatus()).validateTransitionTo(targetStatus);
+        order.changeStatusTo(targetStatus);
+    }
+
     private OrderState stateFor(OrderStatus currentStatus) {
         return states.get(currentStatus);
     }

@@ -94,6 +94,10 @@ public class CustomerOrder {
         return status;
     }
 
+    void changeStatusTo(OrderStatus targetStatus) {
+        this.status = targetStatus;
+    }
+
     public BigDecimal getTotalAmount() {
         return totalAmount;
     }

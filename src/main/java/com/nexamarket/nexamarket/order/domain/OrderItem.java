@@ -73,4 +73,8 @@ public class OrderItem {
     public BigDecimal getLineTotal() {
         return unitPrice.multiply(BigDecimal.valueOf(quantity));
     }
+
+    public UUID getStockReservationId() {
+        return stockReservationId;
+    }
 }

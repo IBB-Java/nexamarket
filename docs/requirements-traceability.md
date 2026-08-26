@@ -31,7 +31,7 @@ proje boyunca güncellenecektir.
 | FR-CART-02 | Devam ediyor | Süresi dolmuş rezervasyonları Catalog Service üzerinden serbest bırakan zamanlayıcı hazır; gerçek Catalog Service ve uçtan uca doğrulama eksik. |
 | FR-CART-03 | Devam ediyor | Checkout, kalemleri satıcıya göre gruplayıp gerçek Order Service'e tek istekte iletiyor; ödeme tamamlandığında sipariş onayı eksik. |
 | FR-ORD-01 | Devam ediyor | Ana sipariş, alt sipariş ve kalemler idempotent checkout ile oluşturuluyor; merkezi durum makinesi geçersiz geçişleri `409 Conflict` ile reddediyor. |
-| FR-ORD-02 | Planlandı | Ödemesi belirlenen sürede tamamlanmayan siparişlerin otomatik iptali. |
+| FR-ORD-02 | Devam ediyor | Ödeme bekleyen siparişleri zamanlayıcıyla iptal edip stok rezervasyonlarını serbest bırakan akış hazır; gerçek Catalog Service ile uçtan uca doğrulama eksik. |
 | FR-ORD-03 | Planlandı | Satıcı/admin onaylı iade talebi iş akışı. |
 | FR-ORD-04 | Planlandı | Durum olaylarının asenkron bildirim, stok ve admin paneli akışı. |
 | FR-PAY-01…04 | Planlandı | Mock provider, idempotent webhook, sorgulama ve kısmi ödeme. |
