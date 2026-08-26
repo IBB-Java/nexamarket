@@ -13,7 +13,6 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -27,8 +26,6 @@ import java.util.UUID;
 public class Cart {
 
     @Id
-    @GeneratedValue
-    @UuidGenerator
     private UUID id;
 
     @Column(name = "customer_id", nullable = false, updatable = false)
@@ -60,6 +57,7 @@ public class Cart {
     }
 
     public Cart(UUID customerId) {
+        this.id = UUID.randomUUID();
         this.customerId = Objects.requireNonNull(customerId, "Customer id is required.");
         this.activeCustomerId = customerId;
         this.status = CartStatus.ACTIVE;

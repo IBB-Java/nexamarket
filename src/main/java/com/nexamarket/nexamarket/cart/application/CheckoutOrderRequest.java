@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public record CheckoutOrderRequest(UUID customerId, List<SellerOrderRequest> sellerOrders) {
+public record CheckoutOrderRequest(UUID sourceCartId, UUID customerId, List<SellerOrderRequest> sellerOrders) {
 
     public static CheckoutOrderRequest from(Cart cart) {
         Map<UUID, List<OrderItemRequest>> itemsBySeller = cart.getItems().stream()
@@ -21,7 +21,7 @@ public record CheckoutOrderRequest(UUID customerId, List<SellerOrderRequest> sel
         List<SellerOrderRequest> sellerOrders = itemsBySeller.entrySet().stream()
                 .map(entry -> new SellerOrderRequest(entry.getKey(), entry.getValue()))
                 .toList();
-        return new CheckoutOrderRequest(cart.getCustomerId(), sellerOrders);
+        return new CheckoutOrderRequest(cart.getId(), cart.getCustomerId(), sellerOrders);
     }
 
     public record SellerOrderRequest(UUID sellerId, List<OrderItemRequest> items) {
