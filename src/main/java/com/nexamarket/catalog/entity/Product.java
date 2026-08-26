@@ -4,7 +4,8 @@ import com.nexamarket.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "products")
@@ -28,12 +29,24 @@ public class Product extends BaseEntity {
     @Column(nullable = false)
     private BigDecimal basePrice;
 
+    @Column(name = "seller_id", nullable = false)
+    private Long sellerId;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status; // ACTIVE, PASSIVE vb.
+    @Builder.Default
+    private ProductStatus status = ProductStatus.DRAFT;
 
-    // Kategori tablosu ile ilişki (Bir ürünün bir kategorisi olur)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
-    private Category category;
+    @ManyToMany
+    @JoinTable(
+            name = "product_categories",
+            joinColumns = @JoinColumn(name = "product_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    @Builder.Default
+    private Set<Category> categories = new LinkedHashSet<>();
 
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<ProductVariant> variants = new LinkedHashSet<>();
 }
