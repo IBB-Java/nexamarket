@@ -1,6 +1,8 @@
 package com.nexamarket.common.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
@@ -11,8 +13,8 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-@MappedSuperclass // Bu sınıfın tek başına bir tablo olmamasını, özelliklerinin miras alan sınıflara geçmesini sağlar.
-@EntityListeners(AuditingEntityListener.class) // Tarihleri Spring'in otomatik doldurması için gerekli dinleyici.
+@MappedSuperclass
+@EntityListeners(AuditingEntityListener.class)
 public abstract class BaseEntity {
 
     @CreatedDate
@@ -23,7 +25,4 @@ public abstract class BaseEntity {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Soft delete ve genel durum kontrolü için (Örn: ACTIVE, DELETED, PASSIVE)
-    @Column(nullable = false)
-    private String status = "ACTIVE";
 }
