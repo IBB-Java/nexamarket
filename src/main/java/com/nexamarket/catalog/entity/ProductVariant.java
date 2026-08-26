@@ -1,8 +1,11 @@
 package com.nexamarket.catalog.entity;
 
+import com.nexamarket.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Entity
 @Table(name = "product_variants")
@@ -11,26 +14,32 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ProductVariant {
+public class ProductVariant extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Hangi ürüne ait olduğu (Product tablosu ile ilişki)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
     @Column(nullable = false, unique = true)
-    private String sku; // Stok kodu (Stock Keeping Unit) - Örn: TSHIRT-KRMZ-M
+    private String sku;
+
+    @ElementCollection
+    @CollectionTable(name = "product_variant_attributes", joinColumns = @JoinColumn(name = "variant_id"))
+    @MapKeyColumn(name = "attribute_name")
+    @Column(name = "attribute_value", nullable = false)
+    @Builder.Default
+    private Map<String, String> attributes = new LinkedHashMap<>();
 
     @Column(nullable = false)
-    private String attributes; // Örn: "Renk: Kırmızı, Beden: M"
+    private BigDecimal price;
 
     @Column(nullable = false)
-    private BigDecimal price; // Varyanta özel fiyat (Örn: XXL beden daha pahalı olabilir)
+    private Integer stockQuantity;
 
-    @Column(nullable = false)
-    private Integer stockQuantity; // Zorunlu stok takibi alanı
+    @Version
+    private Long version;
 }
