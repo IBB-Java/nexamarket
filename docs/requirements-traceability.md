@@ -33,13 +33,14 @@ proje boyunca güncellenecektir.
 | FR-ORD-01 | Devam ediyor | Ana sipariş, alt sipariş ve kalemler idempotent checkout ile oluşturuluyor; merkezi durum makinesi geçersiz geçişleri `409 Conflict` ile reddediyor. |
 | FR-ORD-02 | Devam ediyor | Ödeme bekleyen siparişleri zamanlayıcıyla iptal edip stok rezervasyonlarını serbest bırakan akış hazır; gerçek Catalog Service ile uçtan uca doğrulama eksik. |
 | FR-ORD-03 | Devam ediyor | İade talebi gerekçesiyle ayrı kaydediliyor; sadece satıcı/admin kararını temsil eden resolver onay/red verebiliyor. Kimlik/rol doğrulaması Auth modülüne bağlı. |
-| FR-ORD-04 | Planlandı | Durum olaylarının asenkron bildirim, stok ve admin paneli akışı. |
+| FR-ORD-04 | Devam ediyor | Alt sipariş durum değişiminde aynı işlemde kalıcı outbox olayı yazılır; RabbitMQ'ya aktarma kuyruk kapalıyken sipariş yolunu bozmaz ve yeniden denenir. Stok/admin tüketicileri sonraki modüllerdedir. |
 | FR-PAY-01 | Devam ediyor | Yerel mock sağlayıcı kart ödemesini `PENDING` başlatır; kontrollü başarı/ret, gecikmeli callback ve aynı callback'in tekrar teslimini simüle eder. |
 | FR-PAY-02 | Devam ediyor | Sağlayıcının `providerEventId` değeri tekil kaydedilir; aynı webhook yeniden gelirse sipariş ya da cüzdan ikinci kez değişmez. |
 | FR-PAY-03 | Devam ediyor | Bekleyen kart işlemleri zamanlayıcıyla mock sağlayıcıdan sorgulanır ve `PENDING` sonuçları yeniden denemek üzere planlanır. Ağ hataları için dayanıklılık/observability katmanı sonraki teknik iş paketindedir. |
 | FR-PAY-04 | Devam ediyor | İstek cüzdan ve kart tutarlarını sipariş toplamına eşit olacak şekilde böler; kart ret olursa ayrılan cüzdan tutarı iade edilir. Cüzdan bakiye yükleme yalnızca yerel geliştirme amaçlı iç API'dir. |
 | FR-PROMO-01…02 | Planlandı | Veri odaklı indirim kuralları ve sadakat defteri. |
-| FR-NOTIF-01…02 | Planlandı | Kuyruk tüketicisi, e-posta/SMS/uygulama içi bildirim ve retry. |
+| FR-NOTIF-01 | Devam ediyor | RabbitMQ tüketicisi sipariş olayı için e-posta, SMS ve uygulama içi mesaj üretir. Kanal göndericileri arayüz tabanlıdır; e-posta/SMS şu an güvenli mock'tur. |
+| FR-NOTIF-02 | Devam ediyor | Mesajlar kritik akışın dışında teslim edilir; geçici hata sonrası planlı retry, üst sınıra ulaşınca `FAILED` kaydı vardır. Olay ve kanal bazlı tekilleştirme tekrar teslimleri etkisiz kılar. |
 | FR-REP-01…02 | Planlandı | Arka plan PDF/XLSX raporları ve günlük yönetici özeti. |
 
 ## Teknik ve kabul gereksinimleri
@@ -48,7 +49,7 @@ proje boyunca güncellenecektir.
 | --- | --- | --- |
 | Java 17+ ve Spring Boot 3.x | Tamamlandı | Java 21 hedefi ve Spring Boot 3.5.0. |
 | JPA/Hibernate, PostgreSQL, Flyway | Devam ediyor | Şema migration'ları ve Docker PostgreSQL tanımı mevcut; gerçek PostgreSQL doğrulaması Docker Desktop açıldığında yapılacak. |
-| RabbitMQ/Kafka, Redis, Redisson | Planlandı | Olaylar, önbellek ve dağıtık stok kilidi. |
+| RabbitMQ/Kafka, Redis, Redisson | Devam ediyor | RabbitMQ Compose ve Spring AMQP ile sipariş-bildirim olayı hazır; Redis/Redisson sonraki stok iş paketinde. |
 | Elasticsearch/OpenSearch | Planlandı | Ürün arama ve indeks güncellemesi. |
 | MinIO, PDF, Excel | Planlandı | Görseller ile rapor/fatura çıktıları. |
 | WebSocket, Resilience4j, OpenAPI | Planlandı | Canlı admin akışı, dış servis toleransı, Swagger. |

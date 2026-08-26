@@ -14,9 +14,11 @@ public class OrderStatusService {
 
     private final SubOrderRepository subOrderRepository;
     private final OrderStateMachine orderStateMachine;
+    private final OrderStatusEventPublisher orderStatusEventPublisher;
 
-    public OrderStatusService(SubOrderRepository subOrderRepository) {
+    public OrderStatusService(SubOrderRepository subOrderRepository, OrderStatusEventPublisher orderStatusEventPublisher) {
         this.subOrderRepository = subOrderRepository;
+        this.orderStatusEventPublisher = orderStatusEventPublisher;
         this.orderStateMachine = new OrderStateMachine();
     }
 
@@ -25,6 +27,9 @@ public class OrderStatusService {
         SubOrder subOrder = subOrderRepository.findByIdForUpdate(subOrderId)
                 .orElseThrow(() -> new IllegalArgumentException("Sub-order was not found."));
         orderStateMachine.transition(subOrder, targetStatus);
-        return subOrderRepository.save(subOrder).getStatus();
+        OrderStatus status = subOrderRepository.save(subOrder).getStatus();
+        orderStatusEventPublisher.enqueue(new OrderStatusChangedEvent(UUID.randomUUID(),
+                subOrder.getOrder().getCustomerId(), subOrder.getId(), subOrder.getSellerId(), status));
+        return status;
     }
 }

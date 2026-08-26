@@ -16,5 +16,20 @@ services:
       timeout: 5s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: nexamarket-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: nexamarket
+      RABBITMQ_DEFAULT_PASS: nexamarket
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   postgres-data:

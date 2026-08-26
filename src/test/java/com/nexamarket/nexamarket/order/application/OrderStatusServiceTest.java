@@ -26,12 +26,14 @@ class OrderStatusServiceTest {
 
     @Mock
     private SubOrderRepository subOrderRepository;
+    @Mock
+    private OrderStatusEventPublisher orderStatusEventPublisher;
 
     @Test
     void updatesAnExistingSubOrderThroughTheStateMachine() {
         SubOrder subOrder = paymentPendingSubOrder();
         UUID subOrderId = UUID.randomUUID();
-        OrderStatusService service = new OrderStatusService(subOrderRepository);
+        OrderStatusService service = new OrderStatusService(subOrderRepository, orderStatusEventPublisher);
         when(subOrderRepository.findByIdForUpdate(subOrderId)).thenReturn(Optional.of(subOrder));
         when(subOrderRepository.save(any(SubOrder.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -39,6 +41,7 @@ class OrderStatusServiceTest {
 
         assertThat(response).isEqualTo(OrderStatus.PAID);
         verify(subOrderRepository).save(subOrder);
+        verify(orderStatusEventPublisher).enqueue(any(OrderStatusChangedEvent.class));
     }
 
     private SubOrder paymentPendingSubOrder() {

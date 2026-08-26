@@ -83,6 +83,14 @@ public class SubOrder {
         return sellerId;
     }
 
+    public UUID getId() {
+        return id;
+    }
+
+    public CustomerOrder getOrder() {
+        return order;
+    }
+
     public OrderStatus getStatus() {
         return status;
     }
