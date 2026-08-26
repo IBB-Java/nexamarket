@@ -32,7 +32,7 @@ proje boyunca güncellenecektir.
 | FR-CART-03 | Devam ediyor | Checkout, kalemleri satıcıya göre gruplayıp gerçek Order Service'e tek istekte iletiyor; ödeme tamamlandığında sipariş onayı eksik. |
 | FR-ORD-01 | Devam ediyor | Ana sipariş, alt sipariş ve kalemler idempotent checkout ile oluşturuluyor; merkezi durum makinesi geçersiz geçişleri `409 Conflict` ile reddediyor. |
 | FR-ORD-02 | Devam ediyor | Ödeme bekleyen siparişleri zamanlayıcıyla iptal edip stok rezervasyonlarını serbest bırakan akış hazır; gerçek Catalog Service ile uçtan uca doğrulama eksik. |
-| FR-ORD-03 | Planlandı | Satıcı/admin onaylı iade talebi iş akışı. |
+| FR-ORD-03 | Devam ediyor | İade talebi gerekçesiyle ayrı kaydediliyor; sadece satıcı/admin kararını temsil eden resolver onay/red verebiliyor. Kimlik/rol doğrulaması Auth modülüne bağlı. |
 | FR-ORD-04 | Planlandı | Durum olaylarının asenkron bildirim, stok ve admin paneli akışı. |
 | FR-PAY-01…04 | Planlandı | Mock provider, idempotent webhook, sorgulama ve kısmi ödeme. |
 | FR-PROMO-01…02 | Planlandı | Veri odaklı indirim kuralları ve sadakat defteri. |
