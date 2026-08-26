@@ -97,6 +97,10 @@ public class CartItem {
         return id;
     }
 
+    public Cart getCart() {
+        return cart;
+    }
+
     public UUID getProductVariantId() {
         return productVariantId;
     }

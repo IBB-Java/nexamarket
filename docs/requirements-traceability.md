@@ -22,7 +22,7 @@ proje boyunca güncellenecektir.
 | FR-AUTH-01…04 | Planlandı | Kayıt/giriş, JWT, rol yetkisi ve giriş kilidi. |
 | FR-CAT-01…04 | Planlandı | Ürün/varyant/kategori, görsel, arama ve indeksleme. |
 | FR-CART-01 | Devam ediyor | Sepete ekleme API'si ve Catalog Service REST rezervasyon sınırı hazır; gerçek stok servisi ve yarış testi eksik. |
-| FR-CART-02 | Planlandı | Rezervasyon sonlandırma zamanlayıcısı veya gecikmeli kuyruk eklenecek. |
+| FR-CART-02 | Devam ediyor | Süresi dolmuş rezervasyonları Catalog Service üzerinden serbest bırakan zamanlayıcı hazır; gerçek Catalog Service ve uçtan uca doğrulama eksik. |
 | FR-CART-03 | Planlandı | Ödeme sonrasında satıcı bazlı alt siparişler Order Service'te oluşturulacak. |
 | FR-ORD-01…04 | Planlandı | Merkezi durum makinesi, zaman aşımı, iade ve olay yayını. |
 | FR-PAY-01…04 | Planlandı | Mock provider, idempotent webhook, sorgulama ve kısmi ödeme. |

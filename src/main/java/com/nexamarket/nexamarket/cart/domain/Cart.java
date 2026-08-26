@@ -86,6 +86,18 @@ public class Cart {
                 .orElse(null);
     }
 
+    public void removeItem(CartItem item) {
+        items.remove(item);
+    }
+
+    public void expireWhenEmpty() {
+        if (!items.isEmpty()) {
+            return;
+        }
+        status = CartStatus.EXPIRED;
+        activeCustomerId = null;
+    }
+
     public UUID getId() {
         return id;
     }

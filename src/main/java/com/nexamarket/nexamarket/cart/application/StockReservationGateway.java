@@ -11,4 +11,6 @@ public interface StockReservationGateway {
     StockReservation createReservation(UUID customerId, UUID productVariantId, UUID sellerId, int quantity);
 
     StockReservation increaseReservation(UUID reservationId, int additionalQuantity);
+
+    void releaseReservation(UUID reservationId);
 }

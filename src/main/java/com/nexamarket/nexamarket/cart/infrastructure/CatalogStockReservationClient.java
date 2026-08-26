@@ -41,6 +41,14 @@ public class CatalogStockReservationClient implements StockReservationGateway {
         return toReservation(response);
     }
 
+    @Override
+    public void releaseReservation(UUID reservationId) {
+        restClient.delete()
+                .uri("/internal/stock-reservations/{reservationId}", reservationId)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
     private StockReservation toReservation(ReservationResponse response) {
         if (response == null) {
             throw new IllegalStateException("Catalog service returned an empty stock-reservation response.");
