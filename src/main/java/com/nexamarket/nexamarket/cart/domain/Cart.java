@@ -98,6 +98,17 @@ public class Cart {
         activeCustomerId = null;
     }
 
+    public void checkout() {
+        if (status != CartStatus.ACTIVE) {
+            throw new IllegalStateException("Only an active cart can be checked out.");
+        }
+        if (items.isEmpty()) {
+            throw new IllegalStateException("An empty cart cannot be checked out.");
+        }
+        status = CartStatus.CHECKED_OUT;
+        activeCustomerId = null;
+    }
+
     public UUID getId() {
         return id;
     }

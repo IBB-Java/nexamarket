@@ -2,6 +2,7 @@ package com.nexamarket.nexamarket.cart;
 
 import com.nexamarket.nexamarket.cart.api.CartController;
 import com.nexamarket.nexamarket.cart.application.CartApplicationService;
+import com.nexamarket.nexamarket.cart.application.CartCheckoutService;
 import com.nexamarket.nexamarket.cart.application.CartView;
 import com.nexamarket.nexamarket.cart.domain.CartStatus;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,9 @@ class CartControllerTest {
 
     @MockBean
     private CartApplicationService cartApplicationService;
+
+    @MockBean
+    private CartCheckoutService cartCheckoutService;
 
     @Test
     void addsAnItemAndReturnsCreated() throws Exception {
