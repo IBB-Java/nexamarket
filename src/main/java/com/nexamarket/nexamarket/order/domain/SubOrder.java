@@ -87,6 +87,10 @@ public class SubOrder {
         return status;
     }
 
+    void changeStatusTo(OrderStatus targetStatus) {
+        this.status = targetStatus;
+    }
+
     public BigDecimal getSubtotal() {
         return subtotal;
     }

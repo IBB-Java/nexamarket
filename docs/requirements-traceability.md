@@ -30,7 +30,10 @@ proje boyunca güncellenecektir.
 | FR-CART-01 | Devam ediyor | Sepete ekleme API'si ve Catalog Service REST rezervasyon sınırı hazır; gerçek stok servisi ve yarış testi eksik. |
 | FR-CART-02 | Devam ediyor | Süresi dolmuş rezervasyonları Catalog Service üzerinden serbest bırakan zamanlayıcı hazır; gerçek Catalog Service ve uçtan uca doğrulama eksik. |
 | FR-CART-03 | Devam ediyor | Checkout, kalemleri satıcıya göre gruplayıp gerçek Order Service'e tek istekte iletiyor; ödeme tamamlandığında sipariş onayı eksik. |
-| FR-ORD-01…04 | Devam ediyor | Ana sipariş, alt sipariş ve kalemler `PAYMENT_PENDING` durumuyla ve idempotent checkout ile oluşturuluyor; durum makinesi, zaman aşımı, iade ve olay yayını eksik. |
+| FR-ORD-01 | Devam ediyor | Ana sipariş, alt sipariş ve kalemler idempotent checkout ile oluşturuluyor; merkezi durum makinesi geçersiz geçişleri `409 Conflict` ile reddediyor. |
+| FR-ORD-02 | Planlandı | Ödemesi belirlenen sürede tamamlanmayan siparişlerin otomatik iptali. |
+| FR-ORD-03 | Planlandı | Satıcı/admin onaylı iade talebi iş akışı. |
+| FR-ORD-04 | Planlandı | Durum olaylarının asenkron bildirim, stok ve admin paneli akışı. |
 | FR-PAY-01…04 | Planlandı | Mock provider, idempotent webhook, sorgulama ve kısmi ödeme. |
 | FR-PROMO-01…02 | Planlandı | Veri odaklı indirim kuralları ve sadakat defteri. |
 | FR-NOTIF-01…02 | Planlandı | Kuyruk tüketicisi, e-posta/SMS/uygulama içi bildirim ve retry. |
