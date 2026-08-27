@@ -15,6 +15,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 public class OrderPaymentTimeoutService {
@@ -24,22 +26,32 @@ public class OrderPaymentTimeoutService {
     private final OrderStateMachine orderStateMachine;
     private final Clock clock;
     private final Duration paymentTimeout;
+    private final OrderStatusEventPublisher orderStatusEventPublisher;
 
     @Autowired
     public OrderPaymentTimeoutService(CustomerOrderRepository customerOrderRepository,
                                       StockReservationReleaseGateway stockReservationReleaseGateway,
+                                      OrderStatusEventPublisher orderStatusEventPublisher,
                                       @Value("${order.payment-timeout}") Duration paymentTimeout) {
-        this(customerOrderRepository, stockReservationReleaseGateway, paymentTimeout, Clock.systemUTC());
+        this(customerOrderRepository, stockReservationReleaseGateway, orderStatusEventPublisher, paymentTimeout, Clock.systemUTC());
     }
 
     OrderPaymentTimeoutService(CustomerOrderRepository customerOrderRepository,
                                StockReservationReleaseGateway stockReservationReleaseGateway,
+                               Duration paymentTimeout, Clock clock) {
+        this(customerOrderRepository, stockReservationReleaseGateway, null, paymentTimeout, clock);
+    }
+
+    OrderPaymentTimeoutService(CustomerOrderRepository customerOrderRepository,
+                               StockReservationReleaseGateway stockReservationReleaseGateway,
+                               OrderStatusEventPublisher orderStatusEventPublisher,
                                Duration paymentTimeout, Clock clock) {
         this.customerOrderRepository = customerOrderRepository;
         this.stockReservationReleaseGateway = stockReservationReleaseGateway;
         this.orderStateMachine = new OrderStateMachine();
         this.paymentTimeout = paymentTimeout;
         this.clock = clock;
+        this.orderStatusEventPublisher = orderStatusEventPublisher;
     }
 
     @Scheduled(fixedDelayString = "${order.payment-timeout.check-interval-ms}")
@@ -66,14 +78,23 @@ public class OrderPaymentTimeoutService {
     }
 
     private void releaseReservations(CustomerOrder order) {
+        Set<String> releasedCodes = new HashSet<>();
         for (SubOrder subOrder : order.getSubOrders()) {
-            subOrder.getItems().forEach(item -> stockReservationReleaseGateway.releaseReservation(item.getStockReservationCode()));
+            subOrder.getItems().forEach(item -> {
+                if (releasedCodes.add(item.getStockReservationCode())) {
+                    stockReservationReleaseGateway.releaseReservation(item.getStockReservationCode());
+                }
+            });
         }
     }
 
     private void cancel(CustomerOrder order) {
         for (SubOrder subOrder : order.getSubOrders()) {
             orderStateMachine.transition(subOrder, OrderStatus.CANCELLED);
+            if (orderStatusEventPublisher != null) {
+                orderStatusEventPublisher.enqueue(new OrderStatusChangedEvent(java.util.UUID.randomUUID(),
+                        order.getCustomerId(), subOrder.getId(), subOrder.getSellerId(), subOrder.getStatus()));
+            }
         }
         orderStateMachine.transition(order, OrderStatus.CANCELLED);
     }

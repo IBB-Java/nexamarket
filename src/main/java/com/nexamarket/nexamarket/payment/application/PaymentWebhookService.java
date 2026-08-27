@@ -5,6 +5,8 @@ import com.nexamarket.nexamarket.order.domain.OrderStateMachine;
 import com.nexamarket.nexamarket.order.domain.OrderStatus;
 import com.nexamarket.nexamarket.order.domain.SubOrder;
 import com.nexamarket.nexamarket.order.infrastructure.CustomerOrderRepository;
+import com.nexamarket.nexamarket.order.application.OrderStatusChangedEvent;
+import com.nexamarket.nexamarket.order.application.OrderStatusEventPublisher;
 import com.nexamarket.nexamarket.payment.domain.PaymentStatus;
 import com.nexamarket.nexamarket.payment.domain.PaymentTransaction;
 import com.nexamarket.nexamarket.payment.domain.ProcessedPaymentWebhook;
@@ -13,6 +15,8 @@ import com.nexamarket.nexamarket.payment.domain.WalletAccount;
 import com.nexamarket.nexamarket.payment.infrastructure.PaymentTransactionRepository;
 import com.nexamarket.nexamarket.payment.infrastructure.ProcessedPaymentWebhookRepository;
 import com.nexamarket.nexamarket.payment.infrastructure.WalletAccountRepository;
+import com.nexamarket.stock.application.StockService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,16 +29,31 @@ public class PaymentWebhookService {
     private final CustomerOrderRepository customerOrderRepository;
     private final WalletAccountRepository walletAccountRepository;
     private final OrderStateMachine orderStateMachine;
+    private final StockService stockService;
+    private final OrderStatusEventPublisher orderStatusEventPublisher;
 
+    @Autowired
     public PaymentWebhookService(PaymentTransactionRepository paymentTransactionRepository,
                                  ProcessedPaymentWebhookRepository processedPaymentWebhookRepository,
                                  CustomerOrderRepository customerOrderRepository,
-                                 WalletAccountRepository walletAccountRepository) {
+                                 WalletAccountRepository walletAccountRepository,
+                                 StockService stockService,
+                                 OrderStatusEventPublisher orderStatusEventPublisher) {
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.processedPaymentWebhookRepository = processedPaymentWebhookRepository;
         this.customerOrderRepository = customerOrderRepository;
         this.walletAccountRepository = walletAccountRepository;
         this.orderStateMachine = new OrderStateMachine();
+        this.stockService = stockService;
+        this.orderStatusEventPublisher = orderStatusEventPublisher;
+    }
+
+    PaymentWebhookService(PaymentTransactionRepository paymentTransactionRepository,
+                          ProcessedPaymentWebhookRepository processedPaymentWebhookRepository,
+                          CustomerOrderRepository customerOrderRepository,
+                          WalletAccountRepository walletAccountRepository) {
+        this(paymentTransactionRepository, processedPaymentWebhookRepository, customerOrderRepository,
+                walletAccountRepository, null, null);
     }
 
     /** A provider event id is recorded first, so duplicated callbacks are harmless. */
@@ -69,8 +88,17 @@ public class PaymentWebhookService {
         if (order.getStatus() != OrderStatus.PAYMENT_PENDING) {
             throw new PaymentException(HttpStatus.CONFLICT, "The order is no longer awaiting payment.");
         }
+        if (stockService != null) {
+            for (SubOrder subOrder : order.getSubOrders()) {
+                subOrder.getItems().forEach(item -> stockService.confirmReservationInternally(item.getStockReservationCode()));
+            }
+        }
         for (SubOrder subOrder : order.getSubOrders()) {
             orderStateMachine.transition(subOrder, OrderStatus.PAID);
+            if (orderStatusEventPublisher != null) {
+                orderStatusEventPublisher.enqueue(new OrderStatusChangedEvent(java.util.UUID.randomUUID(),
+                        order.getCustomerId(), subOrder.getId(), subOrder.getSellerId(), subOrder.getStatus()));
+            }
         }
         orderStateMachine.transition(order, OrderStatus.PAID);
     }

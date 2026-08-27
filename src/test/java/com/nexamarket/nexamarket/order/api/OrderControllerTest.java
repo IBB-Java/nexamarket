@@ -1,6 +1,7 @@
 package com.nexamarket.nexamarket.order.api;
 
 import com.nexamarket.nexamarket.order.application.OrderStatusService;
+import com.nexamarket.common.audit.AuditLogRepository;
 import com.nexamarket.nexamarket.order.domain.InvalidOrderStateTransitionException;
 import com.nexamarket.nexamarket.order.domain.OrderStatus;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,9 @@ class OrderControllerTest {
 
     @MockBean
     private OrderStatusService orderStatusService;
+
+    @MockBean
+    private AuditLogRepository auditLogRepository;
 
     @Test
     void returnsConflictForAnInvalidStateTransition() throws Exception {

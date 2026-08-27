@@ -3,8 +3,10 @@ package com.nexamarket.nexamarket.payment.api;
 import com.nexamarket.nexamarket.payment.application.InitiatePaymentCommand;
 import com.nexamarket.nexamarket.payment.application.PaymentApplicationService;
 import com.nexamarket.nexamarket.payment.application.PaymentView;
+import com.nexamarket.auth.security.AuthPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,8 +25,9 @@ public class PaymentController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public PaymentView initiate(@Valid @RequestBody InitiatePaymentRequest request) {
-        return paymentApplicationService.initiate(new InitiatePaymentCommand(request.orderId(), request.idempotencyKey(),
+    public PaymentView initiate(@AuthenticationPrincipal AuthPrincipal principal,
+                                @Valid @RequestBody InitiatePaymentRequest request) {
+        return paymentApplicationService.initiate(new InitiatePaymentCommand(request.orderId(), principal.userId(), request.idempotencyKey(),
                 request.walletAmount(), request.cardAmount()));
     }
 }

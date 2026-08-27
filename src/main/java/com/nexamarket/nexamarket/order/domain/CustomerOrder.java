@@ -41,6 +41,15 @@ public class CustomerOrder {
     @Column(name = "total_amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal totalAmount;
 
+    @Column(name = "subtotal_amount", nullable = false, precision = 19, scale = 2)
+    private BigDecimal subtotalAmount;
+
+    @Column(name = "discount_amount", nullable = false, precision = 19, scale = 2)
+    private BigDecimal discountAmount;
+
+    @Column(name = "promotion_codes", length = 500)
+    private String promotionCodes;
+
     @Version
     @Column(nullable = false)
     private long version;
@@ -64,6 +73,8 @@ public class CustomerOrder {
         this.sourceCartId = Objects.requireNonNull(sourceCartId, "Source cart id is required.");
         this.customerId = Objects.requireNonNull(customerId, "Customer id is required.");
         this.status = OrderStatus.PAYMENT_PENDING;
+        this.subtotalAmount = BigDecimal.ZERO;
+        this.discountAmount = BigDecimal.ZERO;
         this.totalAmount = BigDecimal.ZERO;
     }
 
@@ -77,8 +88,14 @@ public class CustomerOrder {
         for (CheckoutOrderRequest.SellerOrderRequest sellerOrderRequest : request.sellerOrders()) {
             SubOrder subOrder = SubOrder.from(order, sellerOrderRequest);
             order.subOrders.add(subOrder);
-            order.totalAmount = order.totalAmount.add(subOrder.getSubtotal());
+            order.subtotalAmount = order.subtotalAmount.add(subOrder.getSubtotal());
         }
+        if (request.discountAmount().signum() < 0 || request.discountAmount().compareTo(order.subtotalAmount) > 0) {
+            throw new IllegalArgumentException("Order discount is invalid.");
+        }
+        order.discountAmount = request.discountAmount();
+        order.totalAmount = order.subtotalAmount.subtract(order.discountAmount);
+        order.promotionCodes = String.join(",", request.promotionCodes());
         return order;
     }
 
@@ -104,6 +121,18 @@ public class CustomerOrder {
 
     public BigDecimal getTotalAmount() {
         return totalAmount;
+    }
+
+    public BigDecimal getSubtotalAmount() {
+        return subtotalAmount;
+    }
+
+    public BigDecimal getDiscountAmount() {
+        return discountAmount;
+    }
+
+    public String getPromotionCodes() {
+        return promotionCodes;
     }
 
     public List<SubOrder> getSubOrders() {

@@ -106,4 +106,8 @@ public class SubOrder {
     public List<OrderItem> getItems() {
         return Collections.unmodifiableList(items);
     }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
 }

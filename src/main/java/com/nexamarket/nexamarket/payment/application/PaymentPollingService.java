@@ -9,6 +9,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -17,6 +21,8 @@ import java.util.List;
 
 @Service
 public class PaymentPollingService {
+
+    private static final Logger log = LoggerFactory.getLogger(PaymentPollingService.class);
 
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final PaymentProviderGateway paymentProviderGateway;
@@ -51,6 +57,8 @@ public class PaymentPollingService {
     }
 
     @Transactional
+    @Retry(name = "paymentProvider")
+    @CircuitBreaker(name = "paymentProvider", fallbackMethod = "skipAfterProviderFailure")
     public int pollDuePayments() {
         Instant now = Instant.now(clock);
         List<PaymentTransaction> duePayments = paymentTransactionRepository.findDueForPollingForUpdate(PaymentStatus.PENDING, now);
@@ -66,5 +74,11 @@ public class PaymentPollingService {
                     providerStatus, "Provider reported a failed payment during polling."));
         }
         return duePayments.size();
+    }
+
+    /** Scheduler stays healthy while an external provider is temporarily unavailable. */
+    private int skipAfterProviderFailure(Throwable exception) {
+        log.warn("Payment provider polling deferred: {}", exception.getMessage());
+        return 0;
     }
 }

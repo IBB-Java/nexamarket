@@ -9,10 +9,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import com.nexamarket.promotion.application.PromotionQuote;
 
-public record CheckoutOrderRequest(UUID sourceCartId, Long customerId, List<SellerOrderRequest> sellerOrders) {
+public record CheckoutOrderRequest(UUID sourceCartId, Long customerId, List<SellerOrderRequest> sellerOrders,
+                                   BigDecimal discountAmount, List<String> promotionCodes) {
+
+    public CheckoutOrderRequest(UUID sourceCartId, Long customerId, List<SellerOrderRequest> sellerOrders) {
+        this(sourceCartId, customerId, sellerOrders, BigDecimal.ZERO, List.of());
+    }
+
+    /** Backward-compatible constructor kept for the original module tests. */
+    public CheckoutOrderRequest(Long customerId, UUID sourceCartId, List<SellerOrderRequest> sellerOrders) {
+        this(sourceCartId, customerId, sellerOrders, BigDecimal.ZERO, List.of());
+    }
+
+    public CheckoutOrderRequest {
+        discountAmount = discountAmount == null ? BigDecimal.ZERO : discountAmount;
+        promotionCodes = promotionCodes == null ? List.of() : List.copyOf(promotionCodes);
+    }
 
     public static CheckoutOrderRequest from(Cart cart) {
+        return from(cart, PromotionQuote.none());
+    }
+
+    public static CheckoutOrderRequest from(Cart cart, PromotionQuote promotionQuote) {
         Map<Long, List<OrderItemRequest>> itemsBySeller = cart.getItems().stream()
                 .collect(Collectors.groupingBy(
                         CartItem::getSellerId,
@@ -21,7 +41,8 @@ public record CheckoutOrderRequest(UUID sourceCartId, Long customerId, List<Sell
         List<SellerOrderRequest> sellerOrders = itemsBySeller.entrySet().stream()
                 .map(entry -> new SellerOrderRequest(entry.getKey(), entry.getValue()))
                 .toList();
-        return new CheckoutOrderRequest(cart.getId(), cart.getCustomerId(), sellerOrders);
+        return new CheckoutOrderRequest(cart.getId(), cart.getCustomerId(), sellerOrders,
+                promotionQuote.discountAmount(), promotionQuote.appliedCodes());
     }
 
     public record SellerOrderRequest(Long sellerId, List<OrderItemRequest> items) {

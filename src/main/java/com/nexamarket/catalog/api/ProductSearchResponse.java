@@ -3,6 +3,7 @@ package com.nexamarket.catalog.api;
 import com.nexamarket.catalog.search.ProductSearchPage;
 
 import java.util.List;
+import java.io.Serializable;
 
 public record ProductSearchResponse(
         List<ProductSearchItemResponse> items,
@@ -10,7 +11,7 @@ public record ProductSearchResponse(
         int page,
         int size,
         int totalPages
-) {
+) implements Serializable {
     public static ProductSearchResponse from(ProductSearchPage result) {
         int totalPages = result.size() == 0 ? 0 : (int) Math.ceil(result.totalElements() / (double) result.size());
         return new ProductSearchResponse(

@@ -39,6 +39,7 @@ public class CartController {
     @PostMapping("/checkout")
     public CheckoutCartView checkout(@AuthenticationPrincipal AuthPrincipal principal,
                                      @RequestBody(required = false) CheckoutCartRequest request) {
-        return cartCheckoutService.checkout(new CheckoutCartCommand(principal.userId()));
+        return cartCheckoutService.checkout(new CheckoutCartCommand(principal.userId(),
+                request == null ? java.util.List.of() : request.promotionCodes()));
     }
 }

@@ -31,6 +31,7 @@ public class StockService {
     private final StockReservationProperties reservationProperties;
     private final Clock stockClock;
     private final EntityManager entityManager;
+    private final StockMutationLock stockMutationLock;
 
     @Transactional(readOnly = true)
     public StockLevelResponse getStockLevel(Long variantId) {
@@ -51,6 +52,10 @@ public class StockService {
 
     @Transactional
     public StockReservationResponse reserve(CreateStockReservationRequest request, AuthPrincipal principal) {
+        return stockMutationLock.execute(request.variantId(), () -> reserveWithinLock(request, principal));
+    }
+
+    private StockReservationResponse reserveWithinLock(CreateStockReservationRequest request, AuthPrincipal principal) {
         ProductVariant variant = findVariant(request.variantId());
 
         if (productVariantRepository.decreaseStockIfAvailable(variant.getId(), request.quantity()) == 0) {
@@ -81,6 +86,11 @@ public class StockService {
             throw new IllegalArgumentException("Additional quantity must be at least one.");
         }
         StockReservation reservation = findLockedReservation(reservationCode);
+        return stockMutationLock.execute(reservation.getVariant().getId(),
+                () -> increaseReservationWithinLock(reservation, additionalQuantity));
+    }
+
+    private StockReservationResponse increaseReservationWithinLock(StockReservation reservation, int additionalQuantity) {
         if (expireWhenNecessary(reservation, now())) {
             throw new InvalidReservationStateException("Süresi dolmuş rezervasyon artırılamaz");
         }

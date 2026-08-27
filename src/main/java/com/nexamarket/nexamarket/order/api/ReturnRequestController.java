@@ -3,6 +3,7 @@ package com.nexamarket.nexamarket.order.api;
 import com.nexamarket.nexamarket.order.application.CreateReturnRequestCommand;
 import com.nexamarket.nexamarket.order.application.ResolveReturnRequestCommand;
 import com.nexamarket.nexamarket.order.application.ReturnRequestService;
+import com.nexamarket.auth.security.AuthPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.UUID;
 
@@ -27,15 +29,16 @@ public class ReturnRequestController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ReturnRequestView create(@Valid @RequestBody CreateReturnRequestRequest request) {
+    public ReturnRequestView create(@AuthenticationPrincipal AuthPrincipal principal,
+                                    @Valid @RequestBody CreateReturnRequestRequest request) {
         return ReturnRequestView.from(returnRequestService.create(
-                new CreateReturnRequestCommand(request.subOrderId(), request.reason())));
+                new CreateReturnRequestCommand(request.subOrderId(), request.reason()), principal));
     }
 
     @PatchMapping("/{returnRequestId}")
-    public ReturnRequestView resolve(@PathVariable UUID returnRequestId,
+    public ReturnRequestView resolve(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID returnRequestId,
                                      @Valid @RequestBody ResolveReturnRequestRequest request) {
         return ReturnRequestView.from(returnRequestService.resolve(
-                new ResolveReturnRequestCommand(returnRequestId, request.status(), request.resolverId())));
+                new ResolveReturnRequestCommand(returnRequestId, request.status(), principal.userId()), principal));
     }
 }

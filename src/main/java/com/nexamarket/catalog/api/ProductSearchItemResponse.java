@@ -4,6 +4,7 @@ import com.nexamarket.catalog.search.ProductSearchDocument;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.io.Serializable;
 
 public record ProductSearchItemResponse(
         Long id,
@@ -17,7 +18,7 @@ public record ProductSearchItemResponse(
         BigDecimal sellerRating,
         long totalStock,
         boolean inStock
-) {
+) implements Serializable {
     public static ProductSearchItemResponse from(ProductSearchDocument document) {
         return new ProductSearchItemResponse(
                 Long.valueOf(document.getId()),

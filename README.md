@@ -1,58 +1,52 @@
 # NexaMarket
 
-## Ödeme akışını yerelde denemek
+NexaMarket, çok satıcılı e-ticaret senaryosunu Spring Boot ile uygulayan bir
+ders projesidir. Kayıt/giriş, katalog, stok rezervasyonu, sepet, satıcı bazlı
+sipariş, ödeme, iade, bildirim, kampanya, sadakat puanı ve raporlama modülleri
+tek uygulamada entegredir.
 
-Ödeme dalındaki sağlayıcı bir mock'tur; gerçek kart veya para hareketi yapmaz.
-Önce sipariş oluşturulduktan sonra müşteri cüzdanına yalnızca geliştirme ortamında
-yükleme yapılabilir:
+## İlk kez çalıştırma
 
-```bash
-curl -X POST http://localhost:8080/internal/wallets/<customerId>/credits \
-  -H 'Content-Type: application/json' -d '{"amount": "20.00"}'
-```
+1. Docker Desktop’ı açın.
+2. Proje klasöründe bütün bağımlılıkları başlatın:
 
-Ardından toplamı cüzdan ve kart arasında bölerek ödeme başlatılır. Aynı
-`idempotencyKey` ile yapılan tekrarlar yeni tahsilat oluşturmaz:
+   ```bash
+   docker compose up -d
+   ```
 
-```bash
-curl -X POST http://localhost:8080/api/v1/payments \
-  -H 'Content-Type: application/json' \
-  -d '{"orderId":"<orderId>","idempotencyKey":"demo-odeme-1","walletAmount":"20.00","cardAmount":"30.00"}'
-```
+3. Uygulamayı başlatın:
 
-Yanıttaki `providerPaymentId` için mock sağlayıcıya sonuç verilir. `duplicateDeliveries`
-değeri, webhook'un aynı olay kimliğiyle kaç kez tekrar gönderileceğini gösterir:
+   ```bash
+   ./mvnw spring-boot:run
+   ```
 
-```bash
-curl -X POST http://localhost:8080/mock-payment-provider/payments/<providerPaymentId>/outcomes \
-  -H 'Content-Type: application/json' \
-  -d '{"status":"SUCCEEDED","callbackDelaySeconds":2,"duplicateDeliveries":2}'
-```
+4. Tarayıcıdan API dokümantasyonunu açın: <http://localhost:8080/swagger-ui.html>
 
-Çok satıcılı e-ticaret platformu. İş gereksinimleri ve teslim durumu için
-[gereksinim takip dosyasına](docs/requirements-traceability.md) bakın.
+Compose; PostgreSQL, RabbitMQ, Redis, Elasticsearch ve MinIO’yu başlatır.
+MinIO konsolu `http://localhost:9001`, RabbitMQ yönetim paneli ise
+`http://localhost:15672` adresindedir. Her ikisinin varsayılan kullanıcı adı ve
+parolası `nexamarket` / `nexamarket` (MinIO için `minioadmin` / `minioadmin`) olur.
 
-## Yerel olarak çalıştırma
-
-Önce Docker Desktop'ı açın, sonra proje klasöründe PostgreSQL'i başlatın:
+## Test ve kalite kontrolü
 
 ```bash
-docker compose up -d
+./mvnw clean verify
 ```
 
-Ardından uygulamayı çalıştırın:
+Bu komut birim/entegrasyon testlerini, JaCoCo raporunu ve en az %70 satır kapsamı
+kontrolünü çalıştırır. Docker aktifse ayrıca PostgreSQL 16 üzerinde Flyway migration
+smoke testi çalışır; Docker yoksa bu tek test otomatik atlanır.
 
-```bash
-./mvnw spring-boot:run
-```
+## Ana kullanıcı akışı
 
-Testleri çalıştırmak için Docker'a gerek yoktur; testler H2 ile izole olarak
-çalışır:
+1. Müşteri kayıt olur ve JWT alır.
+2. Varyantı sepete ekler; stok hemen rezerve edilir.
+3. Checkout, kalemleri satıcılara göre alt siparişlere böler.
+4. Cüzdan/kart bölüşümlü ödeme tamamlanır; rezervasyon `CONFIRMED` olur.
+5. Satıcı kargo durumunu günceller; outbox üzerinden e-posta, SMS, uygulama içi
+   bildirim ve yönetici WebSocket olayı üretilir.
+6. Teslim edilen sipariş puan kazandırır; onaylanan iade ters puan kaydı açar.
 
-```bash
-./mvnw clean test
-```
-
-> `POST /api/v1/cart/items` uç noktası hazırdır. Stok rezervasyonu Catalog
-> Service tarafından sağlanacağından, uç noktayı uçtan uca denemeden önce bu
-> servis de çalışıyor olmalıdır.
+Detaylı DOCX gereksinim eşlemesi için
+[gereksinim takip kaydına](docs/requirements-traceability.md), modül ve sunum
+notları için [handoff belgesine](docs/nexamarket-handoff.md) bakın.

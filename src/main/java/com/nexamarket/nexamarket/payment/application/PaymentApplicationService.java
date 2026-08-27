@@ -5,11 +5,14 @@ import com.nexamarket.nexamarket.order.domain.OrderStateMachine;
 import com.nexamarket.nexamarket.order.domain.OrderStatus;
 import com.nexamarket.nexamarket.order.domain.SubOrder;
 import com.nexamarket.nexamarket.order.infrastructure.CustomerOrderRepository;
+import com.nexamarket.nexamarket.order.application.OrderStatusChangedEvent;
+import com.nexamarket.nexamarket.order.application.OrderStatusEventPublisher;
 import com.nexamarket.nexamarket.payment.domain.PaymentStatus;
 import com.nexamarket.nexamarket.payment.domain.PaymentTransaction;
 import com.nexamarket.nexamarket.payment.domain.WalletAccount;
 import com.nexamarket.nexamarket.payment.infrastructure.PaymentTransactionRepository;
 import com.nexamarket.nexamarket.payment.infrastructure.WalletAccountRepository;
+import com.nexamarket.stock.application.StockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -32,21 +35,36 @@ public class PaymentApplicationService {
     private final OrderStateMachine orderStateMachine;
     private final Clock clock;
     private final Duration pollingInterval;
+    private final StockService stockService;
+    private final OrderStatusEventPublisher orderStatusEventPublisher;
 
     @Autowired
     public PaymentApplicationService(CustomerOrderRepository customerOrderRepository,
                                      PaymentTransactionRepository paymentTransactionRepository,
                                      WalletAccountRepository walletAccountRepository,
                                      PaymentProviderGateway paymentProviderGateway,
+                                     StockService stockService,
+                                     OrderStatusEventPublisher orderStatusEventPublisher,
                                      @Value("${payment.polling.interval}") Duration pollingInterval) {
         this(customerOrderRepository, paymentTransactionRepository, walletAccountRepository,
-                paymentProviderGateway, pollingInterval, Clock.systemUTC());
+                paymentProviderGateway, stockService, orderStatusEventPublisher, pollingInterval, Clock.systemUTC());
     }
 
     PaymentApplicationService(CustomerOrderRepository customerOrderRepository,
                               PaymentTransactionRepository paymentTransactionRepository,
                               WalletAccountRepository walletAccountRepository,
                               PaymentProviderGateway paymentProviderGateway,
+                              Duration pollingInterval, Clock clock) {
+        this(customerOrderRepository, paymentTransactionRepository, walletAccountRepository,
+                paymentProviderGateway, null, null, pollingInterval, clock);
+    }
+
+    PaymentApplicationService(CustomerOrderRepository customerOrderRepository,
+                              PaymentTransactionRepository paymentTransactionRepository,
+                              WalletAccountRepository walletAccountRepository,
+                              PaymentProviderGateway paymentProviderGateway,
+                              StockService stockService,
+                              OrderStatusEventPublisher orderStatusEventPublisher,
                               Duration pollingInterval, Clock clock) {
         this.customerOrderRepository = customerOrderRepository;
         this.paymentTransactionRepository = paymentTransactionRepository;
@@ -55,6 +73,8 @@ public class PaymentApplicationService {
         this.orderStateMachine = new OrderStateMachine();
         this.pollingInterval = pollingInterval;
         this.clock = clock;
+        this.stockService = stockService;
+        this.orderStatusEventPublisher = orderStatusEventPublisher;
     }
 
     /**
@@ -76,6 +96,9 @@ public class PaymentApplicationService {
                 .orElseThrow(() -> new PaymentException(HttpStatus.NOT_FOUND, "Order was not found."));
         if (order.getStatus() != OrderStatus.PAYMENT_PENDING) {
             throw new PaymentException(HttpStatus.CONFLICT, "Only payment-pending orders can be paid.");
+        }
+        if (command.customerId() != null && !order.getCustomerId().equals(command.customerId())) {
+            throw new PaymentException(HttpStatus.FORBIDDEN, "A customer can only pay for their own order.");
         }
         if (paymentTransactionRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId())
                 .filter(payment -> payment.getStatus() != PaymentStatus.FAILED)
@@ -118,10 +141,23 @@ public class PaymentApplicationService {
     }
 
     private void markOrderPaid(CustomerOrder order) {
+        if (stockService != null) {
+            for (SubOrder subOrder : order.getSubOrders()) {
+                subOrder.getItems().forEach(item -> stockService.confirmReservationInternally(item.getStockReservationCode()));
+            }
+        }
         for (SubOrder subOrder : order.getSubOrders()) {
             orderStateMachine.transition(subOrder, OrderStatus.PAID);
+            publishStatus(order, subOrder);
         }
         orderStateMachine.transition(order, OrderStatus.PAID);
+    }
+
+    private void publishStatus(CustomerOrder order, SubOrder subOrder) {
+        if (orderStatusEventPublisher != null) {
+            orderStatusEventPublisher.enqueue(new OrderStatusChangedEvent(java.util.UUID.randomUUID(), order.getCustomerId(),
+                    subOrder.getId(), subOrder.getSellerId(), subOrder.getStatus()));
+        }
     }
 
     private void validate(InitiatePaymentCommand command) {

@@ -32,4 +32,15 @@ public class CatalogInfrastructureConfiguration {
         executor.initialize();
         return executor;
     }
+
+    @Bean(name = "reportTaskExecutor")
+    public Executor reportTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(2);
+        executor.setQueueCapacity(50);
+        executor.setThreadNamePrefix("report-");
+        executor.initialize();
+        return executor;
+    }
 }
