@@ -37,8 +37,8 @@ class OrderPaymentTimeoutServiceTest {
     @Test
     void releasesReservationsAndCancelsTheTimedOutOrder() {
         CustomerOrder order = paymentPendingOrder();
-        UUID firstReservationId = order.getSubOrders().getFirst().getItems().getFirst().getStockReservationId();
-        UUID secondReservationId = order.getSubOrders().get(1).getItems().getFirst().getStockReservationId();
+        String firstReservationCode = order.getSubOrders().getFirst().getItems().getFirst().getStockReservationCode();
+        String secondReservationCode = order.getSubOrders().get(1).getItems().getFirst().getStockReservationCode();
         OrderPaymentTimeoutService service = service();
         Instant createdBefore = now.minus(Duration.ofMinutes(10));
         when(customerOrderRepository.findByStatusAndCreatedAtBeforeForUpdate(OrderStatus.PAYMENT_PENDING, createdBefore))
@@ -50,20 +50,20 @@ class OrderPaymentTimeoutServiceTest {
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
         assertThat(order.getSubOrders()).allSatisfy(subOrder ->
                 assertThat(subOrder.getStatus()).isEqualTo(OrderStatus.CANCELLED));
-        verify(stockReservationReleaseGateway).releaseReservation(firstReservationId);
-        verify(stockReservationReleaseGateway).releaseReservation(secondReservationId);
+        verify(stockReservationReleaseGateway).releaseReservation(firstReservationCode);
+        verify(stockReservationReleaseGateway).releaseReservation(secondReservationCode);
     }
 
     @Test
     void leavesTheOrderPendingWhenReservationReleaseFails() {
         CustomerOrder order = paymentPendingOrder();
-        UUID reservationId = order.getSubOrders().getFirst().getItems().getFirst().getStockReservationId();
+        String reservationCode = order.getSubOrders().getFirst().getItems().getFirst().getStockReservationCode();
         OrderPaymentTimeoutService service = service();
         Instant createdBefore = now.minus(Duration.ofMinutes(10));
         when(customerOrderRepository.findByStatusAndCreatedAtBeforeForUpdate(OrderStatus.PAYMENT_PENDING, createdBefore))
                 .thenReturn(List.of(order));
         doThrow(new IllegalStateException("Catalog service is unavailable"))
-                .when(stockReservationReleaseGateway).releaseReservation(reservationId);
+                .when(stockReservationReleaseGateway).releaseReservation(reservationCode);
 
         assertThatThrownBy(service::cancelTimedOutOrders)
                 .isInstanceOf(IllegalStateException.class)
@@ -85,16 +85,16 @@ class OrderPaymentTimeoutServiceTest {
     private CustomerOrder paymentPendingOrder() {
         Instant reservedUntil = now.plus(Duration.ofMinutes(10));
         CheckoutOrderRequest request = new CheckoutOrderRequest(
-                UUID.randomUUID(),
+                410L,
                 UUID.randomUUID(),
                 List.of(
-                        new CheckoutOrderRequest.SellerOrderRequest(UUID.randomUUID(), List.of(item(reservedUntil))),
-                        new CheckoutOrderRequest.SellerOrderRequest(UUID.randomUUID(), List.of(item(reservedUntil)))));
+                        new CheckoutOrderRequest.SellerOrderRequest(411L, List.of(item(reservedUntil))),
+                        new CheckoutOrderRequest.SellerOrderRequest(412L, List.of(item(reservedUntil)))));
         return CustomerOrder.from(request);
     }
 
     private CheckoutOrderRequest.OrderItemRequest item(Instant reservedUntil) {
         return new CheckoutOrderRequest.OrderItemRequest(
-                UUID.randomUUID(), 1, new BigDecimal("19.90"), UUID.randomUUID(), reservedUntil);
+                413L, 1, new BigDecimal("19.90"), "reservation-413", reservedUntil);
     }
 }

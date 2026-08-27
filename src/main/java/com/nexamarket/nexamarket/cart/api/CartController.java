@@ -6,8 +6,10 @@ import com.nexamarket.nexamarket.cart.application.CartCheckoutService;
 import com.nexamarket.nexamarket.cart.application.CartView;
 import com.nexamarket.nexamarket.cart.application.CheckoutCartCommand;
 import com.nexamarket.nexamarket.cart.application.CheckoutCartView;
+import com.nexamarket.auth.security.AuthPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,13 +30,15 @@ public class CartController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CartView addItem(@Valid @RequestBody AddCartItemRequest request) {
+    public CartView addItem(@AuthenticationPrincipal AuthPrincipal principal,
+                            @Valid @RequestBody AddCartItemRequest request) {
         return cartApplicationService.addItem(new AddCartItemCommand(
-                request.customerId(), request.productVariantId(), request.sellerId(), request.quantity()));
+                principal.userId(), request.productVariantId(), request.quantity()));
     }
 
     @PostMapping("/checkout")
-    public CheckoutCartView checkout(@Valid @RequestBody CheckoutCartRequest request) {
-        return cartCheckoutService.checkout(new CheckoutCartCommand(request.customerId()));
+    public CheckoutCartView checkout(@AuthenticationPrincipal AuthPrincipal principal,
+                                     @RequestBody(required = false) CheckoutCartRequest request) {
+        return cartCheckoutService.checkout(new CheckoutCartCommand(principal.userId()));
     }
 }

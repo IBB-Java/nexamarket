@@ -18,7 +18,7 @@ public record CartView(UUID id, CartStatus status, List<CartItemView> items) {
                 cart.getItems().stream().map(CartItemView::from).toList());
     }
 
-    public record CartItemView(UUID id, UUID productVariantId, UUID sellerId, int quantity,
+    public record CartItemView(UUID id, Long productVariantId, Long sellerId, int quantity,
                                BigDecimal unitPrice, Instant reservedUntil) {
 
         private static CartItemView from(CartItem item) {

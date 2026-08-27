@@ -71,6 +71,53 @@ public class StockService {
         return toResponse(reservation, variant.getStockQuantity());
     }
 
+    /**
+     * Internal cart operation. The cart owns one reservation per line item and
+     * extends that reservation atomically when the customer increases quantity.
+     */
+    @Transactional
+    public StockReservationResponse increaseReservationInternally(String reservationCode, int additionalQuantity) {
+        if (additionalQuantity < 1) {
+            throw new IllegalArgumentException("Additional quantity must be at least one.");
+        }
+        StockReservation reservation = findLockedReservation(reservationCode);
+        if (expireWhenNecessary(reservation, now())) {
+            throw new InvalidReservationStateException("Süresi dolmuş rezervasyon artırılamaz");
+        }
+        if (reservation.getStatus() != StockReservationStatus.ACTIVE) {
+            throw new InvalidReservationStateException("Yalnızca aktif rezervasyonlar artırılabilir");
+        }
+        ProductVariant variant = reservation.getVariant();
+        if (productVariantRepository.decreaseStockIfAvailable(variant.getId(), additionalQuantity) == 0) {
+            throw new InsufficientStockException(variant.getId());
+        }
+        entityManager.refresh(variant);
+        reservation.setQuantity(reservation.getQuantity() + additionalQuantity);
+        reservation.setExpiresAt(now().plus(reservationProperties.getDuration()));
+        return toResponse(reservation, variant.getStockQuantity());
+    }
+
+    /** Used by cart expiry and order timeout jobs, which run with system authority. */
+    @Transactional
+    public void releaseReservationInternally(String reservationCode) {
+        StockReservation reservation = findLockedReservation(reservationCode);
+        if (reservation.getStatus() == StockReservationStatus.ACTIVE) {
+            releaseToStock(reservation, StockReservationStatus.RELEASED, now());
+        }
+    }
+
+    /** Called after a successful payment so reserved stock becomes committed stock. */
+    @Transactional
+    public void confirmReservationInternally(String reservationCode) {
+        StockReservation reservation = findLockedReservation(reservationCode);
+        if (expireWhenNecessary(reservation, now())) {
+            throw new InvalidReservationStateException("Süresi dolmuş rezervasyon onaylanamaz");
+        }
+        if (reservation.getStatus() == StockReservationStatus.ACTIVE) {
+            reservation.setStatus(StockReservationStatus.CONFIRMED);
+        }
+    }
+
     @Transactional
     public StockReservationResponse confirm(String reservationCode, AuthPrincipal principal) {
         StockReservation reservation = findLockedReservation(reservationCode);

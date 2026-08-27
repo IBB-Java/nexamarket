@@ -4,5 +4,5 @@ import com.nexamarket.nexamarket.order.domain.ReturnRequestStatus;
 
 import java.util.UUID;
 
-public record ResolveReturnRequestCommand(UUID returnRequestId, ReturnRequestStatus status, UUID resolverId) {
+public record ResolveReturnRequestCommand(UUID returnRequestId, ReturnRequestStatus status, Long resolverId) {
 }

@@ -1,16 +1,11 @@
 package com.nexamarket.nexamarket.cart.application;
 
-import java.util.UUID;
-
-/**
- * Cart communicates with the catalog service through this boundary rather than
- * reading or updating catalog stock tables directly.
- */
+/** Boundary between the cart aggregate and the atomic stock-reservation module. */
 public interface StockReservationGateway {
 
-    StockReservation createReservation(UUID customerId, UUID productVariantId, UUID sellerId, int quantity);
+    StockReservation createReservation(Long customerId, Long productVariantId, int quantity);
 
-    StockReservation increaseReservation(UUID reservationId, int additionalQuantity);
+    StockReservation increaseReservation(String reservationCode, int additionalQuantity);
 
-    void releaseReservation(UUID reservationId);
+    void releaseReservation(String reservationCode);
 }

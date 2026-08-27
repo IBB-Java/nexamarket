@@ -14,10 +14,10 @@ import java.util.UUID;
 
 public interface CartRepository extends JpaRepository<Cart, UUID> {
 
-    Optional<Cart> findByCustomerIdAndStatus(UUID customerId, CartStatus status);
+    Optional<Cart> findByCustomerIdAndStatus(Long customerId, CartStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select cart from Cart cart left join fetch cart.items where cart.customerId = :customerId and cart.status = :status")
-    Optional<Cart> findByCustomerIdAndStatusForUpdate(@Param("customerId") UUID customerId,
+    Optional<Cart> findByCustomerIdAndStatusForUpdate(@Param("customerId") Long customerId,
                                                        @Param("status") CartStatus status);
 }

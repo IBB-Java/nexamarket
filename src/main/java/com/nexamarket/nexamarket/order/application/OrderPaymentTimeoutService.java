@@ -67,7 +67,7 @@ public class OrderPaymentTimeoutService {
 
     private void releaseReservations(CustomerOrder order) {
         for (SubOrder subOrder : order.getSubOrders()) {
-            subOrder.getItems().forEach(item -> stockReservationReleaseGateway.releaseReservation(item.getStockReservationId()));
+            subOrder.getItems().forEach(item -> stockReservationReleaseGateway.releaseReservation(item.getStockReservationCode()));
         }
     }
 

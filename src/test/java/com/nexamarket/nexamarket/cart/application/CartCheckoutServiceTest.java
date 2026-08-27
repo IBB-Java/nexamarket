@@ -36,13 +36,13 @@ class CartCheckoutServiceTest {
 
     @Test
     void createsOneOrderRequestGroupedBySellerAndChecksOutTheCart() {
-        UUID customerId = UUID.randomUUID();
-        UUID firstSellerId = UUID.randomUUID();
-        UUID secondSellerId = UUID.randomUUID();
+        Long customerId = 201L;
+        Long firstSellerId = 202L;
+        Long secondSellerId = 203L;
         Cart cart = new Cart(customerId);
-        cart.addItem(UUID.randomUUID(), firstSellerId, 1, new BigDecimal("25.00"), UUID.randomUUID(), now.plusSeconds(600));
-        cart.addItem(UUID.randomUUID(), firstSellerId, 2, new BigDecimal("50.00"), UUID.randomUUID(), now.plusSeconds(600));
-        cart.addItem(UUID.randomUUID(), secondSellerId, 1, new BigDecimal("75.00"), UUID.randomUUID(), now.plusSeconds(600));
+        cart.addItem(204L, firstSellerId, 1, new BigDecimal("25.00"), "reservation-204", now.plusSeconds(600));
+        cart.addItem(205L, firstSellerId, 2, new BigDecimal("50.00"), "reservation-205", now.plusSeconds(600));
+        cart.addItem(206L, secondSellerId, 1, new BigDecimal("75.00"), "reservation-206", now.plusSeconds(600));
         UUID orderId = UUID.randomUUID();
         CartCheckoutService service = service();
         when(cartRepository.findByCustomerIdAndStatusForUpdate(customerId, CartStatus.ACTIVE))
@@ -71,9 +71,9 @@ class CartCheckoutServiceTest {
 
     @Test
     void rejectsCheckoutWhenAStockReservationHasExpired() {
-        UUID customerId = UUID.randomUUID();
+        Long customerId = 211L;
         Cart cart = new Cart(customerId);
-        cart.addItem(UUID.randomUUID(), UUID.randomUUID(), 1, new BigDecimal("25.00"), UUID.randomUUID(), now.minusSeconds(1));
+        cart.addItem(212L, 213L, 1, new BigDecimal("25.00"), "reservation-212", now.minusSeconds(1));
         CartCheckoutService service = service();
         when(cartRepository.findByCustomerIdAndStatusForUpdate(customerId, CartStatus.ACTIVE))
                 .thenReturn(Optional.of(cart));

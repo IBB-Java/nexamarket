@@ -65,10 +65,10 @@ class OrderCreationServiceTest {
 
     private CheckoutOrderRequest checkoutRequest() {
         Instant reservedUntil = Instant.parse("2026-08-26T12:10:00Z");
-        UUID firstSellerId = UUID.randomUUID();
-        UUID secondSellerId = UUID.randomUUID();
+        Long firstSellerId = 401L;
+        Long secondSellerId = 402L;
         return new CheckoutOrderRequest(
-                UUID.randomUUID(),
+                400L,
                 UUID.randomUUID(),
                 List.of(
                         new CheckoutOrderRequest.SellerOrderRequest(firstSellerId, List.of(
@@ -80,6 +80,6 @@ class OrderCreationServiceTest {
 
     private CheckoutOrderRequest.OrderItemRequest item(int quantity, String unitPrice, Instant reservedUntil) {
         return new CheckoutOrderRequest.OrderItemRequest(
-                UUID.randomUUID(), quantity, new BigDecimal(unitPrice), UUID.randomUUID(), reservedUntil);
+                403L, quantity, new BigDecimal(unitPrice), "reservation-403", reservedUntil);
     }
 }

@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/internal/wallets")
@@ -25,7 +24,7 @@ public class WalletInternalController {
 
     @PostMapping("/{customerId}/credits")
     @ResponseStatus(HttpStatus.CREATED)
-    public BigDecimal credit(@PathVariable UUID customerId, @Valid @RequestBody WalletCreditRequest request) {
+    public BigDecimal credit(@PathVariable Long customerId, @Valid @RequestBody WalletCreditRequest request) {
         return walletService.credit(customerId, request.amount());
     }
 }

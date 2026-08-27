@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -25,14 +24,14 @@ class CartRepositoryIntegrationTest {
 
     @Test
     void savesAnActiveCartWithItsItems() {
-        UUID customerId = UUID.randomUUID();
+        Long customerId = 101L;
         Cart cart = new Cart(customerId);
         cart.addItem(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
+                102L,
+                103L,
                 2,
                 new BigDecimal("499.90"),
-                UUID.randomUUID(),
+                "reservation-102",
                 Instant.parse("2026-08-26T12:00:00Z"));
 
         Cart savedCart = cartRepository.saveAndFlush(cart);

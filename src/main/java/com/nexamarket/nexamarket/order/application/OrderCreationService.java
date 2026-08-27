@@ -2,6 +2,7 @@ package com.nexamarket.nexamarket.order.application;
 
 import com.nexamarket.nexamarket.cart.application.CheckoutOrderRequest;
 import com.nexamarket.nexamarket.cart.application.OrderCreation;
+import com.nexamarket.nexamarket.cart.application.OrderCreationGateway;
 import com.nexamarket.nexamarket.order.domain.CustomerOrder;
 import com.nexamarket.nexamarket.order.infrastructure.CustomerOrderRepository;
 import org.springframework.stereotype.Service;
@@ -10,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Objects;
 
 @Service
-public class OrderCreationService {
+public class OrderCreationService implements OrderCreationGateway {
 
     private final CustomerOrderRepository customerOrderRepository;
 
@@ -34,5 +35,11 @@ public class OrderCreationService {
                     CustomerOrder savedOrder = customerOrderRepository.save(order);
                     return new OrderCreation(savedOrder.getId());
                 });
+    }
+
+    @Override
+    @Transactional
+    public OrderCreation createOrder(CheckoutOrderRequest request) {
+        return createFromCart(request);
     }
 }

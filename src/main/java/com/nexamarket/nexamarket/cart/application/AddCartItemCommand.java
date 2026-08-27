@@ -1,10 +1,4 @@
 package com.nexamarket.nexamarket.cart.application;
 
-import java.util.UUID;
-
-public record AddCartItemCommand(
-        UUID customerId,
-        UUID productVariantId,
-        UUID sellerId,
-        int quantity) {
+public record AddCartItemCommand(Long customerId, Long productVariantId, int quantity) {
 }

@@ -34,9 +34,9 @@ class CartReservationExpirationServiceTest {
 
     @Test
     void releasesAnExpiredReservationAndExpiresAnEmptyCart() {
-        Cart cart = new Cart(UUID.randomUUID());
-        UUID reservationId = UUID.randomUUID();
-        var item = cart.addItem(UUID.randomUUID(), UUID.randomUUID(), 1, new BigDecimal("49.90"), reservationId,
+        Cart cart = new Cart(301L);
+        String reservationCode = "reservation-301";
+        var item = cart.addItem(302L, 303L, 1, new BigDecimal("49.90"), reservationCode,
                 now.minusSeconds(1));
         CartReservationExpirationService service = service();
         when(cartItemRepository.findExpiredItemsForUpdate(now, CartStatus.ACTIVE)).thenReturn(List.of(item));
@@ -46,19 +46,19 @@ class CartReservationExpirationServiceTest {
         assertThat(releasedItemCount).isEqualTo(1);
         assertThat(cart.getItems()).isEmpty();
         assertThat(cart.getStatus()).isEqualTo(CartStatus.EXPIRED);
-        verify(stockReservationGateway).releaseReservation(reservationId);
+        verify(stockReservationGateway).releaseReservation(reservationCode);
     }
 
     @Test
     void keepsTheCartItemWhenCatalogCannotConfirmRelease() {
-        Cart cart = new Cart(UUID.randomUUID());
-        UUID reservationId = UUID.randomUUID();
-        var item = cart.addItem(UUID.randomUUID(), UUID.randomUUID(), 1, new BigDecimal("49.90"), reservationId,
+        Cart cart = new Cart(311L);
+        String reservationCode = "reservation-311";
+        var item = cart.addItem(312L, 313L, 1, new BigDecimal("49.90"), reservationCode,
                 now.minusSeconds(1));
         CartReservationExpirationService service = service();
         when(cartItemRepository.findExpiredItemsForUpdate(now, CartStatus.ACTIVE)).thenReturn(List.of(item));
         doThrow(new IllegalStateException("Catalog service is unavailable"))
-                .when(stockReservationGateway).releaseReservation(reservationId);
+                .when(stockReservationGateway).releaseReservation(reservationCode);
 
         assertThatThrownBy(service::releaseExpiredReservations)
                 .isInstanceOf(IllegalStateException.class)

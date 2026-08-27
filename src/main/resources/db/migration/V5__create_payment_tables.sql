@@ -1,5 +1,5 @@
 CREATE TABLE wallet_accounts (
-    customer_id UUID PRIMARY KEY,
+    customer_id BIGINT PRIMARY KEY,
     balance NUMERIC(19, 2) NOT NULL CHECK (balance >= 0),
     version BIGINT NOT NULL DEFAULT 0,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL
@@ -8,7 +8,7 @@ CREATE TABLE wallet_accounts (
 CREATE TABLE payment_transactions (
     id UUID PRIMARY KEY,
     order_id UUID NOT NULL REFERENCES orders (id),
-    customer_id UUID NOT NULL,
+    customer_id BIGINT NOT NULL,
     idempotency_key VARCHAR(100) NOT NULL UNIQUE,
     status VARCHAR(30) NOT NULL,
     wallet_amount NUMERIC(19, 2) NOT NULL CHECK (wallet_amount >= 0),

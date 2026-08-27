@@ -35,7 +35,7 @@ public class SubOrder {
     private CustomerOrder order;
 
     @Column(name = "seller_id", nullable = false, updatable = false)
-    private UUID sellerId;
+    private Long sellerId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
@@ -58,7 +58,7 @@ public class SubOrder {
     protected SubOrder() {
     }
 
-    private SubOrder(CustomerOrder order, UUID sellerId) {
+    private SubOrder(CustomerOrder order, Long sellerId) {
         this.id = UUID.randomUUID();
         this.order = Objects.requireNonNull(order, "Order is required.");
         this.sellerId = Objects.requireNonNull(sellerId, "Seller id is required.");
@@ -79,7 +79,7 @@ public class SubOrder {
         return subOrder;
     }
 
-    public UUID getSellerId() {
+    public Long getSellerId() {
         return sellerId;
     }
 

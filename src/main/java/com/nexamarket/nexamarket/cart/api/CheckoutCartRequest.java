@@ -1,8 +1,5 @@
 package com.nexamarket.nexamarket.cart.api;
 
-import jakarta.validation.constraints.NotNull;
-
-import java.util.UUID;
-
-public record CheckoutCartRequest(@NotNull UUID customerId) {
+/** Checkout uses the authenticated customer; no client-controlled customer id is accepted. */
+public record CheckoutCartRequest() {
 }

@@ -10,7 +10,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
-import java.util.UUID;
 
 @Entity
 @Table(name = "wallet_accounts")
@@ -18,7 +17,7 @@ public class WalletAccount {
 
     @Id
     @Column(name = "customer_id")
-    private UUID customerId;
+    private Long customerId;
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal balance;
@@ -34,12 +33,12 @@ public class WalletAccount {
     protected WalletAccount() {
     }
 
-    private WalletAccount(UUID customerId, BigDecimal openingBalance) {
+    private WalletAccount(Long customerId, BigDecimal openingBalance) {
         this.customerId = Objects.requireNonNull(customerId, "Customer id is required.");
         this.balance = requireNonNegative(openingBalance, "Opening balance must be non-negative.");
     }
 
-    public static WalletAccount open(UUID customerId, BigDecimal openingBalance) {
+    public static WalletAccount open(Long customerId, BigDecimal openingBalance) {
         return new WalletAccount(customerId, openingBalance);
     }
 
@@ -55,7 +54,7 @@ public class WalletAccount {
         balance = balance.add(requireNonNegative(amount, "Credit amount must be non-negative."));
     }
 
-    public UUID getCustomerId() {
+    public Long getCustomerId() {
         return customerId;
     }
 

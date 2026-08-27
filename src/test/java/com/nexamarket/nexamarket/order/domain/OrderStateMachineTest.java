@@ -54,14 +54,14 @@ class OrderStateMachineTest {
 
     private SubOrder paymentPendingSubOrder() {
         CheckoutOrderRequest request = new CheckoutOrderRequest(
+                440L,
                 UUID.randomUUID(),
-                UUID.randomUUID(),
-                List.of(new CheckoutOrderRequest.SellerOrderRequest(UUID.randomUUID(), List.of(
+                List.of(new CheckoutOrderRequest.SellerOrderRequest(441L, List.of(
                         new CheckoutOrderRequest.OrderItemRequest(
-                                UUID.randomUUID(),
+                                442L,
                                 1,
                                 new BigDecimal("19.90"),
-                                UUID.randomUUID(),
+                                "reservation-442",
                                 Instant.parse("2026-08-26T12:10:00Z"))))));
         return CustomerOrder.from(request).getSubOrders().getFirst();
     }

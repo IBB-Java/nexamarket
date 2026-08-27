@@ -120,9 +120,9 @@ class PaymentWebhookServiceTest {
     }
 
     private CustomerOrder order() {
-        return CustomerOrder.from(new CheckoutOrderRequest(UUID.randomUUID(), UUID.randomUUID(), List.of(
-                new CheckoutOrderRequest.SellerOrderRequest(UUID.randomUUID(), List.of(
-                        new CheckoutOrderRequest.OrderItemRequest(UUID.randomUUID(), 1, new BigDecimal("30.00"),
-                                UUID.randomUUID(), Instant.parse("2026-08-26T12:00:00Z")))))));
+        return CustomerOrder.from(new CheckoutOrderRequest(UUID.randomUUID(), 521L, List.of(
+                new CheckoutOrderRequest.SellerOrderRequest(522L, List.of(
+                        new CheckoutOrderRequest.OrderItemRequest(523L, 1, new BigDecimal("30.00"),
+                                "reservation-523", Instant.parse("2026-08-26T12:00:00Z")))))));
     }
 }

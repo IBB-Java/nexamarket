@@ -1,9 +1,7 @@
 package com.nexamarket.nexamarket.order.application;
 
-import java.util.UUID;
-
-/** Order Service releases reservations through Catalog Service's REST boundary. */
+/** Order timeout releases stock through the local stock module. */
 public interface StockReservationReleaseGateway {
 
-    void releaseReservation(UUID reservationId);
+    void releaseReservation(String reservationCode);
 }

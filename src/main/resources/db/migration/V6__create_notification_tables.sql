@@ -1,8 +1,8 @@
 CREATE TABLE notification_outbox_events (
     id UUID PRIMARY KEY,
-    recipient_id UUID NOT NULL,
+    recipient_id BIGINT NOT NULL,
     sub_order_id UUID NOT NULL REFERENCES sub_orders (id),
-    seller_id UUID NOT NULL,
+    seller_id BIGINT NOT NULL,
     order_status VARCHAR(30) NOT NULL,
     publish_attempts INTEGER NOT NULL DEFAULT 0,
     next_attempt_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -15,7 +15,7 @@ CREATE INDEX idx_notification_outbox_due ON notification_outbox_events (publishe
 CREATE TABLE notification_messages (
     id UUID PRIMARY KEY,
     deduplication_key VARCHAR(150) NOT NULL UNIQUE,
-    recipient_id UUID NOT NULL,
+    recipient_id BIGINT NOT NULL,
     channel VARCHAR(30) NOT NULL,
     subject VARCHAR(200) NOT NULL,
     content VARCHAR(2000) NOT NULL,

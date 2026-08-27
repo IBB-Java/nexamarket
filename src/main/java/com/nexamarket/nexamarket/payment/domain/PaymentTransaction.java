@@ -25,7 +25,7 @@ public class PaymentTransaction {
     private UUID orderId;
 
     @Column(name = "customer_id", nullable = false, updatable = false)
-    private UUID customerId;
+    private Long customerId;
 
     @Column(name = "idempotency_key", nullable = false, unique = true, updatable = false, length = 100)
     private String idempotencyKey;
@@ -63,7 +63,7 @@ public class PaymentTransaction {
     protected PaymentTransaction() {
     }
 
-    private PaymentTransaction(UUID orderId, UUID customerId, String idempotencyKey,
+    private PaymentTransaction(UUID orderId, Long customerId, String idempotencyKey,
                                BigDecimal walletAmount, BigDecimal cardAmount, Instant nextPollAt) {
         this.id = UUID.randomUUID();
         this.orderId = Objects.requireNonNull(orderId, "Order id is required.");
@@ -78,7 +78,7 @@ public class PaymentTransaction {
         this.nextPollAt = nextPollAt;
     }
 
-    public static PaymentTransaction initiate(UUID orderId, UUID customerId, String idempotencyKey,
+    public static PaymentTransaction initiate(UUID orderId, Long customerId, String idempotencyKey,
                                               BigDecimal walletAmount, BigDecimal cardAmount, Instant nextPollAt) {
         return new PaymentTransaction(orderId, customerId, idempotencyKey, walletAmount, cardAmount, nextPollAt);
     }
@@ -126,7 +126,7 @@ public class PaymentTransaction {
         return orderId;
     }
 
-    public UUID getCustomerId() {
+    public Long getCustomerId() {
         return customerId;
     }
 

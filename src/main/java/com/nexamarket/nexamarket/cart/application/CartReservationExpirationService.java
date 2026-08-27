@@ -46,7 +46,7 @@ public class CartReservationExpirationService {
     public int releaseExpiredReservations() {
         List<CartItem> expiredItems = cartItemRepository.findExpiredItemsForUpdate(Instant.now(clock), CartStatus.ACTIVE);
         for (CartItem item : expiredItems) {
-            stockReservationGateway.releaseReservation(item.getReservationId());
+            stockReservationGateway.releaseReservation(item.getReservationCode());
             item.getCart().removeItem(item);
             item.getCart().expireWhenEmpty();
         }

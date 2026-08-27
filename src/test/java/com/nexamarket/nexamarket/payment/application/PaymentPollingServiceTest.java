@@ -35,7 +35,7 @@ class PaymentPollingServiceTest {
     @Test
     void reschedulesPendingProviderPaymentsForRetry() {
         Instant now = Instant.parse("2026-08-26T09:00:00Z");
-        PaymentTransaction payment = PaymentTransaction.initiate(UUID.randomUUID(), UUID.randomUUID(), "poll-key",
+        PaymentTransaction payment = PaymentTransaction.initiate(UUID.randomUUID(), 511L, "poll-key",
                 BigDecimal.ZERO, new BigDecimal("30.00"), now);
         payment.assignProviderPayment(UUID.randomUUID());
         PaymentPollingService service = new PaymentPollingService(paymentTransactionRepository, paymentProviderGateway,

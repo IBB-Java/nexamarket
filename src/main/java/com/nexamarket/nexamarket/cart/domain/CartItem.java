@@ -31,10 +31,10 @@ public class CartItem {
     private Cart cart;
 
     @Column(name = "product_variant_id", nullable = false, updatable = false)
-    private UUID productVariantId;
+    private Long productVariantId;
 
     @Column(name = "seller_id", nullable = false, updatable = false)
-    private UUID sellerId;
+    private Long sellerId;
 
     @Column(nullable = false)
     private int quantity;
@@ -42,8 +42,8 @@ public class CartItem {
     @Column(name = "unit_price", nullable = false, precision = 19, scale = 2)
     private BigDecimal unitPrice;
 
-    @Column(name = "reservation_id", nullable = false)
-    private UUID reservationId;
+    @Column(name = "reservation_code", nullable = false, length = 36)
+    private String reservationCode;
 
     @Column(name = "reserved_until", nullable = false)
     private Instant reservedUntil;
@@ -59,69 +59,41 @@ public class CartItem {
     protected CartItem() {
     }
 
-    CartItem(Cart cart, UUID productVariantId, UUID sellerId, int quantity, BigDecimal unitPrice,
-             UUID reservationId, Instant reservedUntil) {
-        if (quantity < 1) {
-            throw new IllegalArgumentException("Quantity must be at least one.");
-        }
-        if (unitPrice.signum() < 0) {
-            throw new IllegalArgumentException("Unit price cannot be negative.");
-        }
+    CartItem(Cart cart, Long productVariantId, Long sellerId, int quantity, BigDecimal unitPrice,
+             String reservationCode, Instant reservedUntil) {
+        validate(quantity, unitPrice);
         this.cart = Objects.requireNonNull(cart, "Cart is required.");
         this.productVariantId = Objects.requireNonNull(productVariantId, "Product variant id is required.");
         this.sellerId = Objects.requireNonNull(sellerId, "Seller id is required.");
         this.quantity = quantity;
-        this.unitPrice = Objects.requireNonNull(unitPrice, "Unit price is required.");
-        this.reservationId = Objects.requireNonNull(reservationId, "Reservation id is required.");
+        this.unitPrice = unitPrice;
+        this.reservationCode = Objects.requireNonNull(reservationCode, "Reservation code is required.");
         this.reservedUntil = Objects.requireNonNull(reservedUntil, "Reservation expiration is required.");
     }
 
-    public boolean hasProductVariantAndSeller(UUID productVariantId, UUID sellerId) {
+    public boolean hasProductVariantAndSeller(Long productVariantId, Long sellerId) {
         return this.productVariantId.equals(productVariantId) && this.sellerId.equals(sellerId);
     }
 
-    public void refreshReservation(int quantity, BigDecimal unitPrice, UUID reservationId, Instant reservedUntil) {
-        if (quantity < 1) {
-            throw new IllegalArgumentException("Quantity must be at least one.");
-        }
-        if (unitPrice.signum() < 0) {
-            throw new IllegalArgumentException("Unit price cannot be negative.");
-        }
+    public void refreshReservation(int quantity, BigDecimal unitPrice, String reservationCode, Instant reservedUntil) {
+        validate(quantity, unitPrice);
         this.quantity = quantity;
-        this.unitPrice = Objects.requireNonNull(unitPrice, "Unit price is required.");
-        this.reservationId = Objects.requireNonNull(reservationId, "Reservation id is required.");
+        this.unitPrice = unitPrice;
+        this.reservationCode = Objects.requireNonNull(reservationCode, "Reservation code is required.");
         this.reservedUntil = Objects.requireNonNull(reservedUntil, "Reservation expiration is required.");
     }
 
-    public UUID getId() {
-        return id;
+    private static void validate(int quantity, BigDecimal unitPrice) {
+        if (quantity < 1) throw new IllegalArgumentException("Quantity must be at least one.");
+        if (unitPrice == null || unitPrice.signum() < 0) throw new IllegalArgumentException("Unit price cannot be negative.");
     }
 
-    public Cart getCart() {
-        return cart;
-    }
-
-    public UUID getProductVariantId() {
-        return productVariantId;
-    }
-
-    public UUID getSellerId() {
-        return sellerId;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public BigDecimal getUnitPrice() {
-        return unitPrice;
-    }
-
-    public UUID getReservationId() {
-        return reservationId;
-    }
-
-    public Instant getReservedUntil() {
-        return reservedUntil;
-    }
+    public UUID getId() { return id; }
+    public Cart getCart() { return cart; }
+    public Long getProductVariantId() { return productVariantId; }
+    public Long getSellerId() { return sellerId; }
+    public int getQuantity() { return quantity; }
+    public BigDecimal getUnitPrice() { return unitPrice; }
+    public String getReservationCode() { return reservationCode; }
+    public Instant getReservedUntil() { return reservedUntil; }
 }

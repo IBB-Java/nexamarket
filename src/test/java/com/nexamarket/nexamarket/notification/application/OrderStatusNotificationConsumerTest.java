@@ -19,7 +19,7 @@ import static org.mockito.Mockito.when;
 class OrderStatusNotificationConsumerTest {
     @Mock private NotificationMessageRepository repository;
     @Test void createsOneMessagePerChannelForANewEvent() {
-        OrderStatusChangedEvent event = new OrderStatusChangedEvent(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), OrderStatus.SHIPPED);
+        OrderStatusChangedEvent event = new OrderStatusChangedEvent(UUID.randomUUID(), 601L, UUID.randomUUID(), 602L, OrderStatus.SHIPPED);
         when(repository.existsByDeduplicationKey(any())).thenReturn(false);
         new OrderStatusNotificationConsumer(repository).receive(event);
         verify(repository, times(3)).save(any());

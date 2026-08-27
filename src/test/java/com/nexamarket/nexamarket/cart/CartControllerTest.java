@@ -5,6 +5,8 @@ import com.nexamarket.nexamarket.cart.application.CartApplicationService;
 import com.nexamarket.nexamarket.cart.application.CartCheckoutService;
 import com.nexamarket.nexamarket.cart.application.CartView;
 import com.nexamarket.nexamarket.cart.domain.CartStatus;
+import com.nexamarket.auth.entity.UserRole;
+import com.nexamarket.auth.security.AuthPrincipal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -20,6 +22,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -39,22 +42,19 @@ class CartControllerTest {
 
     @Test
     void addsAnItemAndReturnsCreated() throws Exception {
-        UUID customerId = UUID.randomUUID();
-        UUID variantId = UUID.randomUUID();
-        UUID sellerId = UUID.randomUUID();
         UUID cartId = UUID.randomUUID();
         when(cartApplicationService.addItem(any())).thenReturn(new CartView(cartId, CartStatus.ACTIVE, List.of()));
 
         mockMvc.perform(post("/api/v1/cart/items")
+                        .with(authentication(new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                                new AuthPrincipal(1L, "cart@nexamarket.test", UserRole.CUSTOMER), null)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "customerId": "%s",
-                                  "productVariantId": "%s",
-                                  "sellerId": "%s",
+                                  "productVariantId": 2,
                                   "quantity": 2
                                 }
-                                """.formatted(customerId, variantId, sellerId)))
+                                """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(cartId.toString()))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));

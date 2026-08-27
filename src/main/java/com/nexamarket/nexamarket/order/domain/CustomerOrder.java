@@ -32,7 +32,7 @@ public class CustomerOrder {
     private UUID sourceCartId;
 
     @Column(name = "customer_id", nullable = false, updatable = false)
-    private UUID customerId;
+    private Long customerId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
@@ -59,7 +59,7 @@ public class CustomerOrder {
     protected CustomerOrder() {
     }
 
-    private CustomerOrder(UUID sourceCartId, UUID customerId) {
+    private CustomerOrder(UUID sourceCartId, Long customerId) {
         this.id = UUID.randomUUID();
         this.sourceCartId = Objects.requireNonNull(sourceCartId, "Source cart id is required.");
         this.customerId = Objects.requireNonNull(customerId, "Customer id is required.");
@@ -90,7 +90,7 @@ public class CustomerOrder {
         return sourceCartId;
     }
 
-    public UUID getCustomerId() {
+    public Long getCustomerId() {
         return customerId;
     }
 

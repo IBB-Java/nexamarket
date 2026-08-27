@@ -26,7 +26,7 @@ public class OrderItem {
     private SubOrder subOrder;
 
     @Column(name = "product_variant_id", nullable = false, updatable = false)
-    private UUID productVariantId;
+    private Long productVariantId;
 
     @Column(nullable = false)
     private int quantity;
@@ -34,8 +34,8 @@ public class OrderItem {
     @Column(name = "unit_price", nullable = false, precision = 19, scale = 2)
     private BigDecimal unitPrice;
 
-    @Column(name = "stock_reservation_id", nullable = false, updatable = false)
-    private UUID stockReservationId;
+    @Column(name = "stock_reservation_code", nullable = false, updatable = false, length = 36)
+    private String stockReservationCode;
 
     @Column(name = "reserved_until", nullable = false, updatable = false)
     private Instant reservedUntil;
@@ -43,8 +43,8 @@ public class OrderItem {
     protected OrderItem() {
     }
 
-    private OrderItem(SubOrder subOrder, UUID productVariantId, int quantity, BigDecimal unitPrice,
-                      UUID stockReservationId, Instant reservedUntil) {
+    private OrderItem(SubOrder subOrder, Long productVariantId, int quantity, BigDecimal unitPrice,
+                      String stockReservationCode, Instant reservedUntil) {
         if (quantity < 1) {
             throw new IllegalArgumentException("Quantity must be at least one.");
         }
@@ -56,7 +56,7 @@ public class OrderItem {
         this.productVariantId = Objects.requireNonNull(productVariantId, "Product variant id is required.");
         this.quantity = quantity;
         this.unitPrice = unitPrice;
-        this.stockReservationId = Objects.requireNonNull(stockReservationId, "Stock reservation id is required.");
+        this.stockReservationCode = Objects.requireNonNull(stockReservationCode, "Stock reservation code is required.");
         this.reservedUntil = Objects.requireNonNull(reservedUntil, "Reservation expiration is required.");
     }
 
@@ -66,7 +66,7 @@ public class OrderItem {
                 request.productVariantId(),
                 request.quantity(),
                 request.unitPrice(),
-                request.stockReservationId(),
+                request.stockReservationCode(),
                 request.reservedUntil());
     }
 
@@ -74,7 +74,7 @@ public class OrderItem {
         return unitPrice.multiply(BigDecimal.valueOf(quantity));
     }
 
-    public UUID getStockReservationId() {
-        return stockReservationId;
+    public String getStockReservationCode() {
+        return stockReservationCode;
     }
 }

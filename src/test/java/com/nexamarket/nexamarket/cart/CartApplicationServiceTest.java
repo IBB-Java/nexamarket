@@ -8,6 +8,9 @@ import com.nexamarket.nexamarket.cart.application.StockReservationGateway;
 import com.nexamarket.nexamarket.cart.domain.Cart;
 import com.nexamarket.nexamarket.cart.domain.CartStatus;
 import com.nexamarket.nexamarket.cart.infrastructure.CartRepository;
+import com.nexamarket.catalog.entity.Product;
+import com.nexamarket.catalog.entity.ProductVariant;
+import com.nexamarket.catalog.repository.ProductVariantRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -17,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -35,20 +37,24 @@ class CartApplicationServiceTest {
     @Mock
     private StockReservationGateway stockReservationGateway;
 
+    @Mock
+    private ProductVariantRepository productVariantRepository;
+
     @Test
     void createsAReservationWhenAddingANewItem() {
-        UUID customerId = UUID.randomUUID();
-        UUID variantId = UUID.randomUUID();
-        UUID sellerId = UUID.randomUUID();
+        Long customerId = 11L;
+        Long variantId = 12L;
+        Long sellerId = 13L;
         StockReservation reservation = reservation(2);
-        CartApplicationService service = new CartApplicationService(cartRepository, stockReservationGateway);
+        CartApplicationService service = new CartApplicationService(cartRepository, stockReservationGateway, productVariantRepository);
 
         when(cartRepository.findByCustomerIdAndStatusForUpdate(customerId, CartStatus.ACTIVE))
                 .thenReturn(Optional.empty());
-        when(stockReservationGateway.createReservation(customerId, variantId, sellerId, 2)).thenReturn(reservation);
+        when(productVariantRepository.findById(variantId)).thenReturn(Optional.of(variant(sellerId)));
+        when(stockReservationGateway.createReservation(customerId, variantId, 2)).thenReturn(reservation);
         when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        CartView cart = service.addItem(new AddCartItemCommand(customerId, variantId, sellerId, 2));
+        CartView cart = service.addItem(new AddCartItemCommand(customerId, variantId, 2));
 
         assertThat(cart.status()).isEqualTo(CartStatus.ACTIVE);
         assertThat(cart.items()).singleElement().satisfies(item -> {
@@ -56,37 +62,42 @@ class CartApplicationServiceTest {
             assertThat(item.quantity()).isEqualTo(2);
             assertThat(item.unitPrice()).isEqualByComparingTo("499.90");
         });
-        verify(stockReservationGateway).createReservation(customerId, variantId, sellerId, 2);
+        verify(stockReservationGateway).createReservation(customerId, variantId, 2);
     }
 
     @Test
     void increasesTheExistingReservationInsteadOfCreatingAnotherItem() {
-        UUID customerId = UUID.randomUUID();
-        UUID variantId = UUID.randomUUID();
-        UUID sellerId = UUID.randomUUID();
-        UUID reservationId = UUID.randomUUID();
+        Long customerId = 21L;
+        Long variantId = 22L;
+        Long sellerId = 23L;
+        String reservationCode = "reservation-22";
         Cart existingCart = new Cart(customerId);
-        existingCart.addItem(variantId, sellerId, 1, new BigDecimal("499.90"), reservationId,
+        existingCart.addItem(variantId, sellerId, 1, new BigDecimal("499.90"), reservationCode,
                 Instant.now().plusSeconds(600));
-        CartApplicationService service = new CartApplicationService(cartRepository, stockReservationGateway);
+        CartApplicationService service = new CartApplicationService(cartRepository, stockReservationGateway, productVariantRepository);
 
         when(cartRepository.findByCustomerIdAndStatusForUpdate(customerId, CartStatus.ACTIVE))
                 .thenReturn(Optional.of(existingCart));
-        when(stockReservationGateway.increaseReservation(reservationId, 2)).thenReturn(reservation(3));
+        when(productVariantRepository.findById(variantId)).thenReturn(Optional.of(variant(sellerId)));
+        when(stockReservationGateway.increaseReservation(reservationCode, 2)).thenReturn(reservation(3));
         when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        CartView cart = service.addItem(new AddCartItemCommand(customerId, variantId, sellerId, 2));
+        CartView cart = service.addItem(new AddCartItemCommand(customerId, variantId, 2));
 
         assertThat(cart.items()).singleElement().satisfies(item -> assertThat(item.quantity()).isEqualTo(3));
-        verify(stockReservationGateway).increaseReservation(reservationId, 2);
-        verify(stockReservationGateway, never()).createReservation(any(), any(), any(), any(Integer.class));
+        verify(stockReservationGateway).increaseReservation(reservationCode, 2);
+        verify(stockReservationGateway, never()).createReservation(any(), any(), any(Integer.class));
     }
 
     private StockReservation reservation(int quantity) {
         return new StockReservation(
-                UUID.randomUUID(),
+                "reservation-" + quantity,
                 quantity,
                 new BigDecimal("499.90"),
                 Instant.now().plusSeconds(600));
+    }
+
+    private ProductVariant variant(Long sellerId) {
+        return ProductVariant.builder().product(Product.builder().sellerId(sellerId).build()).price(new BigDecimal("499.90")).build();
     }
 }

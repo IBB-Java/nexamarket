@@ -117,9 +117,9 @@ class PaymentApplicationServiceTest {
     }
 
     private CustomerOrder order(String amount) {
-        return CustomerOrder.from(new CheckoutOrderRequest(UUID.randomUUID(), UUID.randomUUID(), List.of(
-                new CheckoutOrderRequest.SellerOrderRequest(UUID.randomUUID(), List.of(
-                        new CheckoutOrderRequest.OrderItemRequest(UUID.randomUUID(), 1, new BigDecimal(amount),
-                                UUID.randomUUID(), Instant.parse("2026-08-26T12:00:00Z")))))));
+        return CustomerOrder.from(new CheckoutOrderRequest(UUID.randomUUID(), 501L, List.of(
+                new CheckoutOrderRequest.SellerOrderRequest(502L, List.of(
+                        new CheckoutOrderRequest.OrderItemRequest(503L, 1, new BigDecimal(amount),
+                                "reservation-503", Instant.parse("2026-08-26T12:00:00Z")))))));
     }
 }

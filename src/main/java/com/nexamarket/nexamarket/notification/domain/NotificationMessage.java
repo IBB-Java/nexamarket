@@ -18,7 +18,7 @@ import java.util.UUID;
 public class NotificationMessage {
     @Id private UUID id;
     @Column(name = "deduplication_key", nullable = false, unique = true) private String deduplicationKey;
-    @Column(name = "recipient_id", nullable = false) private UUID recipientId;
+    @Column(name = "recipient_id", nullable = false) private Long recipientId;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private NotificationChannel channel;
     @Column(nullable = false) private String subject;
     @Column(nullable = false) private String content;
@@ -30,11 +30,11 @@ public class NotificationMessage {
     @UpdateTimestamp @Column(name = "updated_at", nullable = false) private Instant updatedAt;
 
     protected NotificationMessage() { }
-    private NotificationMessage(UUID eventId, UUID recipientId, NotificationChannel channel, String subject, String content, Instant now) {
+    private NotificationMessage(UUID eventId, Long recipientId, NotificationChannel channel, String subject, String content, Instant now) {
         this.id = UUID.randomUUID(); this.deduplicationKey = eventId + ":" + channel; this.recipientId = recipientId;
         this.channel = channel; this.subject = subject; this.content = content; this.status = NotificationStatus.PENDING; this.nextAttemptAt = now;
     }
-    public static NotificationMessage create(UUID eventId, UUID recipientId, NotificationChannel channel, String subject, String content, Instant now) { return new NotificationMessage(eventId, recipientId, channel, subject, content, now); }
+    public static NotificationMessage create(UUID eventId, Long recipientId, NotificationChannel channel, String subject, String content, Instant now) { return new NotificationMessage(eventId, recipientId, channel, subject, content, now); }
     public void markSent(Instant now) { status = NotificationStatus.SENT; sentAt = now; }
     public void retry(Instant now, Duration delay, int maximumAttempts) { attempts++; if (attempts >= maximumAttempts) { status = NotificationStatus.FAILED; } else { status = NotificationStatus.RETRYING; nextAttemptAt = now.plus(delay); } }
     public NotificationChannel getChannel() { return channel; }

@@ -10,10 +10,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public record CheckoutOrderRequest(UUID sourceCartId, UUID customerId, List<SellerOrderRequest> sellerOrders) {
+public record CheckoutOrderRequest(UUID sourceCartId, Long customerId, List<SellerOrderRequest> sellerOrders) {
 
     public static CheckoutOrderRequest from(Cart cart) {
-        Map<UUID, List<OrderItemRequest>> itemsBySeller = cart.getItems().stream()
+        Map<Long, List<OrderItemRequest>> itemsBySeller = cart.getItems().stream()
                 .collect(Collectors.groupingBy(
                         CartItem::getSellerId,
                         Collectors.mapping(OrderItemRequest::from, Collectors.toList())));
@@ -24,18 +24,18 @@ public record CheckoutOrderRequest(UUID sourceCartId, UUID customerId, List<Sell
         return new CheckoutOrderRequest(cart.getId(), cart.getCustomerId(), sellerOrders);
     }
 
-    public record SellerOrderRequest(UUID sellerId, List<OrderItemRequest> items) {
+    public record SellerOrderRequest(Long sellerId, List<OrderItemRequest> items) {
     }
 
-    public record OrderItemRequest(UUID productVariantId, int quantity, BigDecimal unitPrice,
-                                   UUID stockReservationId, Instant reservedUntil) {
+    public record OrderItemRequest(Long productVariantId, int quantity, BigDecimal unitPrice,
+                                   String stockReservationCode, Instant reservedUntil) {
 
         private static OrderItemRequest from(CartItem item) {
             return new OrderItemRequest(
                     item.getProductVariantId(),
                     item.getQuantity(),
                     item.getUnitPrice(),
-                    item.getReservationId(),
+                    item.getReservationCode(),
                     item.getReservedUntil());
         }
     }

@@ -57,7 +57,7 @@ class ReturnRequestServiceTest {
         stateMachine.transition(subOrder, OrderStatus.RETURN_REQUESTED);
         ReturnRequest returnRequest = new ReturnRequest(subOrder, "Damaged on delivery");
         UUID returnRequestId = UUID.randomUUID();
-        UUID resolverId = UUID.randomUUID();
+        Long resolverId = 431L;
         ReturnRequestService service = service();
         when(returnRequestRepository.findByIdForUpdate(returnRequestId)).thenReturn(Optional.of(returnRequest));
         when(returnRequestRepository.save(returnRequest)).thenReturn(returnRequest);
@@ -79,11 +79,11 @@ class ReturnRequestServiceTest {
 
     private SubOrder shippedSubOrder() {
         CustomerOrder order = CustomerOrder.from(new CheckoutOrderRequest(
+                430L,
                 UUID.randomUUID(),
-                UUID.randomUUID(),
-                List.of(new CheckoutOrderRequest.SellerOrderRequest(UUID.randomUUID(), List.of(
+                List.of(new CheckoutOrderRequest.SellerOrderRequest(432L, List.of(
                         new CheckoutOrderRequest.OrderItemRequest(
-                                UUID.randomUUID(), 1, new BigDecimal("19.90"), UUID.randomUUID(),
+                                433L, 1, new BigDecimal("19.90"), "reservation-433",
                                 Instant.parse("2026-08-26T12:10:00Z")))))));
         SubOrder subOrder = order.getSubOrders().getFirst();
         OrderStateMachine stateMachine = new OrderStateMachine();

@@ -17,9 +17,9 @@ import java.util.UUID;
 @Table(name = "notification_outbox_events")
 public class NotificationOutboxEvent {
     @Id private UUID id;
-    @Column(name = "recipient_id", nullable = false) private UUID recipientId;
+    @Column(name = "recipient_id", nullable = false) private Long recipientId;
     @Column(name = "sub_order_id", nullable = false) private UUID subOrderId;
-    @Column(name = "seller_id", nullable = false) private UUID sellerId;
+    @Column(name = "seller_id", nullable = false) private Long sellerId;
     @Enumerated(EnumType.STRING) @Column(name = "order_status", nullable = false) private OrderStatus orderStatus;
     @Column(name = "publish_attempts", nullable = false) private int publishAttempts;
     @Column(name = "next_attempt_at", nullable = false) private Instant nextAttemptAt;

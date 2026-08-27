@@ -34,7 +34,7 @@ public class ReturnRequest {
     private String reason;
 
     @Column(name = "resolved_by")
-    private UUID resolvedBy;
+    private Long resolvedBy;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -56,7 +56,7 @@ public class ReturnRequest {
         this.reason = reason.trim();
     }
 
-    public void resolve(ReturnRequestStatus targetStatus, UUID resolverId, Instant resolvedAt) {
+    public void resolve(ReturnRequestStatus targetStatus, Long resolverId, Instant resolvedAt) {
         if (status != ReturnRequestStatus.REQUESTED) {
             throw new IllegalStateException("Only a requested return can be resolved.");
         }
