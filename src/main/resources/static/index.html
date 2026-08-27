@@ -11,16 +11,16 @@
     <link rel="stylesheet" href="/store.css">
 </head>
 <body>
-<div class="announcement">Ücretsiz teslimat fırsatı · Güvenli ödeme · Çok satıcılı deneyim</div>
+<div class="announcement">1500 TL üzeri ücretsiz teslimat · 14 gün kolay iade · Güvenli alışveriş</div>
 
 <header class="site-header">
     <a class="brand" href="#home" aria-label="NexaMarket ana sayfa">
         <span class="brand-mark">N</span><span>Nexa<span>Market</span></span>
     </a>
     <nav aria-label="Ana menü">
-        <a href="#discover">Keşfet</a>
-        <a href="#how-it-works">Nasıl çalışır?</a>
-        <button class="nav-link" data-open-seller>Satıcı alanı</button>
+        <a href="#discover">Yeni gelenler</a>
+        <a href="#how-it-works">Neden NexaMarket?</a>
+        <button class="nav-link" data-open-seller>Ürün sat</button>
     </nav>
     <div class="header-actions">
         <button class="text-button" id="authButton">Giriş yap</button>
@@ -33,39 +33,39 @@
 <main id="home">
     <section class="hero">
         <div class="hero-copy">
-            <p class="eyebrow">YENİ NESİL PAZARYERİ</p>
-            <h1>Aradığın her şey,<br><em>özenle</em> seçilmiş.</h1>
-            <p class="hero-text">NexaMarket, bağımsız satıcıları ve bilinçli alışverişi aynı zarif deneyimde buluşturur.</p>
+            <p class="eyebrow">YENİ SEZON, YENİ KEŞİFLER</p>
+            <h1>Gününe iyi gelen<br><em>küçük</em> seçimler.</h1>
+            <p class="hero-text">Sevdiğin markaları, özgün tasarımları ve günlük hayatını kolaylaştıran ürünleri tek yerde keşfet.</p>
             <div class="hero-actions">
-                <a class="primary-button" href="#discover">Ürünleri keşfet <span>→</span></a>
-                <button class="secondary-button" id="seedButton">Demo mağazayı hazırla</button>
+                <a class="primary-button" href="#discover">Alışverişe başla <span>→</span></a>
+                <button class="secondary-button" id="seedButton">Mağazayı keşfe hazırla</button>
             </div>
-            <p class="helper-text" id="seedHint">İlk kullanımda gerçek API üzerinden örnek ürünler ekler.</p>
+            <p class="helper-text" id="seedHint">Yeni ürünler ve ilham veren seçimler seni bekliyor.</p>
         </div>
         <div class="hero-art" aria-hidden="true">
             <div class="orb orb-one"></div>
             <div class="orb orb-two"></div>
             <div class="product-scene">
-                <div class="scene-card card-top"><span>✦</span><b>Seçili satıcılar</b><small>Özenle listelenir</small></div>
+                <div class="scene-card card-top"><span>✦</span><b>Özenle seçildi</b><small>Senin için keşfedildi</small></div>
                 <div class="scene-product"><span class="scene-emoji">⌁</span><small>GÜNLÜK SEÇKİ</small><strong>Yeni favorilerin</strong></div>
-                <div class="scene-card card-bottom"><span>✓</span><b>Güvenli alışveriş</b><small>Rezervasyonlu stok</small></div>
+                <div class="scene-card card-bottom"><span>✓</span><b>İçin rahat olsun</b><small>Güvenli alışveriş</small></div>
             </div>
         </div>
     </section>
 
     <section class="trust-strip" aria-label="NexaMarket avantajları">
-        <div><span>01</span><p><b>Şeffaf stok</b> Sepete eklediğinde ürünün ayrılır.</p></div>
-        <div><span>02</span><p><b>Akıllı sipariş</b> Satıcılara göre otomatik bölünür.</p></div>
-        <div><span>03</span><p><b>Güvenli ödeme</b> Her işlem kayıt altında.</p></div>
+        <div><span>01</span><p><b>Hızlı teslimat</b> Seçtiklerin özenle hazırlanır.</p></div>
+        <div><span>02</span><p><b>Kolay iade</b> Fikrini değiştirmek çok kolay.</p></div>
+        <div><span>03</span><p><b>Güvenli ödeme</b> İçin rahat ederek alışveriş yap.</p></div>
     </section>
 
     <section class="catalog-section" id="discover">
         <div class="section-heading">
             <div>
-                <p class="eyebrow">MAĞAZA</p>
-                <h2>Bugünün seçkisi</h2>
+                <p class="eyebrow">SANA ÖZEL</p>
+                <h2>Bugünün favorileri</h2>
             </div>
-            <button class="seller-cta" data-open-seller>+ Kendi ürününü ekle</button>
+            <button class="seller-cta" data-open-seller>+ Ürünlerini sat</button>
         </div>
         <div class="catalog-controls">
             <label class="search-box"><span>⌕</span><input id="searchInput" type="search" placeholder="Ürün ara"></label>
@@ -80,29 +80,29 @@
         <div class="product-grid" id="productGrid" aria-live="polite"></div>
         <div class="empty-catalog" id="emptyCatalog" hidden>
             <div class="empty-icon">◌</div>
-            <h3>Mağaza vitrini seni bekliyor.</h3>
-            <p>Henüz ürün yok. Satıcı alanından ürün ekleyebilir veya örnek mağazayı tek tıkla hazırlayabilirsin.</p>
-            <div><button class="primary-button small" id="emptySeedButton">Demo ürünleri ekle</button><button class="secondary-button" data-open-seller>Ürün ekle</button></div>
+            <h3>Keşfetmeye başlamak ister misin?</h3>
+            <p>Mağazayı birkaç özenle seçilmiş ürünle hazırlayabilir veya kendi ürünlerini hemen vitrine ekleyebilirsin.</p>
+            <div><button class="primary-button small" id="emptySeedButton">Seçkiyi hazırla</button><button class="secondary-button" data-open-seller>Ürün ekle</button></div>
         </div>
     </section>
 
     <section class="process-section" id="how-it-works">
-        <div class="process-intro"><p class="eyebrow">SUNUMDA ANLAT</p><h2>Basit görünen, sağlam çalışan akış.</h2><p>Arayüzün arkasında stok rezervasyonu, satıcı bazlı alt siparişler, idempotent ödeme ve bildirim altyapısı birlikte çalışır.</p></div>
+        <div class="process-intro"><p class="eyebrow">NEXAMARKET DENEYİMİ</p><h2>Alışverişin en keyifli hâli.</h2><p>İlham veren seçimleri keşfet, sana uygun olanı bul ve sevdiğin ürünleri güvenle kapına getir.</p></div>
         <div class="process-steps">
-            <article><span>1</span><h3>Sepete ekle</h3><p>Varyant seçilir ve stok geçici olarak rezerve edilir.</p></article>
-            <article><span>2</span><h3>Checkout yap</h3><p>Sipariş, satıcılarına göre güvenle alt siparişlere ayrılır.</p></article>
-            <article><span>3</span><h3>Ödemeyi tamamla</h3><p>Başarılı ödeme rezervasyonu kesinleştirir ve bildirim başlatır.</p></article>
+            <article><span>1</span><h3>Keşfet</h3><p>Günlük hayatına eşlik edecek yeni favorilerini bul.</p></article>
+            <article><span>2</span><h3>Seç</h3><p>Sevdiklerini sepete ekle, kararını sakince ver.</p></article>
+            <article><span>3</span><h3>Keyfini sür</h3><p>Siparişin hazırlanırken sen yeni keşiflere devam et.</p></article>
         </div>
     </section>
 </main>
 
-<footer><div class="brand"><span class="brand-mark">N</span><span>Nexa<span>Market</span></span></div><p>Spring Boot ile geliştirilmiş çok satıcılı e-ticaret deneyimi.</p><a href="/swagger-ui.html" target="_blank">Geliştirici API'si ↗</a></footer>
+<footer><div class="brand"><span class="brand-mark">N</span><span>Nexa<span>Market</span></span></div><p>Günlük hayatına iyi gelen seçimler burada.</p><a href="#home">Yukarı dön ↑</a></footer>
 
 <aside class="cart-drawer" id="cartDrawer" aria-label="Alışveriş sepeti" aria-hidden="true">
     <div class="drawer-header"><div><p class="eyebrow">SEPETİN</p><h2>Seçtiklerin</h2></div><button class="icon-button" data-close-cart aria-label="Sepeti kapat">×</button></div>
     <div class="cart-items" id="cartItems"></div>
     <div class="cart-empty" id="cartEmpty"><span>◌</span><p>Sepetin şu an boş.</p><button class="text-button" data-close-cart>Keşfe dön</button></div>
-    <div class="cart-summary" id="cartSummary" hidden><div><span>Toplam</span><strong id="cartTotal">₺0,00</strong></div><button class="primary-button full" id="checkoutButton">Siparişi oluştur <span>→</span></button><small>Ödeme adımında kart veya cüzdan seçebilirsin.</small></div>
+    <div class="cart-summary" id="cartSummary" hidden><label class="coupon-field">Kupon kodun var mı?<input id="couponInput" placeholder="KUPON KODU"></label><button class="coupon-button" id="applyCouponButton">Uygula</button><p class="coupon-note" id="couponNote"></p><div><span>Toplam</span><strong id="cartTotal">₺0,00</strong></div><button class="primary-button full" id="checkoutButton">Siparişi tamamla <span>→</span></button><small>Ödeme bilgilerin güvenle işlenir.</small></div>
 </aside>
 
 <div class="overlay" id="overlay" hidden></div>
@@ -115,9 +115,17 @@
     <p class="form-message" id="authMessage"></p>
 </dialog>
 
+<dialog class="modal" id="accountModal">
+    <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
+    <div class="modal-header"><p class="eyebrow">HESABIM</p><h2 id="accountName">Merhaba</h2><p>Alışverişlerin ve kazandığın avantajlar burada.</p></div>
+    <div class="account-stats"><div><span>✦</span><p><b id="loyaltyPoints">0</b> puan</p><small>Sadakat bakiyen</small></div><div><span>◌</span><p><b id="orderCount">0</b> sipariş</p><small>Son alışverişlerin</small></div></div>
+    <div class="recent-orders"><p class="payment-label">Son siparişlerin</p><div id="recentOrders"><span>Henüz bir siparişin yok.</span></div></div>
+    <button class="secondary-button full" id="logoutButton">Çıkış yap</button>
+</dialog>
+
 <dialog class="modal seller-modal" id="sellerModal">
     <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
-    <div class="modal-header"><p class="eyebrow">SATICI STÜDYOSU</p><h2>Vitrine yeni ürün ekle</h2><p>Bu ekran doğrudan katalog API’sine ürün ve varyant gönderir.</p></div>
+    <div class="modal-header"><p class="eyebrow">SATICI ALANI</p><h2>Vitrine yeni ürün ekle</h2><p>Ürününün bilgilerini gir, alışverişe hazır hâle getirelim.</p></div>
     <form id="sellerForm" class="seller-form">
         <div class="form-row"><label>Ürün adı<input id="sellerProductName" required placeholder="Örn. Seramik Kahve Fincanı"></label><label>Kategori<input id="sellerCategory" required value="Yaşam" placeholder="Örn. Yaşam"></label></div>
         <div class="form-row"><label>Fiyat (₺)<input id="sellerPrice" type="number" min="1" step="0.01" required value="249.90"></label><label>Stok<input id="sellerStock" type="number" min="0" required value="12"></label></div>
@@ -132,8 +140,8 @@
     <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
     <div class="modal-header"><p class="eyebrow">SİPARİŞ ÖZETİ</p><h2>Son bir adım</h2><p id="checkoutDescription">Siparişin hazırlanıyor.</p></div>
     <div class="order-recap" id="orderRecap"></div>
-    <div id="paymentPanel" hidden><p class="payment-label">Ödeme yöntemi</p><div class="payment-choice active"><span>▣</span><div><b>Demo kart ile öde</b><small>Güvenli mock ödeme sağlayıcısı</small></div><span>✓</span></div><button class="primary-button full" id="payButton">Ödemeyi tamamla <span>→</span></button></div>
-    <div class="success-panel" id="successPanel" hidden><span>✓</span><h3>Siparişin alındı!</h3><p>Stok rezervasyonu kesinleştirildi. Sipariş ve ödeme olayları bildirim altyapısına gönderildi.</p><button class="primary-button full" data-close-modal>Alışverişe devam et</button></div>
+    <div id="paymentPanel" hidden><p class="payment-label">Ödeme yöntemi</p><div class="payment-choice active"><span>▣</span><div><b>Kart ile öde</b><small>Güvenli ve hızlı ödeme</small></div><span>✓</span></div><button class="primary-button full" id="payButton">Ödemeyi tamamla <span>→</span></button></div>
+    <div class="success-panel" id="successPanel" hidden><span>✓</span><h3>Siparişin alındı!</h3><p>Seçtiklerin özenle hazırlanacak. Siparişinle ilgili gelişmeleri seninle paylaşacağız.</p><button class="primary-button full" data-close-modal>Alışverişe devam et</button></div>
     <p class="form-message" id="checkoutMessage"></p>
 </dialog>
 

@@ -3,8 +3,10 @@ const state = {
     user: JSON.parse(localStorage.getItem("nexa_user") || "null"),
     catalog: [],
     cart: JSON.parse(localStorage.getItem("nexa_cart") || "[]"),
+    orders: JSON.parse(localStorage.getItem("nexa_orders") || "[]"),
     authMode: "login",
     activeCategory: "all",
+    coupon: "",
     lastOrder: null
 };
 
@@ -39,6 +41,10 @@ function saveSession() {
 
 function saveCart() {
     localStorage.setItem("nexa_cart", JSON.stringify(state.cart));
+}
+
+function saveOrders() {
+    localStorage.setItem("nexa_orders", JSON.stringify(state.orders));
 }
 
 function toast(message) {
@@ -158,7 +164,20 @@ function openModal(id) { closeCart(); const modal = document.getElementById(id);
 function closeModals() { $$("dialog[open]").forEach(dialog => dialog.close()); }
 
 function updateAuthUI() {
-    $("#authButton").textContent = state.token ? `${state.user?.email?.split("@")[0] || "Hesabım"} · Çıkış` : "Giriş yap";
+    $("#authButton").textContent = state.token ? `${state.user?.email?.split("@")[0] || "Hesabım"} · Hesabım` : "Giriş yap";
+}
+
+async function openAccount() {
+    if (!state.token) return openModal("authModal");
+    $("#accountName").textContent = `Merhaba, ${state.user?.email?.split("@")[0] || "NexaMarketli"}`;
+    $("#orderCount").textContent = state.orders.length;
+    $("#recentOrders").innerHTML = state.orders.length ? state.orders.slice(0, 3).map(order => `<div class="recent-order"><div><b>#${html(order.id.slice(0, 8).toUpperCase())}</b><small>${html(order.date)}</small></div><strong>${currency(order.total)}</strong></div>`).join("") : "<span>Henüz bir siparişin yok.</span>";
+    try { const loyalty = await api("/api/v1/loyalty/me"); $("#loyaltyPoints").textContent = loyalty.points ?? 0; } catch { $("#loyaltyPoints").textContent = "0"; }
+    openModal("accountModal");
+}
+
+function logout() {
+    state.token = ""; state.user = null; saveSession(); updateAuthUI(); closeModals(); toast("Güvenle çıkış yaptın.");
 }
 
 async function hydrateUser() {
@@ -216,7 +235,7 @@ async function seedCatalog() {
                 if (!error.message.includes("SKU zaten")) throw error;
             }
         }
-        await loadProducts(); toast("Demo mağaza hazır. Ürünleri şimdi sepete ekleyebilirsin.");
+        await loadProducts(); toast("Mağaza keşfe hazır. Beğendiğin ürünleri sepete ekleyebilirsin.");
     } catch (error) { toast(error.message); }
     finally { button.disabled = false; button.textContent = "Demo mağazayı hazırla"; $("#emptySeedButton").disabled = false; }
 }
@@ -232,7 +251,7 @@ async function submitSeller(event) {
 async function checkout() {
     if (!state.token) { openModal("authModal"); $("#authMessage").textContent = "Sipariş oluşturmak için giriş yapmalısın."; return; }
     try {
-        const order = await api("/api/v1/cart/items/checkout", {method: "POST", body: JSON.stringify({promotionCodes: []})});
+        const order = await api("/api/v1/cart/items/checkout", {method: "POST", body: JSON.stringify({promotionCodes: state.coupon ? [state.coupon] : []})});
         state.lastOrder = {id: order.orderId, total: state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0), itemCount: state.cart.reduce((sum, item) => sum + item.quantity, 0)};
         $("#orderRecap").innerHTML = `<div><span>Ürünler</span><b>${state.lastOrder.itemCount} ürün</b></div><div><span>Sipariş no</span><b>${html(state.lastOrder.id.slice(0, 8).toUpperCase())}</b></div><div class="recap-total"><span>Ödenecek tutar</span><strong>${currency(state.lastOrder.total)}</strong></div>`;
         $("#paymentPanel").hidden = false; $("#successPanel").hidden = true; $("#checkoutMessage").textContent = ""; $("#checkoutDescription").textContent = "Siparişin oluşturuldu. Şimdi güvenli ödemeyi tamamla."; openModal("checkoutModal");
@@ -245,6 +264,7 @@ async function pay() {
     try {
         const payment = await api("/api/v1/payments", {method: "POST", body: JSON.stringify({orderId: state.lastOrder.id, idempotencyKey: `web-${crypto.randomUUID()}`, walletAmount: 0, cardAmount: state.lastOrder.total.toFixed(2)})});
         if (payment.providerPaymentId) await api(`/mock-payment-provider/payments/${payment.providerPaymentId}/outcomes`, {method: "POST", headers: {Authorization: ""}, body: JSON.stringify({status: "SUCCEEDED", failureReason: null, callbackDelaySeconds: 0, duplicateDeliveries: 1})});
+        state.orders.unshift({id: state.lastOrder.id, total: state.lastOrder.total, date: new Intl.DateTimeFormat("tr-TR", {day:"numeric", month:"long"}).format(new Date())}); saveOrders();
         $("#paymentPanel").hidden = true; $("#successPanel").hidden = false; message.textContent = ""; state.cart = []; saveCart(); renderCart();
     } catch (error) { message.textContent = error.message; }
 }
@@ -253,9 +273,10 @@ function initEvents() {
     $("#cartButton").addEventListener("click", openCart); $$('[data-close-cart]').forEach(button => button.addEventListener("click", closeCart)); $("#overlay").addEventListener("click", closeCart);
     $$('[data-open-seller]').forEach(button => button.addEventListener("click", () => openModal("sellerModal")));
     $$('[data-close-modal]').forEach(button => button.addEventListener("click", closeModals));
-    $("#authButton").addEventListener("click", () => { if (state.token) { state.token = ""; state.user = null; saveSession(); updateAuthUI(); toast("Güvenle çıkış yaptın."); } else openModal("authModal"); });
+    $("#authButton").addEventListener("click", openAccount); $("#logoutButton").addEventListener("click", logout);
     $$("[data-auth-tab]").forEach(button => button.addEventListener("click", () => setAuthMode(button.dataset.authTab)));
     $("#authForm").addEventListener("submit", submitAuth); $("#sellerForm").addEventListener("submit", submitSeller); $("#checkoutButton").addEventListener("click", checkout); $("#payButton").addEventListener("click", pay);
+    $("#applyCouponButton").addEventListener("click", () => { const code = $("#couponInput").value.trim().toUpperCase(); state.coupon = code; $("#couponInput").value = code; $("#couponNote").textContent = code ? `${code} ödeme adımında uygulanacak.` : ""; });
     $("#seedButton").addEventListener("click", seedCatalog); $("#emptySeedButton").addEventListener("click", seedCatalog); $("#refreshButton").addEventListener("click", loadProducts);
     $("#searchInput").addEventListener("input", renderCatalog);
     $$(".pill").forEach(button => button.addEventListener("click", () => { state.activeCategory = button.dataset.category; $$(".pill").forEach(item => item.classList.toggle("active", item === button)); renderCatalog(); }));
