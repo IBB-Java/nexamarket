@@ -20,12 +20,28 @@ tek uygulamada entegredir.
    ./mvnw spring-boot:run
    ```
 
-4. Tarayıcıdan API dokümantasyonunu açın: <http://localhost:8080/swagger-ui.html>
+4. Tarayıcıdan mağaza arayüzünü açın: <http://localhost:8080>
+5. API dokümantasyonu ve teknik test ekranı için Swagger'ı açın:
+   <http://localhost:8080/swagger-ui.html>
 
 Compose; PostgreSQL, RabbitMQ, Redis, Elasticsearch ve MinIO’yu başlatır.
 MinIO konsolu `http://localhost:9001`, RabbitMQ yönetim paneli ise
 `http://localhost:15672` adresindedir. Her ikisinin varsayılan kullanıcı adı ve
 parolası `nexamarket` / `nexamarket` (MinIO için `minioadmin` / `minioadmin`) olur.
+
+## Mağaza arayüzü
+
+Ana sayfa artık yalnızca Swagger ekranı değildir. `http://localhost:8080` adresinde
+NexaMarket Store bulunur. Buradan:
+
+- demo mağazayı tek tıkla gerçek katalog API'si üzerinden doldurabilir,
+- müşteri hesabı oluşturup giriş yapabilir,
+- ürünleri sepete ekleyip checkout yapabilir,
+- mock kart ödemesiyle siparişi tamamlayabilir,
+- “Satıcı alanı” ile yeni ürün ve varyant ekleyebilirsiniz.
+
+Bu ekran, sunumda cart → order → payment → notification akışını Swagger JSON'ları
+yerine görünür bir kullanıcı deneyimi üzerinden göstermek için tasarlanmıştır.
 
 ## Test ve kalite kontrolü
 
