@@ -54,12 +54,22 @@ public class ProductSearchDocument {
     @Field(type = FieldType.Double)
     private Double sellerRating;
 
+    @Field(type = FieldType.Long)
+    private Long totalStock;
+
+    @Field(type = FieldType.Boolean)
+    private Boolean inStock;
+
     public static ProductSearchDocument from(Product product, BigDecimal sellerRating) {
         List<BigDecimal> variantPrices = product.getVariants().stream()
                 .map(ProductVariant::getPrice)
                 .toList();
         BigDecimal minPrice = variantPrices.stream().min(BigDecimal::compareTo).orElse(product.getBasePrice());
         BigDecimal maxPrice = variantPrices.stream().max(BigDecimal::compareTo).orElse(product.getBasePrice());
+        long totalStock = product.getVariants().stream()
+                .map(ProductVariant::getStockQuantity)
+                .mapToLong(Integer::longValue)
+                .sum();
         return ProductSearchDocument.builder()
                 .id(product.getId().toString())
                 .sellerId(product.getSellerId())
@@ -71,6 +81,8 @@ public class ProductSearchDocument {
                 .minPrice(minPrice.doubleValue())
                 .maxPrice(maxPrice.doubleValue())
                 .sellerRating(sellerRating == null ? null : sellerRating.doubleValue())
+                .totalStock(totalStock)
+                .inStock(totalStock > 0)
                 .build();
     }
 }

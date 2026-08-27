@@ -5,6 +5,8 @@ import com.nexamarket.catalog.api.CreateCategoryRequest;
 import com.nexamarket.catalog.api.CreateProductRequest;
 import com.nexamarket.catalog.api.CreateProductVariantRequest;
 import com.nexamarket.catalog.api.ProductResponse;
+import com.nexamarket.catalog.api.UpdateProductRequest;
+import com.nexamarket.catalog.api.UpdateProductVariantRequest;
 import com.nexamarket.catalog.entity.Category;
 import com.nexamarket.catalog.entity.Product;
 import com.nexamarket.catalog.entity.ProductStatus;
@@ -18,8 +20,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -78,7 +82,7 @@ public class CatalogService {
                 .forEach(product.getVariants()::add);
 
         Product saved = productRepository.save(product);
-        eventPublisher.publishEvent(new ProductCatalogChangedEvent(saved.getId()));
+        eventPublisher.publishEvent(ProductCatalogChangedEvent.now(saved.getId()));
         return ProductResponse.from(saved);
     }
 
@@ -87,6 +91,27 @@ public class CatalogService {
         Product product = productRepository.findDetailedById(productId)
                 .orElseThrow(() -> new CatalogNotFoundException("Ürün bulunamadı: " + productId));
         return ProductResponse.from(product);
+    }
+
+    @Transactional
+    public ProductResponse updateProduct(Long productId, Long sellerId, UpdateProductRequest request) {
+        Product product = productRepository.findDetailedById(productId)
+                .filter(candidate -> candidate.getSellerId().equals(sellerId))
+                .orElseThrow(() -> new CatalogNotFoundException("Satıcıya ait ürün bulunamadı: " + productId));
+
+        if (request.description() != null) {
+            product.setDescription(trimToNull(request.description()));
+        }
+        if (request.basePrice() != null) {
+            product.setBasePrice(request.basePrice());
+        }
+        if (request.variants() != null) {
+            updateVariants(product, request.variants());
+        }
+
+        Product saved = productRepository.save(product);
+        eventPublisher.publishEvent(ProductCatalogChangedEvent.now(saved.getId()));
+        return ProductResponse.from(saved);
     }
 
     private Set<Category> loadCategories(Set<Long> categoryIds) {
@@ -121,6 +146,32 @@ public class CatalogService {
                 .price(request.price())
                 .stockQuantity(request.stockQuantity())
                 .build();
+    }
+
+    private void updateVariants(Product product, List<UpdateProductVariantRequest> updates) {
+        Map<Long, ProductVariant> variantsById = product.getVariants().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        ProductVariant::getId,
+                        variant -> variant,
+                        (left, right) -> left,
+                        LinkedHashMap::new));
+        Set<Long> updatedIds = new HashSet<>();
+
+        for (UpdateProductVariantRequest update : updates) {
+            if (!updatedIds.add(update.id())) {
+                throw new InvalidProductUpdateException("İstek içinde tekrarlanan varyant: " + update.id());
+            }
+            ProductVariant variant = variantsById.get(update.id());
+            if (variant == null) {
+                throw new CatalogNotFoundException("Ürüne ait varyant bulunamadı: " + update.id());
+            }
+            if (update.price() != null) {
+                variant.setPrice(update.price());
+            }
+            if (update.stockQuantity() != null) {
+                variant.setStockQuantity(update.stockQuantity());
+            }
+        }
     }
 
     private String normalizeSku(String sku) {

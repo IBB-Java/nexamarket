@@ -1,6 +1,11 @@
 package com.nexamarket.catalog.api;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nexamarket.catalog.application.ProductIndexingService;
+import com.nexamarket.catalog.entity.Product;
 import com.nexamarket.catalog.entity.ProductStatus;
+import com.nexamarket.catalog.repository.ProductRepository;
 import com.nexamarket.catalog.search.ProductSearchDocument;
 import com.nexamarket.catalog.search.ProductSearchGateway;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,12 +13,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -27,6 +36,15 @@ class ProductSearchApiIntegrationTest {
 
     @Autowired
     private ProductSearchGateway searchGateway;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired
+    private ProductIndexingService productIndexingService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void indexFixtures() {
@@ -74,6 +92,83 @@ class ProductSearchApiIntegrationTest {
                         .param("maxPrice", "100"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Geçersiz arama kriteri"));
+    }
+
+    @Test
+    void reflectsProductUpdateInSearchWithinConfiguredConsistencyBound() throws Exception {
+        long categoryId = createCategory("Arama Tutarlılığı");
+        JsonNode productJson = createProduct(categoryId);
+        long productId = productJson.get("id").asLong();
+        long variantId = productJson.get("variants").get(0).get("id").asLong();
+
+        Product product = productRepository.findDetailedById(productId).orElseThrow();
+        product.setStatus(ProductStatus.ACTIVE);
+        productRepository.saveAndFlush(product);
+        productIndexingService.index(productId);
+
+        mockMvc.perform(patch("/api/v1/products/{productId}", productId)
+                        .header("X-Seller-Id", 701)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "description": "FR-CAT-04 indeks yenilemesi",
+                                  "basePrice": 199.99,
+                                  "variants": [
+                                    {"id": %d, "price": 219.99, "stockQuantity": 0}
+                                  ]
+                                }
+                                """.formatted(variantId)))
+                .andExpect(status().isOk());
+
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+        AssertionError lastFailure = null;
+        while (System.nanoTime() < deadline) {
+            try {
+                mockMvc.perform(get("/api/v1/products/search")
+                                .param("q", "FR-CAT-04"))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.totalElements").value(1))
+                        .andExpect(jsonPath("$.items[0].id").value(productId))
+                        .andExpect(jsonPath("$.items[0].minPrice").value(219.99))
+                        .andExpect(jsonPath("$.items[0].maxPrice").value(219.99))
+                        .andExpect(jsonPath("$.items[0].totalStock").value(0))
+                        .andExpect(jsonPath("$.items[0].inStock").value(false));
+                return;
+            } catch (AssertionError assertionError) {
+                lastFailure = assertionError;
+                Thread.sleep(25);
+            }
+        }
+        throw lastFailure == null ? new AssertionError("Arama indeksi zamanında güncellenmedi") : lastFailure;
+    }
+
+    private long createCategory(String name) throws Exception {
+        String response = mockMvc.perform(post("/api/v1/categories")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + name + "\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(response).get("id").asLong();
+    }
+
+    private JsonNode createProduct(long categoryId) throws Exception {
+        String response = mockMvc.perform(post("/api/v1/products")
+                        .header("X-Seller-Id", 701)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Tutarlılık Test Ürünü",
+                                  "description": "Eski açıklama",
+                                  "basePrice": 100.00,
+                                  "categoryIds": [%d],
+                                  "variants": [
+                                    {"sku": "FR-CAT-04-SKU", "attributes": {}, "price": 120.00, "stockQuantity": 7}
+                                  ]
+                                }
+                                """.formatted(categoryId)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(response);
     }
 
     private ProductSearchDocument document(

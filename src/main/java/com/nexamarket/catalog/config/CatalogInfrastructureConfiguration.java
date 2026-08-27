@@ -8,7 +8,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.util.concurrent.Executor;
 
 @Configuration
-@EnableConfigurationProperties(CatalogStorageProperties.class)
+@EnableConfigurationProperties({CatalogStorageProperties.class, CatalogIndexingProperties.class})
 public class CatalogInfrastructureConfiguration {
 
     @Bean(name = "thumbnailTaskExecutor")

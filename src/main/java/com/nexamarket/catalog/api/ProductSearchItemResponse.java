@@ -14,7 +14,9 @@ public record ProductSearchItemResponse(
         List<String> categoryNames,
         BigDecimal minPrice,
         BigDecimal maxPrice,
-        BigDecimal sellerRating
+        BigDecimal sellerRating,
+        long totalStock,
+        boolean inStock
 ) {
     public static ProductSearchItemResponse from(ProductSearchDocument document) {
         return new ProductSearchItemResponse(
@@ -26,7 +28,9 @@ public record ProductSearchItemResponse(
                 List.copyOf(document.getCategoryNames()),
                 BigDecimal.valueOf(document.getMinPrice()),
                 BigDecimal.valueOf(document.getMaxPrice()),
-                document.getSellerRating() == null ? null : BigDecimal.valueOf(document.getSellerRating())
+                document.getSellerRating() == null ? null : BigDecimal.valueOf(document.getSellerRating()),
+                document.getTotalStock() == null ? 0 : document.getTotalStock(),
+                Boolean.TRUE.equals(document.getInStock())
         );
     }
 }
