@@ -75,7 +75,8 @@ public class JwtService {
             if (!expectedTokenType.equals(tokenType)) {
                 throw new InvalidTokenException();
             }
-            Long userId = claims.get("userId", Long.class);
+            Object userIdClaim = claims.get("userId");
+            Long userId = userIdClaim instanceof Number number ? number.longValue() : null;
             String role = claims.get("role", String.class);
             if (userId == null || role == null || claims.getId() == null) {
                 throw new InvalidTokenException();

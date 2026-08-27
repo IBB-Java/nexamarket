@@ -1,7 +1,6 @@
 package com.nexamarket.auth.security;
 
 import com.nexamarket.auth.application.InvalidTokenException;
-import com.nexamarket.auth.entity.UserRole;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

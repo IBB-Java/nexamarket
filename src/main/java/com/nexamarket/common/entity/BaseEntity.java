@@ -33,5 +33,4 @@ public abstract class BaseEntity {
     protected void updateAuditTimestamp() {
         updatedAt = LocalDateTime.now();
     }
-
 }
