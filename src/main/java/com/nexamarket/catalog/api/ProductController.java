@@ -12,6 +12,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -62,6 +63,13 @@ public class ProductController {
         return catalogService.getProduct(productId);
     }
 
+    @GetMapping("/seller")
+    public java.util.List<ProductResponse> listSellerProducts(
+            @RequestHeader("X-Seller-Id") @Positive Long sellerId
+    ) {
+        return catalogService.listSellerProducts(sellerId);
+    }
+
     @PatchMapping("/{productId}")
     public ProductResponse update(
             @PathVariable @Positive Long productId,
@@ -78,5 +86,14 @@ public class ProductController {
             @Valid @RequestBody ChangeProductPublicationRequest request
     ) {
         return catalogService.changePublication(productId, sellerId, request);
+    }
+
+    @DeleteMapping("/{productId}")
+    public ResponseEntity<Void> delete(
+            @PathVariable @Positive Long productId,
+            @RequestHeader("X-Seller-Id") @Positive Long sellerId
+    ) {
+        catalogService.deleteProduct(productId, sellerId);
+        return ResponseEntity.noContent().build();
     }
 }

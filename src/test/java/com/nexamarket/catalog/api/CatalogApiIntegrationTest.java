@@ -11,6 +11,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -85,6 +86,30 @@ class CatalogApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"PASSIVE\"}"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void sellerCanListAndSoftDeleteItsProducts() throws Exception {
+        long categoryId = createCategory("Silme Akışı");
+        JsonNode product = objectMapper.readTree(createProduct(categoryId, 54321, "Silinecek Ürün", "SIL-001"));
+        long productId = product.get("id").asLong();
+
+        mockMvc.perform(get("/api/v1/products/seller")
+                        .header("X-Seller-Id", 54321))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(productId))
+                .andExpect(jsonPath("$[0].status").value("DRAFT"));
+
+        mockMvc.perform(delete("/api/v1/products/{productId}", productId)
+                        .header("X-Seller-Id", 54321))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/products/{productId}", productId))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/products/seller")
+                        .header("X-Seller-Id", 54321))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test

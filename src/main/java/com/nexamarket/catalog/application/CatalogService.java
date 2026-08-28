@@ -90,8 +90,17 @@ public class CatalogService {
     @Transactional(readOnly = true)
     public ProductResponse getProduct(Long productId) {
         Product product = productRepository.findDetailedById(productId)
+                .filter(candidate -> candidate.getStatus() != ProductStatus.DELETED)
                 .orElseThrow(() -> new CatalogNotFoundException("Ürün bulunamadı: " + productId));
         return ProductResponse.from(product);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductResponse> listSellerProducts(Long sellerId) {
+        return productRepository.findAllBySellerIdAndStatusNotOrderByIdDesc(sellerId, ProductStatus.DELETED)
+                .stream()
+                .map(ProductResponse::from)
+                .toList();
     }
 
     @Transactional
@@ -113,6 +122,19 @@ public class CatalogService {
         Product saved = productRepository.save(product);
         eventPublisher.publishEvent(ProductCatalogChangedEvent.now(saved.getId()));
         return ProductResponse.from(saved);
+    }
+
+    /** Soft deletion keeps historical order references intact while removing the product from public search. */
+    @Transactional
+    public void deleteProduct(Long productId, Long sellerId) {
+        Product product = productRepository.findDetailedById(productId)
+                .filter(candidate -> candidate.getStatus() != ProductStatus.DELETED)
+                .filter(candidate -> candidate.getSellerId().equals(sellerId))
+                .orElseThrow(() -> new CatalogNotFoundException("Satıcıya ait ürün bulunamadı: " + productId));
+
+        product.setStatus(ProductStatus.DELETED);
+        productRepository.save(product);
+        eventPublisher.publishEvent(ProductCatalogChangedEvent.now(product.getId()));
     }
 
     /**
