@@ -1,5 +1,6 @@
 package com.nexamarket.nexamarket.cart.domain;
 
+import com.nexamarket.catalog.entity.ProductVariant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -32,6 +33,11 @@ public class CartItem {
 
     @Column(name = "product_variant_id", nullable = false, updatable = false)
     private Long productVariantId;
+
+    /** Read-only link used to build a customer-friendly cart response. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_variant_id", insertable = false, updatable = false)
+    private ProductVariant productVariant;
 
     @Column(name = "seller_id", nullable = false, updatable = false)
     private Long sellerId;
@@ -91,6 +97,7 @@ public class CartItem {
     public UUID getId() { return id; }
     public Cart getCart() { return cart; }
     public Long getProductVariantId() { return productVariantId; }
+    public ProductVariant getProductVariant() { return productVariant; }
     public Long getSellerId() { return sellerId; }
     public int getQuantity() { return quantity; }
     public BigDecimal getUnitPrice() { return unitPrice; }

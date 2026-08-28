@@ -21,6 +21,8 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -63,5 +65,33 @@ class CartControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(cartId.toString()))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    void returnsTheCurrentCustomersCart() throws Exception {
+        UUID cartId = UUID.randomUUID();
+        when(cartApplicationService.getActiveCart(1L)).thenReturn(new CartView(cartId, CartStatus.ACTIVE, List.of()));
+
+        mockMvc.perform(get("/api/v1/cart/items")
+                        .with(authentication(new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                                new AuthPrincipal(1L, "cart@nexamarket.test", UserRole.CUSTOMER), null,
+                                java.util.List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(cartId.toString()));
+    }
+
+    @Test
+    void removesAVisibleCartLine() throws Exception {
+        UUID cartItemId = UUID.randomUUID();
+        when(cartApplicationService.removeItem(org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.eq(cartItemId)))
+                .thenReturn(CartView.empty());
+        var customerAuthentication = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                new AuthPrincipal(1L, "cart@nexamarket.test", UserRole.CUSTOMER), null, java.util.List.of());
+
+        mockMvc.perform(delete("/api/v1/cart/items/{cartItemId}", cartItemId)
+                        .with(authentication(customerAuthentication))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(0));
     }
 }

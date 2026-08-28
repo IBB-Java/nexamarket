@@ -10,11 +10,16 @@ import com.nexamarket.auth.security.AuthPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/cart/items")
@@ -34,6 +39,17 @@ public class CartController {
                             @Valid @RequestBody AddCartItemRequest request) {
         return cartApplicationService.addItem(new AddCartItemCommand(
                 principal.userId(), request.productVariantId(), request.quantity()));
+    }
+
+    @GetMapping
+    public CartView getActiveCart(@AuthenticationPrincipal AuthPrincipal principal) {
+        return cartApplicationService.getActiveCart(principal.userId());
+    }
+
+    @DeleteMapping("/{cartItemId}")
+    public CartView removeItem(@AuthenticationPrincipal AuthPrincipal principal,
+                               @PathVariable UUID cartItemId) {
+        return cartApplicationService.removeItem(principal.userId(), cartItemId);
     }
 
     @PostMapping("/checkout")

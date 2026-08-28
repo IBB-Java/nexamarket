@@ -70,4 +70,13 @@ public class ProductController {
     ) {
         return catalogService.updateProduct(productId, sellerId, request);
     }
+
+    @PatchMapping("/{productId}/publication")
+    public ProductResponse changePublication(
+            @PathVariable @Positive Long productId,
+            @RequestHeader("X-Seller-Id") @Positive Long sellerId,
+            @Valid @RequestBody ChangeProductPublicationRequest request
+    ) {
+        return catalogService.changePublication(productId, sellerId, request);
+    }
 }

@@ -36,9 +36,14 @@ NexaMarket Store bulunur. Buradan:
 
 - demo mağazayı tek tıkla gerçek katalog API'si üzerinden doldurabilir,
 - müşteri hesabı oluşturup giriş yapabilir,
-- ürünleri sepete ekleyip checkout yapabilir,
+- ürünleri sepete ekleyip, sunucu tarafında rezerve edilen sepetini yönetebilir,
 - mock kart ödemesiyle siparişi tamamlayabilir,
-- “Satıcı alanı” ile yeni ürün ve varyant ekleyebilirsiniz.
+- “Satıcı alanı” ile yeni ürün ve varyant ekleyebilir, ürünü hemen vitrinde
+  yayınlayabilir veya taslak olarak saklayabilirsiniz.
+
+Katalogda yalnızca `ACTIVE` durumundaki ürünler müşteriye gösterilir. Uygulama
+açılırken katalog verisi arama indeksine yeniden yazılır; bu nedenle yerel
+veritabanındaki ürünler indeks yeniden oluşturulsa bile mağazada kaybolmaz.
 
 Bu ekran, sunumda cart → order → payment → notification akışını Swagger JSON'ları
 yerine görünür bir kullanıcı deneyimi üzerinden göstermek için tasarlanmıştır.

@@ -21,4 +21,11 @@ public class ProductIndexingService {
                 .orElseThrow(() -> new CatalogNotFoundException("Ürün bulunamadı: " + productId));
         productSearchGateway.index(ProductSearchDocument.from(product, null));
     }
+
+    @Transactional(readOnly = true)
+    public int indexAll() {
+        var products = productRepository.findAllByOrderByIdAsc();
+        products.forEach(product -> productSearchGateway.index(ProductSearchDocument.from(product, null)));
+        return products.size();
+    }
 }

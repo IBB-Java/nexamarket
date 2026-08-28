@@ -43,6 +43,36 @@ function saveCart() {
     localStorage.setItem("nexa_cart", JSON.stringify(state.cart));
 }
 
+function applyCartResponse(cart) {
+    const items = cart?.items || [];
+    state.cart = items.map(item => {
+        const product = state.catalog.find(candidate =>
+            String(candidate.id) === String(item.productId) || String(candidate.variantId) === String(item.productVariantId));
+        const name = item.productName || product?.name || "Sepetteki ürün";
+        return {
+            cartItemId: item.id,
+            id: item.productId ?? product?.id ?? item.productVariantId,
+            variantId: item.productVariantId,
+            name,
+            price: Number(item.unitPrice ?? product?.price ?? 0),
+            quantity: item.quantity,
+            category: product?.category || "Seçki",
+            emoji: product?.emoji || emojiFor(name)
+        };
+    });
+    saveCart();
+    renderCart();
+}
+
+async function syncCart(cart = null) {
+    if (!state.token) return;
+    try {
+        applyCartResponse(cart || await api("/api/v1/cart/items"));
+    } catch (error) {
+        toast("Sepetin şu an güncellenemedi.");
+    }
+}
+
 function saveOrders() {
     localStorage.setItem("nexa_orders", JSON.stringify(state.orders));
 }
@@ -138,11 +168,9 @@ async function addToCart(productId) {
     try {
         await resolveProduct(product);
         if (!product.variantId) throw new Error("Bu ürünün sipariş edilebilir bir varyantı bulunamadı.");
-        await api("/api/v1/cart/items", {method: "POST", body: JSON.stringify({productVariantId: product.variantId, quantity: 1})});
-        const existing = state.cart.find(item => String(item.id) === String(product.id));
-        if (existing) existing.quantity += 1;
-        else state.cart.push({...product, quantity: 1});
-        saveCart(); renderCart(); toast(`${product.name} sepete eklendi.`);
+        const cart = await api("/api/v1/cart/items", {method: "POST", body: JSON.stringify({productVariantId: product.variantId, quantity: 1})});
+        applyCartResponse(cart);
+        toast(`${product.name} sepete eklendi.`);
     } catch (error) { toast(error.message); }
 }
 
@@ -153,9 +181,25 @@ function renderCart() {
     $("#cartTotal").textContent = currency(total);
     $("#cartEmpty").hidden = state.cart.length > 0;
     $("#cartSummary").hidden = state.cart.length === 0;
-    $$('[data-remove-product]').forEach(button => button.addEventListener("click", () => {
-        state.cart = state.cart.filter(item => String(item.id) !== String(button.dataset.removeProduct)); saveCart(); renderCart();
-    }));
+    $$('[data-remove-product]').forEach(button => button.addEventListener("click", () => removeFromCart(button.dataset.removeProduct)));
+}
+
+async function removeFromCart(productId) {
+    const item = state.cart.find(candidate => String(candidate.id) === String(productId));
+    if (!item) return;
+    if (!state.token || !item.cartItemId) {
+        state.cart = state.cart.filter(candidate => candidate !== item);
+        saveCart();
+        renderCart();
+        return;
+    }
+    try {
+        const cart = await api(`/api/v1/cart/items/${item.cartItemId}`, {method: "DELETE"});
+        applyCartResponse(cart);
+        toast(`${item.name} sepetten çıkarıldı.`);
+    } catch (error) {
+        toast(error.message);
+    }
 }
 
 function openCart() { $("#cartDrawer").classList.add("open"); $("#cartDrawer").setAttribute("aria-hidden", "false"); $("#overlay").hidden = false; }
@@ -177,7 +221,7 @@ async function openAccount() {
 }
 
 function logout() {
-    state.token = ""; state.user = null; saveSession(); updateAuthUI(); closeModals(); toast("Güvenle çıkış yaptın.");
+    state.token = ""; state.user = null; state.cart = []; saveSession(); saveCart(); renderCart(); updateAuthUI(); closeModals(); toast("Güvenle çıkış yaptın.");
 }
 
 async function hydrateUser() {
@@ -216,9 +260,15 @@ async function ensureCategory(name) {
 
 async function createProduct(payload, silent = false) {
     const categoryId = await ensureCategory(payload.category);
-    const product = await api("/api/v1/products", {method: "POST", headers: {"X-Seller-Id": String(payload.sellerId || 1), Authorization: ""}, body: JSON.stringify({
+    const sellerHeaders = {"X-Seller-Id": String(payload.sellerId || 1), Authorization: ""};
+    let product = await api("/api/v1/products", {method: "POST", headers: sellerHeaders, body: JSON.stringify({
         name: payload.name, description: payload.description, basePrice: payload.price, categoryIds: [categoryId], variants: [{sku: payload.sku, attributes: {"Seçenek": "Standart"}, price: payload.price, stockQuantity: payload.stock}]
     })});
+    if (payload.publish !== false) {
+        product = await api(`/api/v1/products/${product.id}/publication`, {
+            method: "PATCH", headers: sellerHeaders, body: JSON.stringify({status: "ACTIVE"})
+        });
+    }
     const normalised = normaliseProduct(product);
     state.catalog = [normalised, ...state.catalog.filter(item => String(item.id) !== String(normalised.id))];
     renderCatalog();
@@ -243,7 +293,7 @@ async function seedCatalog() {
 async function submitSeller(event) {
     event.preventDefault(); const message = $("#sellerMessage"); message.textContent = "Ürün ekleniyor…";
     try {
-        const product = await createProduct({name: $("#sellerProductName").value.trim(), category: $("#sellerCategory").value.trim(), price: Number($("#sellerPrice").value), stock: Number($("#sellerStock").value), sku: $("#sellerSku").value.trim(), sellerId: Number($("#sellerId").value), description: $("#sellerDescription").value.trim() || "NexaMarket satıcısından yeni ürün."});
+        const product = await createProduct({name: $("#sellerProductName").value.trim(), category: $("#sellerCategory").value.trim(), price: Number($("#sellerPrice").value), stock: Number($("#sellerStock").value), sku: $("#sellerSku").value.trim(), sellerId: Number($("#sellerId").value), description: $("#sellerDescription").value.trim() || "NexaMarket satıcısından yeni ürün.", publish: $("#sellerPublish").checked});
         message.textContent = ""; closeModals(); toast(`${product.name} mağazaya eklendi.`);
     } catch (error) { message.textContent = error.message; }
 }
@@ -283,7 +333,7 @@ function initEvents() {
 }
 
 async function boot() {
-    initEvents(); renderCart(); updateAuthUI(); await hydrateUser(); await loadProducts();
+    initEvents(); renderCart(); updateAuthUI(); await hydrateUser(); await loadProducts(); await syncCart();
 }
 
 boot();

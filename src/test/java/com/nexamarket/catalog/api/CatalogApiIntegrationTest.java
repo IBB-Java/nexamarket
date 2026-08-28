@@ -69,6 +69,25 @@ class CatalogApiIntegrationTest {
     }
 
     @Test
+    void sellerCanPublishItsDraftProduct() throws Exception {
+        long categoryId = createCategory("Yayın Akışı");
+        JsonNode product = objectMapper.readTree(createProduct(categoryId, 42, "Yayına Hazır Ürün", "YAYIN-001"));
+
+        mockMvc.perform(patch("/api/v1/products/{productId}/publication", product.get("id").asLong())
+                        .header("X-Seller-Id", 42)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"ACTIVE\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+
+        mockMvc.perform(patch("/api/v1/products/{productId}/publication", product.get("id").asLong())
+                        .header("X-Seller-Id", 99)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"PASSIVE\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void rejectsProductWithoutVariants() throws Exception {
         long categoryId = createCategory("Kitap");
         String productJson = """

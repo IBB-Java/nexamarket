@@ -1,6 +1,7 @@
 package com.nexamarket.catalog.application;
 
 import com.nexamarket.catalog.api.CategoryResponse;
+import com.nexamarket.catalog.api.ChangeProductPublicationRequest;
 import com.nexamarket.catalog.api.CreateCategoryRequest;
 import com.nexamarket.catalog.api.CreateProductRequest;
 import com.nexamarket.catalog.api.CreateProductVariantRequest;
@@ -109,6 +110,27 @@ public class CatalogService {
             updateVariants(product, request.variants());
         }
 
+        Product saved = productRepository.save(product);
+        eventPublisher.publishEvent(ProductCatalogChangedEvent.now(saved.getId()));
+        return ProductResponse.from(saved);
+    }
+
+    /**
+     * New products intentionally begin as drafts. Publishing is explicit so a
+     * half-filled seller form can never leak into public search results.
+     */
+    @Transactional
+    public ProductResponse changePublication(Long productId, Long sellerId,
+                                             ChangeProductPublicationRequest request) {
+        if (!request.isSupportedStorefrontStatus()) {
+            throw new InvalidProductUpdateException("Ürün yalnızca ACTIVE veya PASSIVE durumuna alınabilir");
+        }
+
+        Product product = productRepository.findDetailedById(productId)
+                .filter(candidate -> candidate.getSellerId().equals(sellerId))
+                .orElseThrow(() -> new CatalogNotFoundException("Satıcıya ait ürün bulunamadı: " + productId));
+
+        product.setStatus(request.status());
         Product saved = productRepository.save(product);
         eventPublisher.publishEvent(ProductCatalogChangedEvent.now(saved.getId()));
         return ProductResponse.from(saved);

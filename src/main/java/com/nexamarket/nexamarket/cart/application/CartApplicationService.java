@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
+import java.util.UUID;
 
 @Service
 public class CartApplicationService {
@@ -62,6 +63,36 @@ public class CartApplicationService {
                     reservation.reservedUntil());
         }
 
+        return CartView.from(cartRepository.save(cart));
+    }
+
+    @Transactional(readOnly = true)
+    public CartView getActiveCart(Long customerId) {
+        Objects.requireNonNull(customerId, "Customer id is required.");
+        return cartRepository.findByCustomerIdAndStatus(customerId, CartStatus.ACTIVE)
+                .map(CartView::from)
+                .orElseGet(CartView::empty);
+    }
+
+    /**
+     * Removing a line immediately releases its inventory reservation, so stock
+     * is never held by an item the customer can no longer see in the cart.
+     */
+    @Transactional
+    public CartView removeItem(Long customerId, UUID cartItemId) {
+        Objects.requireNonNull(customerId, "Customer id is required.");
+        Objects.requireNonNull(cartItemId, "Cart item id is required.");
+
+        Cart cart = cartRepository.findByCustomerIdAndStatusForUpdate(customerId, CartStatus.ACTIVE)
+                .orElseThrow(() -> new IllegalArgumentException("Aktif sepet bulunamadı."));
+        CartItem item = cart.getItems().stream()
+                .filter(candidate -> candidate.getId().equals(cartItemId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Sepet kalemi bulunamadı."));
+
+        stockReservationGateway.releaseReservation(item.getReservationCode());
+        cart.removeItem(item);
+        cart.expireWhenEmpty();
         return CartView.from(cartRepository.save(cart));
     }
 

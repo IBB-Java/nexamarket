@@ -1,0 +1,30 @@
+.publish-option {
+    display: flex !important;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 11px 12px;
+    border: 1px solid #d6d7ce;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.publish-option input {
+    width: auto !important;
+    margin: 3px 0 0 !important;
+    accent-color: #e96e53;
+}
+
+.publish-option b {
+    display: block;
+    font-size: .78rem;
+}
+
+.publish-option small {
+    display: block;
+    margin-top: 3px;
+    color: #5d6e73;
+    font-size: .7rem;
+    font-weight: 400;
+    line-height: 1.4;
+}
