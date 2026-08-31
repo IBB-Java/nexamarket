@@ -35,11 +35,16 @@ Ana sayfa artık yalnızca Swagger ekranı değildir. `http://localhost:8080` ad
 NexaMarket Store bulunur. Buradan:
 
 - demo mağazayı tek tıkla gerçek katalog API'si üzerinden doldurabilir,
-- müşteri hesabı oluşturup giriş yapabilir,
-- ürünleri sepete ekleyip, sunucu tarafında rezerve edilen sepetini yönetebilir,
+- müşteri hesabı oluşturup giriş yapabilir ve görünür hesap menüsünden güvenle
+  çıkış yapabilir,
+- ürünleri arayabilir, kategoriye göre filtreleyebilir, sıralayabilir, detaylarını
+  inceleyebilir ve favorilerine kaydedebilir,
+- ürünleri sepete ekleyip, silme onayıyla sunucu tarafında rezerve edilen sepetini
+  yönetebilir,
 - mock kart ödemesiyle siparişi tamamlayabilir,
-- “Satıcı alanı” ile yeni ürün ve varyant ekleyebilir, ürünü hemen vitrinde
-  yayınlayabilir veya taslak olarak saklayabilirsiniz.
+- “Satıcı alanı” ile otomatik stok kodlu yeni ürün ve varyant ekleyebilir, ürünü
+  hemen vitrinde yayınlayabilir veya taslak olarak saklayabilir; mevcut ürünleri
+  yayınlayabilir, satıştan kaldırabilir ve geçmiş siparişleri bozmadan silebilirsiniz.
 
 Katalogda yalnızca `ACTIVE` durumundaki ürünler müşteriye gösterilir. Uygulama
 açılırken katalog verisi arama indeksine yeniden yazılır; bu nedenle yerel

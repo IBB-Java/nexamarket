@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="/store-extra.css">
 </head>
 <body>
-<div class="announcement">1500 TL üzeri ücretsiz teslimat · 14 gün kolay iade · Güvenli alışveriş</div>
+<div class="announcement"><span><b>✦</b> 1500 TL üzeri ücretsiz teslimat</span><i></i><span>14 gün kolay iade</span><i></i><span>Güvenli alışveriş</span></div>
 
 <header class="site-header">
     <a class="brand" href="#home" aria-label="NexaMarket ana sayfa">
@@ -24,7 +24,16 @@
         <button class="nav-link" data-open-seller>Ürün sat</button>
     </nav>
     <div class="header-actions">
-        <button class="text-button" id="authButton">Giriş yap</button>
+        <button class="favorite-header-button" id="favoritesButton" aria-label="Favorileri göster" aria-pressed="false">♡ <b id="favoriteCount">0</b></button>
+        <div class="account-shell">
+            <button class="account-button" id="authButton" aria-expanded="false"><span class="account-avatar">◦</span><span id="authButtonLabel">Giriş yap</span><span class="chevron">⌄</span></button>
+            <div class="account-menu" id="accountMenu" hidden>
+                <div class="account-menu-user"><span class="account-avatar">◦</span><div><b id="menuUserName">NexaMarketli</b><small id="menuUserEmail">Hesabına giriş yap</small></div></div>
+                <button id="accountOverviewButton"><span>◎</span> Hesap özeti</button>
+                <button data-open-seller><span>◇</span> Satıcı alanı</button>
+                <button class="menu-logout" id="headerLogoutButton"><span>↗</span> Güvenli çıkış</button>
+            </div>
+        </div>
         <button class="cart-button" id="cartButton" aria-label="Sepeti aç">
             <span class="cart-icon">⌑</span> Sepetim <b id="cartCount">0</b>
         </button>
@@ -34,21 +43,21 @@
 <main id="home">
     <section class="hero">
         <div class="hero-copy">
-            <p class="eyebrow">YENİ SEZON, YENİ KEŞİFLER</p>
-            <h1>Gününe iyi gelen<br><em>küçük</em> seçimler.</h1>
-            <p class="hero-text">Sevdiğin markaları, özgün tasarımları ve günlük hayatını kolaylaştıran ürünleri tek yerde keşfet.</p>
+            <p class="eyebrow">SEÇİLMİŞ ÜRÜNLER · GÜVENLİ ALIŞVERİŞ</p>
+            <h1>Sıradan değil,<br><em>tam sana göre.</em></h1>
+            <p class="hero-text">Bağımsız satıcılardan özgün tasarımlar, günlük hayatı güzelleştiren ürünler ve zahmetsiz bir alışveriş deneyimi.</p>
             <div class="hero-actions">
-                <a class="primary-button" href="#discover">Alışverişe başla <span>→</span></a>
-                <button class="secondary-button" id="seedButton">Mağazayı keşfe hazırla</button>
+                <a class="primary-button" href="#discover">Koleksiyonu keşfet <span>→</span></a>
+                <button class="secondary-button" data-open-seller>Mağazanı aç</button>
             </div>
-            <p class="helper-text" id="seedHint">Yeni ürünler ve ilham veren seçimler seni bekliyor.</p>
+            <div class="hero-proof"><span><b>✓</b> Güvenli ödeme</span><span><b>✓</b> Kolay iade</span><span><b>✓</b> Gerçek stok</span></div>
         </div>
         <div class="hero-art" aria-hidden="true">
             <div class="orb orb-one"></div>
             <div class="orb orb-two"></div>
             <div class="product-scene">
                 <div class="scene-card card-top"><span>✦</span><b>Özenle seçildi</b><small>Senin için keşfedildi</small></div>
-                <div class="scene-product"><span class="scene-emoji">⌁</span><small>GÜNLÜK SEÇKİ</small><strong>Yeni favorilerin</strong></div>
+                <div class="scene-product"><span class="scene-emoji">⌁</span><small>EDİTÖRÜN SEÇİMİ</small><strong>Yeni favorilerin</strong><em>Keşfetmeye hazır</em></div>
                 <div class="scene-card card-bottom"><span>✓</span><b>İçin rahat olsun</b><small>Güvenli alışveriş</small></div>
             </div>
         </div>
@@ -70,15 +79,14 @@
         </div>
         <div class="catalog-controls">
             <label class="search-box"><span>⌕</span><input id="searchInput" type="search" placeholder="Ürün ara"></label>
-            <div class="category-pills" role="group" aria-label="Kategori filtreleri">
-                <button class="pill active" data-category="all">Tümü</button>
-                <button class="pill" data-category="Teknoloji">Teknoloji</button>
-                <button class="pill" data-category="Yaşam">Yaşam</button>
-                <button class="pill" data-category="Ev">Ev</button>
+            <div class="catalog-actions">
+                <div class="category-pills" id="categoryPills" role="group" aria-label="Kategori filtreleri"><button class="pill active" data-category="all">Tümü</button></div>
+                <label class="sort-control"><span>Sırala</span><select id="sortSelect"><option value="featured">Öne çıkanlar</option><option value="price-asc">Fiyat: Artan</option><option value="price-desc">Fiyat: Azalan</option><option value="name">Ürün adı</option></select></label>
             </div>
         </div>
         <div class="catalog-meta"><span id="productCount">Katalog yükleniyor…</span><button id="refreshButton">↻ Yenile</button></div>
         <div class="product-grid" id="productGrid" aria-live="polite"></div>
+        <div class="empty-catalog search-empty" id="searchEmpty" hidden><div class="empty-icon">⌕</div><h3>Aramana uygun ürün bulamadık</h3><p>Farklı bir kelime veya kategori deneyebilirsin.</p><button class="secondary-button" id="clearFiltersButton">Filtreleri temizle</button></div>
         <div class="empty-catalog" id="emptyCatalog" hidden>
             <div class="empty-icon">◌</div>
             <h3>Keşfetmeye başlamak ister misin?</h3>
@@ -121,21 +129,50 @@
     <div class="modal-header"><p class="eyebrow">HESABIM</p><h2 id="accountName">Merhaba</h2><p>Alışverişlerin ve kazandığın avantajlar burada.</p></div>
     <div class="account-stats"><div><span>✦</span><p><b id="loyaltyPoints">0</b> puan</p><small>Sadakat bakiyen</small></div><div><span>◌</span><p><b id="orderCount">0</b> sipariş</p><small>Son alışverişlerin</small></div></div>
     <div class="recent-orders"><p class="payment-label">Son siparişlerin</p><div id="recentOrders"><span>Henüz bir siparişin yok.</span></div></div>
-    <button class="secondary-button full" id="logoutButton">Çıkış yap</button>
+    <button class="secondary-button full logout-emphasis" id="logoutButton">Güvenli çıkış yap <span>↗</span></button>
 </dialog>
 
 <dialog class="modal seller-modal" id="sellerModal">
     <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
-    <div class="modal-header"><p class="eyebrow">SATICI ALANI</p><h2>Vitrine yeni ürün ekle</h2><p>Ürününün bilgilerini gir, alışverişe hazır hâle getirelim.</p></div>
-    <form id="sellerForm" class="seller-form">
-        <div class="form-row"><label>Ürün adı<input id="sellerProductName" required placeholder="Örn. Seramik Kahve Fincanı"></label><label>Kategori<input id="sellerCategory" required value="Yaşam" placeholder="Örn. Yaşam"></label></div>
-        <div class="form-row"><label>Fiyat (₺)<input id="sellerPrice" type="number" min="1" step="0.01" required value="249.90"></label><label>Stok<input id="sellerStock" type="number" min="0" required value="12"></label></div>
-        <div class="form-row"><label>SKU<input id="sellerSku" required value="NEXA-001"></label></div>
-        <label>Açıklama<textarea id="sellerDescription" rows="3" placeholder="Ürünün kısa ve çekici açıklaması"></textarea></label>
-        <label class="publish-option"><input id="sellerPublish" type="checkbox" checked><span><b>Ürünü hemen vitrine çıkar</b><small>Kapalı bırakırsan ürün taslak olarak kalır ve yalnızca senin yayınlamanı bekler.</small></span></label>
-        <button class="primary-button full" type="submit">Ürünü mağazaya ekle <span>→</span></button>
-    </form>
-    <p class="form-message" id="sellerMessage"></p>
+    <div class="modal-header"><p class="eyebrow">SATICI STÜDYOSU</p><h2>Mağazanı tek yerden yönet</h2><p>Yeni ürün ekle, taslaklarını yayınla veya satıştan kaldır.</p></div>
+    <div class="seller-workspace">
+        <section class="seller-create-panel">
+            <div class="panel-title"><span>01</span><div><b>Yeni ürün</b><small>Vitrinine yeni bir seçim ekle</small></div></div>
+            <form id="sellerForm" class="seller-form">
+                <div class="form-row"><label>Ürün adı<input id="sellerProductName" required maxlength="255" placeholder="Örn. Seramik Kahve Fincanı"></label><label>Kategori<input id="sellerCategory" required value="Yaşam" maxlength="60" placeholder="Örn. Yaşam"></label></div>
+                <div class="form-row"><label>Fiyat (₺)<input id="sellerPrice" type="number" min="1" step="0.01" required value="249.90"></label><label>Stok adedi<input id="sellerStock" type="number" min="0" max="100000" required value="12"></label></div>
+                <div class="form-row"><label>Stok kodu <small>(isteğe bağlı)</small><input id="sellerSku" maxlength="80" placeholder="Boş bırakırsan otomatik oluşur"></label></div>
+                <label>Açıklama<textarea id="sellerDescription" rows="3" maxlength="1000" placeholder="Ürünün malzemesini, kullanımını ve öne çıkan yönünü anlat"></textarea></label>
+                <label class="publish-option"><input id="sellerPublish" type="checkbox" checked><span><b>Ürünü hemen vitrine çıkar</b><small>Kapalı bırakırsan ürün taslak olarak kaydedilir.</small></span></label>
+                <button class="primary-button full" type="submit" id="sellerSubmitButton">Ürünü kaydet <span>→</span></button>
+            </form>
+            <p class="form-message" id="sellerMessage"></p>
+        </section>
+        <section class="seller-inventory-panel">
+            <div class="panel-title inventory-title"><span>02</span><div><b>Ürünlerin</b><small>Yayın durumunu ve ürünlerini yönet</small></div><button id="refreshSellerButton" aria-label="Ürünleri yenile">↻</button></div>
+            <div class="seller-inventory" id="sellerInventory"><div class="inventory-loading">Ürünlerin hazırlanıyor…</div></div>
+        </section>
+    </div>
+</dialog>
+
+<dialog class="modal product-modal" id="productModal">
+    <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
+    <div class="product-detail-layout">
+        <div class="detail-art" id="detailArt"><span id="detailEmoji">✦</span><small id="detailCategory">SEÇKİ</small></div>
+        <div class="detail-copy">
+            <p class="eyebrow">ÖZENLE SEÇİLDİ</p><h2 id="detailName">Ürün</h2>
+            <p class="detail-description" id="detailDescription"></p>
+            <div class="detail-notes"><span>✓ Güvenli ödeme</span><span>↗ 14 gün kolay iade</span></div>
+            <div class="detail-stock" id="detailStock"></div>
+            <div class="detail-buy"><strong id="detailPrice">₺0,00</strong><button class="primary-button" id="detailAddButton">Sepete ekle <span>→</span></button></div>
+            <button class="detail-favorite" id="detailFavoriteButton">♡ Favorilerime ekle</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="modal confirm-modal" id="confirmModal">
+    <div class="confirm-icon">!</div><h2 id="confirmTitle">Emin misin?</h2><p id="confirmText"></p>
+    <div class="confirm-actions"><button class="secondary-button" id="confirmCancelButton">Vazgeç</button><button class="danger-button" id="confirmActionButton">Sil</button></div>
 </dialog>
 
 <dialog class="modal checkout-modal" id="checkoutModal">

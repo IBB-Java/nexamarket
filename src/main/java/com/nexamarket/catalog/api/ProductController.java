@@ -13,12 +13,14 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -65,6 +67,14 @@ public class ProductController {
         return catalogService.getProduct(productId);
     }
 
+    @GetMapping("/seller")
+    @PreAuthorize("hasRole('SELLER')")
+    public java.util.List<ProductResponse> listSellerProducts(
+            @AuthenticationPrincipal AuthPrincipal principal
+    ) {
+        return catalogService.listSellerProducts(principal.userId());
+    }
+
     @PatchMapping("/{productId}")
     @PreAuthorize("hasRole('SELLER')")
     public ProductResponse update(
@@ -83,5 +93,15 @@ public class ProductController {
             @Valid @RequestBody ChangeProductPublicationRequest request
     ) {
         return catalogService.changePublication(productId, principal.userId(), request);
+    }
+
+    @DeleteMapping("/{productId}")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<Void> delete(
+            @PathVariable @Positive Long productId,
+            @AuthenticationPrincipal AuthPrincipal principal
+    ) {
+        catalogService.deleteProduct(productId, principal.userId());
+        return ResponseEntity.noContent().build();
     }
 }
