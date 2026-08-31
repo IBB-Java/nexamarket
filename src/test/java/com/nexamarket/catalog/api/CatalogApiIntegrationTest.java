@@ -117,23 +117,23 @@ class CatalogApiIntegrationTest {
     @Test
     void sellerCanListAndSoftDeleteItsProducts() throws Exception {
         long categoryId = createCategory("Silme Akışı");
-        JsonNode product = objectMapper.readTree(createProduct(categoryId, 54321, "Silinecek Ürün", "SIL-001"));
+        JsonNode product = objectMapper.readTree(createProduct(categoryId, "Silinecek Ürün", "SIL-001"));
         long productId = product.get("id").asLong();
 
         mockMvc.perform(get("/api/v1/products/seller")
-                        .header("X-Seller-Id", 54321))
+                        .header("Authorization", "Bearer " + sellerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(productId))
                 .andExpect(jsonPath("$[0].status").value("DRAFT"));
 
         mockMvc.perform(delete("/api/v1/products/{productId}", productId)
-                        .header("X-Seller-Id", 54321))
+                        .header("Authorization", "Bearer " + sellerToken))
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/v1/products/{productId}", productId))
                 .andExpect(status().isNotFound());
         mockMvc.perform(get("/api/v1/products/seller")
-                        .header("X-Seller-Id", 54321))
+                        .header("Authorization", "Bearer " + sellerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }
