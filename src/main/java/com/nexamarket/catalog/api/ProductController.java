@@ -2,6 +2,7 @@ package com.nexamarket.catalog.api;
 
 import com.nexamarket.catalog.application.CatalogService;
 import com.nexamarket.catalog.application.ProductSearchService;
+import com.nexamarket.auth.security.AuthPrincipal;
 import com.nexamarket.catalog.search.ProductSearchCriteria;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
@@ -17,10 +18,11 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.net.URI;
 import java.math.BigDecimal;
@@ -49,11 +51,12 @@ public class ProductController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('SELLER')")
     public ResponseEntity<ProductResponse> create(
-            @RequestHeader("X-Seller-Id") @Positive Long sellerId,
+            @AuthenticationPrincipal AuthPrincipal principal,
             @Valid @RequestBody CreateProductRequest request
     ) {
-        ProductResponse response = catalogService.createProduct(sellerId, request);
+        ProductResponse response = catalogService.createProduct(principal.userId(), request);
         return ResponseEntity.created(URI.create("/api/v1/products/" + response.id())).body(response);
     }
 
@@ -63,20 +66,22 @@ public class ProductController {
     }
 
     @PatchMapping("/{productId}")
+    @PreAuthorize("hasRole('SELLER')")
     public ProductResponse update(
             @PathVariable @Positive Long productId,
-            @RequestHeader("X-Seller-Id") @Positive Long sellerId,
+            @AuthenticationPrincipal AuthPrincipal principal,
             @Valid @RequestBody UpdateProductRequest request
     ) {
-        return catalogService.updateProduct(productId, sellerId, request);
+        return catalogService.updateProduct(productId, principal.userId(), request);
     }
 
     @PatchMapping("/{productId}/publication")
+    @PreAuthorize("hasRole('SELLER')")
     public ProductResponse changePublication(
             @PathVariable @Positive Long productId,
-            @RequestHeader("X-Seller-Id") @Positive Long sellerId,
+            @AuthenticationPrincipal AuthPrincipal principal,
             @Valid @RequestBody ChangeProductPublicationRequest request
     ) {
-        return catalogService.changePublication(productId, sellerId, request);
+        return catalogService.changePublication(productId, principal.userId(), request);
     }
 }

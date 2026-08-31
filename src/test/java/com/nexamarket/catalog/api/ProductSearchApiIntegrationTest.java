@@ -8,12 +8,17 @@ import com.nexamarket.catalog.entity.ProductStatus;
 import com.nexamarket.catalog.repository.ProductRepository;
 import com.nexamarket.catalog.search.ProductSearchDocument;
 import com.nexamarket.catalog.search.ProductSearchGateway;
+import com.nexamarket.auth.entity.UserAccount;
+import com.nexamarket.auth.entity.UserRole;
+import com.nexamarket.auth.entity.UserStatus;
+import com.nexamarket.auth.repository.UserAccountRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -46,8 +51,19 @@ class ProductSearchApiIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private UserAccountRepository userAccountRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    private String adminToken;
+    private String sellerToken;
+
     @BeforeEach
-    void indexFixtures() {
+    void indexFixtures() throws Exception {
+        adminToken = createUserAndLogin("admin-search-" + System.nanoTime() + "@nexamarket.test", UserRole.ADMIN);
+        sellerToken = createUserAndLogin("seller-search-" + System.nanoTime() + "@nexamarket.test", UserRole.SELLER);
         searchGateway.index(document(
                 "9001", "Kablosuz Kulaklık", "Bluetooth ve ANC",
                 ProductStatus.ACTIVE, List.of(501L), List.of("Elektronik"), 100.0, 150.0, 4.7));
@@ -107,7 +123,7 @@ class ProductSearchApiIntegrationTest {
         productIndexingService.index(productId);
 
         mockMvc.perform(patch("/api/v1/products/{productId}", productId)
-                        .header("X-Seller-Id", 701)
+                        .header("Authorization", "Bearer " + sellerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -144,6 +160,7 @@ class ProductSearchApiIntegrationTest {
 
     private long createCategory(String name) throws Exception {
         String response = mockMvc.perform(post("/api/v1/categories")
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"" + name + "\"}"))
                 .andExpect(status().isCreated())
@@ -153,7 +170,7 @@ class ProductSearchApiIntegrationTest {
 
     private JsonNode createProduct(long categoryId) throws Exception {
         String response = mockMvc.perform(post("/api/v1/products")
-                        .header("X-Seller-Id", 701)
+                        .header("Authorization", "Bearer " + sellerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -169,6 +186,21 @@ class ProductSearchApiIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(response);
+    }
+
+    private String createUserAndLogin(String email, UserRole role) throws Exception {
+        userAccountRepository.save(UserAccount.builder()
+                .email(email)
+                .passwordHash(passwordEncoder.encode("StrongPass!2026"))
+                .role(role)
+                .status(UserStatus.ACTIVE)
+                .build());
+        String response = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPass!2026\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(response).get("accessToken").asText();
     }
 
     private ProductSearchDocument document(

@@ -211,6 +211,23 @@ function updateAuthUI() {
     $("#authButton").textContent = state.token ? `${state.user?.email?.split("@")[0] || "Hesabım"} · Hesabım` : "Giriş yap";
 }
 
+function requireSeller() {
+    if (!state.token) {
+        openModal("authModal");
+        $("#authMessage").textContent = "Ürün eklemek için önce giriş yapmalısın.";
+        return false;
+    }
+    if (state.user?.role !== "SELLER") {
+        toast("Ürün eklemek için yöneticinin hesabına SELLER rolü vermesi gerekir. Rol değişikliğinden sonra tekrar giriş yap.");
+        return false;
+    }
+    return true;
+}
+
+function openSellerArea() {
+    if (requireSeller()) openModal("sellerModal");
+}
+
 async function openAccount() {
     if (!state.token) return openModal("authModal");
     $("#accountName").textContent = `Merhaba, ${state.user?.email?.split("@")[0] || "NexaMarketli"}`;
@@ -251,22 +268,20 @@ async function submitAuth(event) {
 }
 
 async function ensureCategory(name) {
-    const categories = await api("/api/v1/categories", {headers: {Authorization: ""}});
+    const categories = await api("/api/v1/categories");
     const existing = categories.find(category => category.name.toLocaleLowerCase("tr") === name.toLocaleLowerCase("tr"));
     if (existing) return existing.id;
-    const created = await api("/api/v1/categories", {method: "POST", headers: {Authorization: ""}, body: JSON.stringify({name, description: `${name} seçkisi`, parentCategoryId: null})});
-    return created.id;
+    throw new Error(`“${name}” kategorisi bulunamadı. Bu kategorinin önce yönetici tarafından oluşturulması gerekir.`);
 }
 
 async function createProduct(payload, silent = false) {
     const categoryId = await ensureCategory(payload.category);
-    const sellerHeaders = {"X-Seller-Id": String(payload.sellerId || 1), Authorization: ""};
-    let product = await api("/api/v1/products", {method: "POST", headers: sellerHeaders, body: JSON.stringify({
+    let product = await api("/api/v1/products", {method: "POST", body: JSON.stringify({
         name: payload.name, description: payload.description, basePrice: payload.price, categoryIds: [categoryId], variants: [{sku: payload.sku, attributes: {"Seçenek": "Standart"}, price: payload.price, stockQuantity: payload.stock}]
     })});
     if (payload.publish !== false) {
         product = await api(`/api/v1/products/${product.id}/publication`, {
-            method: "PATCH", headers: sellerHeaders, body: JSON.stringify({status: "ACTIVE"})
+            method: "PATCH", body: JSON.stringify({status: "ACTIVE"})
         });
     }
     const normalised = normaliseProduct(product);
@@ -277,11 +292,12 @@ async function createProduct(payload, silent = false) {
 }
 
 async function seedCatalog() {
+    if (!requireSeller()) return;
     const button = $("#seedButton"); button.disabled = true; button.textContent = "Mağaza hazırlanıyor…";
     $("#emptySeedButton").disabled = true;
     try {
         for (const product of demoProducts) {
-            try { await createProduct({...product, sellerId: 1}, true); } catch (error) {
+            try { await createProduct(product, true); } catch (error) {
                 if (!error.message.includes("SKU zaten")) throw error;
             }
         }
@@ -293,7 +309,8 @@ async function seedCatalog() {
 async function submitSeller(event) {
     event.preventDefault(); const message = $("#sellerMessage"); message.textContent = "Ürün ekleniyor…";
     try {
-        const product = await createProduct({name: $("#sellerProductName").value.trim(), category: $("#sellerCategory").value.trim(), price: Number($("#sellerPrice").value), stock: Number($("#sellerStock").value), sku: $("#sellerSku").value.trim(), sellerId: Number($("#sellerId").value), description: $("#sellerDescription").value.trim() || "NexaMarket satıcısından yeni ürün.", publish: $("#sellerPublish").checked});
+        if (!requireSeller()) return;
+        const product = await createProduct({name: $("#sellerProductName").value.trim(), category: $("#sellerCategory").value.trim(), price: Number($("#sellerPrice").value), stock: Number($("#sellerStock").value), sku: $("#sellerSku").value.trim(), description: $("#sellerDescription").value.trim() || "NexaMarket satıcısından yeni ürün.", publish: $("#sellerPublish").checked});
         message.textContent = ""; closeModals(); toast(`${product.name} mağazaya eklendi.`);
     } catch (error) { message.textContent = error.message; }
 }
@@ -321,7 +338,7 @@ async function pay() {
 
 function initEvents() {
     $("#cartButton").addEventListener("click", openCart); $$('[data-close-cart]').forEach(button => button.addEventListener("click", closeCart)); $("#overlay").addEventListener("click", closeCart);
-    $$('[data-open-seller]').forEach(button => button.addEventListener("click", () => openModal("sellerModal")));
+    $$('[data-open-seller]').forEach(button => button.addEventListener("click", openSellerArea));
     $$('[data-close-modal]').forEach(button => button.addEventListener("click", closeModals));
     $("#authButton").addEventListener("click", openAccount); $("#logoutButton").addEventListener("click", logout);
     $$("[data-auth-tab]").forEach(button => button.addEventListener("click", () => setAuthMode(button.dataset.authTab)));

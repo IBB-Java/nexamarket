@@ -1,6 +1,7 @@
 package com.nexamarket.catalog.api;
 
 import com.nexamarket.catalog.application.ProductImageService;
+import com.nexamarket.auth.security.AuthPrincipal;
 import com.nexamarket.catalog.storage.StoredObject;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.net.URI;
 
@@ -29,11 +32,13 @@ public class ProductImageController {
     private final ProductImageService productImageService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('SELLER')")
     public ResponseEntity<ProductImageResponse> upload(
             @PathVariable @Positive Long productId,
+            @AuthenticationPrincipal AuthPrincipal principal,
             @RequestParam("file") MultipartFile file
     ) {
-        ProductImageResponse response = productImageService.upload(productId, file);
+        ProductImageResponse response = productImageService.upload(productId, principal.userId(), file);
         URI location = URI.create("/api/v1/products/" + productId + "/images/" + response.id());
         return ResponseEntity.accepted().location(location).body(response);
     }

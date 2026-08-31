@@ -1,6 +1,10 @@
 package com.nexamarket.catalog.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nexamarket.auth.entity.UserAccount;
+import com.nexamarket.auth.entity.UserRole;
+import com.nexamarket.auth.entity.UserStatus;
+import com.nexamarket.auth.repository.UserAccountRepository;
 import com.nexamarket.catalog.entity.Product;
 import com.nexamarket.catalog.entity.ProductImage;
 import com.nexamarket.catalog.entity.ProductImageStatus;
@@ -8,11 +12,13 @@ import com.nexamarket.catalog.entity.ProductStatus;
 import com.nexamarket.catalog.repository.ProductImageRepository;
 import com.nexamarket.catalog.repository.ProductRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -48,6 +54,33 @@ class ProductImageApiIntegrationTest {
     @Autowired
     private ProductImageRepository productImageRepository;
 
+    @Autowired
+    private UserAccountRepository userAccountRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    private String sellerToken;
+    private long sellerId;
+
+    @BeforeEach
+    void setUpSeller() throws Exception {
+        String email = "seller-image-" + System.nanoTime() + "@nexamarket.test";
+        UserAccount seller = userAccountRepository.save(UserAccount.builder()
+                .email(email)
+                .passwordHash(passwordEncoder.encode("StrongPass!2026"))
+                .role(UserRole.SELLER)
+                .status(UserStatus.ACTIVE)
+                .build());
+        sellerId = seller.getId();
+        String response = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPass!2026\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        sellerToken = objectMapper.readTree(response).get("accessToken").asText();
+    }
+
     @Test
     void uploadsOriginalAndGeneratesThumbnailAsynchronously() throws Exception {
         Product product = createProduct("Görselli Ürün");
@@ -55,7 +88,8 @@ class ProductImageApiIntegrationTest {
                 "file", "product.png", MediaType.IMAGE_PNG_VALUE, createPng(640, 320));
 
         String response = mockMvc.perform(multipart("/api/v1/products/{productId}/images", product.getId())
-                        .file(file))
+                        .file(file)
+                        .header("Authorization", "Bearer " + sellerToken))
                 .andExpect(status().isAccepted())
                 .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.status").value("PENDING_THUMBNAIL"))
@@ -82,7 +116,8 @@ class ProductImageApiIntegrationTest {
                 "file", "fake.png", MediaType.IMAGE_PNG_VALUE, "not-an-image".getBytes());
 
         String response = mockMvc.perform(multipart("/api/v1/products/{productId}/images", product.getId())
-                        .file(file))
+                        .file(file)
+                        .header("Authorization", "Bearer " + sellerToken))
                 .andExpect(status().isAccepted())
                 .andReturn().getResponse().getContentAsString();
 
@@ -99,14 +134,15 @@ class ProductImageApiIntegrationTest {
                 "file", "notes.txt", MediaType.TEXT_PLAIN_VALUE, "hello".getBytes());
 
         mockMvc.perform(multipart("/api/v1/products/{productId}/images", product.getId())
-                        .file(file))
+                        .file(file)
+                        .header("Authorization", "Bearer " + sellerToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Geçersiz ürün görseli"));
     }
 
     private Product createProduct(String name) {
         return productRepository.save(Product.builder()
-                .sellerId(77L)
+                .sellerId(sellerId)
                 .name(name)
                 .basePrice(new BigDecimal("100.00"))
                 .status(ProductStatus.ACTIVE)

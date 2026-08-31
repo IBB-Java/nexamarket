@@ -9,6 +9,7 @@ import com.nexamarket.users.api.MyProfileResponse;
 import com.nexamarket.users.api.ReviewSellerProfileRequest;
 import com.nexamarket.users.api.SellerProfileResponse;
 import com.nexamarket.users.api.UpdateMyProfileRequest;
+import com.nexamarket.users.api.UpdateUserRoleRequest;
 import com.nexamarket.users.api.UpdateSellerProfileRequest;
 import com.nexamarket.users.api.UpdateUserStatusRequest;
 import com.nexamarket.users.entity.SellerProfile;
@@ -142,6 +143,17 @@ public class UsersService {
             user.setFailedLoginAttempts(0);
             user.setLockedUntil(null);
         }
+        return MyProfileResponse.from(user, userProfileRepository.findByUserId(userId).orElse(null));
+    }
+
+    @Transactional
+    public MyProfileResponse promoteCustomerToSeller(Long userId, UpdateUserRoleRequest request) {
+        UserAccount user = userAccountRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+        if (request.role() != UserRole.SELLER || user.getRole() != UserRole.CUSTOMER) {
+            throw new InvalidUserRoleChangeException();
+        }
+        user.setRole(UserRole.SELLER);
         return MyProfileResponse.from(user, userProfileRepository.findByUserId(userId).orElse(null));
     }
 

@@ -33,10 +33,13 @@ public class ProductImageService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public ProductImageResponse upload(Long productId, MultipartFile file) {
+    public ProductImageResponse upload(Long productId, Long sellerId, MultipartFile file) {
         validate(file);
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new CatalogNotFoundException("Ürün bulunamadı: " + productId));
+        if (!product.getSellerId().equals(sellerId)) {
+            throw new CatalogNotFoundException("Satıcıya ait ürün bulunamadı: " + productId);
+        }
 
         String contentType = file.getContentType().toLowerCase(Locale.ROOT);
         String extension = contentType.equals(MediaTypes.PNG) ? "png" : "jpg";

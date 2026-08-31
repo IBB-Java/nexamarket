@@ -1,6 +1,7 @@
 package com.nexamarket.users.api;
 
 import com.nexamarket.users.application.InvalidSellerReviewException;
+import com.nexamarket.users.application.InvalidUserRoleChangeException;
 import com.nexamarket.users.application.InvalidUserStatusChangeException;
 import com.nexamarket.users.application.SellerAccessDeniedException;
 import com.nexamarket.users.application.SellerProfileConflictException;
@@ -40,6 +41,11 @@ public class UsersExceptionHandler {
     @ExceptionHandler(InvalidUserStatusChangeException.class)
     ProblemDetail invalidUserStatus(InvalidUserStatusChangeException exception) {
         return problem(HttpStatus.BAD_REQUEST, "Geçersiz kullanıcı durumu", exception.getMessage());
+    }
+
+    @ExceptionHandler(InvalidUserRoleChangeException.class)
+    ProblemDetail invalidUserRole(InvalidUserRoleChangeException exception) {
+        return problem(HttpStatus.BAD_REQUEST, "Geçersiz kullanıcı rolü", exception.getMessage());
     }
 
     private ProblemDetail problem(HttpStatus status, String title, String message) {

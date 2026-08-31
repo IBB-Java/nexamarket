@@ -2,11 +2,17 @@ package com.nexamarket.catalog.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nexamarket.auth.entity.UserAccount;
+import com.nexamarket.auth.entity.UserRole;
+import com.nexamarket.auth.entity.UserStatus;
+import com.nexamarket.auth.repository.UserAccountRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -27,6 +33,26 @@ class CatalogApiIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private UserAccountRepository userAccountRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    private String adminToken;
+    private String sellerToken;
+    private String otherSellerToken;
+    private long sellerId;
+
+    @BeforeEach
+    void setUpUsers() throws Exception {
+        adminToken = createUserAndLogin("admin-catalog-" + System.nanoTime() + "@nexamarket.test", UserRole.ADMIN);
+        String sellerEmail = "seller-catalog-" + System.nanoTime() + "@nexamarket.test";
+        sellerToken = createUserAndLogin(sellerEmail, UserRole.SELLER);
+        sellerId = userAccountRepository.findByEmailIgnoreCase(sellerEmail).orElseThrow().getId();
+        otherSellerToken = createUserAndLogin("other-seller-catalog-" + System.nanoTime() + "@nexamarket.test", UserRole.SELLER);
+    }
 
     @Test
     void createsCategoryAndSellerProduct() throws Exception {
@@ -50,12 +76,12 @@ class CatalogApiIntegrationTest {
                 """.formatted(categoryId);
 
         String response = mockMvc.perform(post("/api/v1/products")
-                        .header("X-Seller-Id", 42)
+                        .header("Authorization", "Bearer " + sellerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(productJson))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", org.hamcrest.Matchers.matchesPattern("/api/v1/products/\\d+")))
-                .andExpect(jsonPath("$.sellerId").value(42))
+                .andExpect(jsonPath("$.sellerId").value(sellerId))
                 .andExpect(jsonPath("$.status").value("DRAFT"))
                 .andExpect(jsonPath("$.categories[0].name").value("Elektronik"))
                 .andExpect(jsonPath("$.variants[0].sku").value("KULAKLIK-SIYAH"))
@@ -71,17 +97,17 @@ class CatalogApiIntegrationTest {
     @Test
     void sellerCanPublishItsDraftProduct() throws Exception {
         long categoryId = createCategory("Yayın Akışı");
-        JsonNode product = objectMapper.readTree(createProduct(categoryId, 42, "Yayına Hazır Ürün", "YAYIN-001"));
+        JsonNode product = objectMapper.readTree(createProduct(categoryId, "Yayına Hazır Ürün", "YAYIN-001"));
 
         mockMvc.perform(patch("/api/v1/products/{productId}/publication", product.get("id").asLong())
-                        .header("X-Seller-Id", 42)
+                        .header("Authorization", "Bearer " + sellerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"ACTIVE\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
 
         mockMvc.perform(patch("/api/v1/products/{productId}/publication", product.get("id").asLong())
-                        .header("X-Seller-Id", 99)
+                        .header("Authorization", "Bearer " + otherSellerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"PASSIVE\"}"))
                 .andExpect(status().isNotFound());
@@ -100,12 +126,31 @@ class CatalogApiIntegrationTest {
                 """.formatted(categoryId);
 
         mockMvc.perform(post("/api/v1/products")
-                        .header("X-Seller-Id", 42)
+                        .header("Authorization", "Bearer " + sellerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(productJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Doğrulama hatası"))
                 .andExpect(jsonPath("$.errors.variants").exists());
+    }
+
+    @Test
+    void customerCannotCreateProductEvenWhenItKnowsTheEndpoint() throws Exception {
+        long categoryId = createCategory("Müşteri Yetkisi");
+        String customerToken = createUserAndLogin("customer-catalog-" + System.nanoTime() + "@nexamarket.test", UserRole.CUSTOMER);
+
+        mockMvc.perform(post("/api/v1/products")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Yetkisiz Ürün",
+                                  "basePrice": 100.00,
+                                  "categoryIds": [%d],
+                                  "variants": [{"sku": "YETKISIZ-001", "attributes": {}, "price": 100.00, "stockQuantity": 1}]
+                                }
+                                """.formatted(categoryId)))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -124,7 +169,7 @@ class CatalogApiIntegrationTest {
                 """.formatted(categoryId);
 
         mockMvc.perform(post("/api/v1/products")
-                        .header("X-Seller-Id", 42)
+                        .header("Authorization", "Bearer " + sellerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(productJson))
                 .andExpect(status().isConflict())
@@ -134,7 +179,7 @@ class CatalogApiIntegrationTest {
     @Test
     void updatesDescriptionPriceAndVariantStockForOwningSeller() throws Exception {
         long categoryId = createCategory("Güncellenecek Ürünler");
-        String created = createProduct(categoryId, 42, "Güncel Ürün", "GUNCEL-1");
+        String created = createProduct(categoryId, "Güncel Ürün", "GUNCEL-1");
         JsonNode createdJson = objectMapper.readTree(created);
         long productId = createdJson.get("id").asLong();
         long variantId = createdJson.get("variants").get(0).get("id").asLong();
@@ -150,7 +195,7 @@ class CatalogApiIntegrationTest {
                 """.formatted(variantId);
 
         mockMvc.perform(patch("/api/v1/products/{productId}", productId)
-                        .header("X-Seller-Id", 42)
+                        .header("Authorization", "Bearer " + sellerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateJson))
                 .andExpect(status().isOk())
@@ -168,10 +213,10 @@ class CatalogApiIntegrationTest {
     @Test
     void hidesProductFromAnotherSellerDuringUpdate() throws Exception {
         long categoryId = createCategory("Satıcı İzolasyonu");
-        JsonNode product = objectMapper.readTree(createProduct(categoryId, 42, "Özel Ürün", "OZEL-1"));
+        JsonNode product = objectMapper.readTree(createProduct(categoryId, "Özel Ürün", "OZEL-1"));
 
         mockMvc.perform(patch("/api/v1/products/{productId}", product.get("id").asLong())
-                        .header("X-Seller-Id", 99)
+                        .header("Authorization", "Bearer " + otherSellerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"description\":\"Yetkisiz değişiklik\"}"))
                 .andExpect(status().isNotFound())
@@ -180,6 +225,7 @@ class CatalogApiIntegrationTest {
 
     private long createCategory(String name) throws Exception {
         String response = mockMvc.perform(post("/api/v1/categories")
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"" + name + "\"}"))
                 .andExpect(status().isCreated())
@@ -188,7 +234,7 @@ class CatalogApiIntegrationTest {
         return json.get("id").asLong();
     }
 
-    private String createProduct(long categoryId, long sellerId, String name, String sku) throws Exception {
+    private String createProduct(long categoryId, String name, String sku) throws Exception {
         String productJson = """
                 {
                   "name": "%s",
@@ -201,10 +247,25 @@ class CatalogApiIntegrationTest {
                 }
                 """.formatted(name, categoryId, sku);
         return mockMvc.perform(post("/api/v1/products")
-                        .header("X-Seller-Id", sellerId)
+                        .header("Authorization", "Bearer " + sellerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(productJson))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
+    }
+
+    private String createUserAndLogin(String email, UserRole role) throws Exception {
+        userAccountRepository.save(UserAccount.builder()
+                .email(email)
+                .passwordHash(passwordEncoder.encode("StrongPass!2026"))
+                .role(role)
+                .status(UserStatus.ACTIVE)
+                .build());
+        String response = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPass!2026\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(response).get("accessToken").asText();
     }
 }

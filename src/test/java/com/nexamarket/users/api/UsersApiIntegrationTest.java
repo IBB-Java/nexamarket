@@ -146,6 +146,40 @@ class UsersApiIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void onlyAdminCanPromoteRegisteredCustomerToSeller() throws Exception {
+        String customerEmail = "promote@nexamarket.test";
+        String customerAccess = registerAndLogin(customerEmail, "StrongPass!2026");
+        UserAccount customer = userAccountRepository.findByEmailIgnoreCase(customerEmail).orElseThrow();
+        UserAccount admin = userAccountRepository.save(UserAccount.builder()
+                .email("admin-promote@nexamarket.test")
+                .passwordHash(passwordEncoder.encode("StrongPass!2026"))
+                .role(UserRole.ADMIN)
+                .status(UserStatus.ACTIVE)
+                .build());
+        String adminAccess = login(admin.getEmail(), "StrongPass!2026");
+
+        mockMvc.perform(patch("/api/v1/admin/users/{userId}/role", customer.getId())
+                        .header("Authorization", "Bearer " + customerAccess)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"SELLER\"}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/api/v1/admin/users/{userId}/role", customer.getId())
+                        .header("Authorization", "Bearer " + adminAccess)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"SELLER\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("SELLER"));
+
+        String sellerAccess = login(customerEmail, "StrongPass!2026");
+        mockMvc.perform(post("/api/v1/sellers/me")
+                        .header("Authorization", "Bearer " + sellerAccess)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"storeName\":\"Yükseltilen Mağaza\"}"))
+                .andExpect(status().isCreated());
+    }
+
     private String registerAndLogin(String email, String password) throws Exception {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
