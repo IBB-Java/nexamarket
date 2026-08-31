@@ -13,6 +13,8 @@ public interface SellerProfileRepository extends JpaRepository<SellerProfile, Lo
     @EntityGraph(attributePaths = "user")
     Optional<SellerProfile> findByUserId(Long userId);
 
+    void deleteByUserId(Long userId);
+
     @EntityGraph(attributePaths = "user")
     Optional<SellerProfile> findDetailedById(Long id);
 

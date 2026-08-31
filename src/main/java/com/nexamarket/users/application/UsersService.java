@@ -4,6 +4,7 @@ import com.nexamarket.auth.entity.UserAccount;
 import com.nexamarket.auth.entity.UserRole;
 import com.nexamarket.auth.entity.UserStatus;
 import com.nexamarket.auth.repository.UserAccountRepository;
+import com.nexamarket.auth.repository.RefreshTokenRepository;
 import com.nexamarket.users.api.CreateSellerProfileRequest;
 import com.nexamarket.users.api.MyProfileResponse;
 import com.nexamarket.users.api.ReviewSellerProfileRequest;
@@ -30,6 +31,7 @@ import java.util.Locale;
 public class UsersService {
 
     private final UserAccountRepository userAccountRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final UserProfileRepository userProfileRepository;
     private final SellerProfileRepository sellerProfileRepository;
 
@@ -156,6 +158,22 @@ public class UsersService {
         }
         user.setRole(request.role());
         return MyProfileResponse.from(user, userProfileRepository.findByUserId(userId).orElse(null));
+    }
+
+    @Transactional
+    public void deleteManagedUser(Long userId, Long administratorId) {
+        if (userId.equals(administratorId)) {
+            throw new UserDeletionNotAllowedException("Yönetici kendi hesabını bu panelden silemez");
+        }
+        UserAccount user = userAccountRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+        if (user.getRole() == UserRole.ADMIN) {
+            throw new UserDeletionNotAllowedException("ADMIN rolündeki kullanıcı silinemez");
+        }
+        refreshTokenRepository.deleteByUserId(userId);
+        sellerProfileRepository.deleteByUserId(userId);
+        userProfileRepository.deleteByUserId(userId);
+        userAccountRepository.delete(user);
     }
 
     private UserAccount currentUser(Long userId) {

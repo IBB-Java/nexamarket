@@ -9,6 +9,7 @@ import java.io.Serializable;
 public record ProductSearchItemResponse(
         Long id,
         Long sellerId,
+        String sellerName,
         String name,
         String description,
         List<Long> categoryIds,
@@ -19,10 +20,11 @@ public record ProductSearchItemResponse(
         long totalStock,
         boolean inStock
 ) implements Serializable {
-    public static ProductSearchItemResponse from(ProductSearchDocument document) {
+    public static ProductSearchItemResponse from(ProductSearchDocument document, String sellerName) {
         return new ProductSearchItemResponse(
                 Long.valueOf(document.getId()),
                 document.getSellerId(),
+                sellerName,
                 document.getName(),
                 document.getDescription(),
                 List.copyOf(document.getCategoryIds()),

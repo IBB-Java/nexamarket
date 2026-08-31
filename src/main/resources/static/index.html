@@ -32,6 +32,7 @@
                 <button id="accountOverviewButton"><span>◎</span> Hesap özeti</button>
                 <button data-open-seller><span>◇</span> Satıcı alanı</button>
                 <button id="courierAreaButton" hidden><span>▣</span> Kurye alanı</button>
+                <button id="adminPanelButton" hidden><span>◫</span> Yönetim paneli</button>
                 <button class="menu-logout" id="headerLogoutButton"><span>↗</span> Güvenli çıkış</button>
             </div>
         </div>
@@ -138,6 +139,27 @@
     <div class="modal-header"><p class="eyebrow">KURYE ALANI</p><h2>Teslimatların</h2><p>Sana atanan siparişleri takip et ve kargo durumlarını güncelle.</p></div>
     <div class="courier-toolbar"><span id="courierOrderCount">Siparişler yükleniyor…</span><button id="refreshCourierButton" aria-label="Siparişleri yenile">↻ Yenile</button></div>
     <div class="courier-orders" id="courierOrders"><div class="inventory-loading"><span class="button-spinner"></span>Siparişlerin hazırlanıyor…</div></div>
+</dialog>
+
+<dialog class="modal admin-modal" id="adminModal">
+    <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
+    <div class="modal-header"><p class="eyebrow">YÖNETİM PANELİ</p><h2>Kullanıcı yönetimi</h2><p>Alıcı, satıcı ve kurye hesaplarını tek ekrandan yönet.</p></div>
+    <div class="admin-workspace">
+        <section class="admin-create-panel">
+            <div class="panel-title"><span>01</span><div><b>Yeni kullanıcı</b><small>Platform için yeni hesap oluştur</small></div></div>
+            <form id="adminUserForm" class="seller-form">
+                <label>E-posta<input id="adminUserEmail" type="email" required maxlength="320" placeholder="ornek@nexamarket.com"></label>
+                <label>Parola<input id="adminUserPassword" type="password" required minlength="12" maxlength="72" placeholder="En az 12 karakter"></label>
+                <label>Rol<select id="adminUserRole"><option value="CUSTOMER">CUSTOMER · Alıcı</option><option value="SELLER">SELLER · Satıcı</option><option value="COURIER">COURIER · Kurye</option></select></label>
+                <button class="primary-button full" type="submit" id="adminUserSubmitButton">Kullanıcı ekle <span>→</span></button>
+            </form>
+            <p class="form-message" id="adminUserMessage"></p>
+        </section>
+        <section class="admin-users-panel">
+            <div class="panel-title inventory-title"><span>02</span><div><b>Platform kullanıcıları</b><small id="adminUserCount">Kullanıcılar yükleniyor…</small></div><button id="refreshAdminUsersButton" aria-label="Kullanıcıları yenile">↻</button></div>
+            <div class="admin-users" id="adminUsers"><div class="inventory-loading"><span class="button-spinner"></span>Kullanıcılar hazırlanıyor…</div></div>
+        </section>
+    </div>
 </dialog>
 
 <dialog class="modal seller-modal" id="sellerModal">

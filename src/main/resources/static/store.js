@@ -5,7 +5,7 @@ const state = {
     catalog: [], cart: JSON.parse(localStorage.getItem("nexa_cart") || "[]"),
     orders: [],
     favorites: new Set(JSON.parse(localStorage.getItem("nexa_favorites") || "[]").map(String)),
-    sellerProducts: [], courierOrders: [], authMode: "login", activeCategory: "all", sort: "featured",
+    sellerProducts: [], courierOrders: [], adminUsers: [], authMode: "login", activeCategory: "all", sort: "featured",
     favoriteOnly: false, coupon: "", lastOrder: null, selectedProduct: null,
     catalogLoading: true, confirmAction: null
 };
@@ -75,7 +75,7 @@ function emojiFor(name = "") {
 function normaliseProduct(product) {
     const category = product.categoryNames?.[0] || product.categories?.[0]?.name || "Seçki";
     const variant = product.variants?.[0] || null;
-    return {id: product.id, sellerId: product.sellerId, name: product.name,
+    return {id: product.id, sellerId: product.sellerId, sellerName: product.sellerName || `Satıcı #${product.sellerId}`, name: product.name,
         description: product.description || "NexaMarket seçkisinden özenle seçildi.", category,
         price: Number(product.minPrice ?? product.basePrice ?? variant?.price ?? 0),
         inStock: product.inStock ?? Number(product.totalStock ?? variant?.stockQuantity ?? 0) > 0,
@@ -97,7 +97,7 @@ function productsForView() {
     const products = state.catalog.filter(product => {
         const matchesCategory = state.activeCategory === "all" || product.category.toLocaleLowerCase("tr") === state.activeCategory.toLocaleLowerCase("tr");
         const matchesFavorite = !state.favoriteOnly || state.favorites.has(String(product.id));
-        const haystack = `${product.name} ${product.category} ${product.description}`.toLocaleLowerCase("tr");
+        const haystack = `${product.name} ${product.category} ${product.sellerName} ${product.description}`.toLocaleLowerCase("tr");
         return matchesCategory && matchesFavorite && (!query || haystack.includes(query));
     });
     if (state.sort === "price-asc") products.sort((a, b) => a.price - b.price);
@@ -123,7 +123,7 @@ function renderCatalog() {
             <button class="favorite-button ${favorite ? "active" : ""}" data-favorite-product="${product.id}" aria-label="${html(product.name)} favorilere ${favorite ? "çıkar" : "ekle"}" aria-pressed="${favorite}">${favorite ? "♥" : "♡"}</button>
             <button class="product-image" data-view-product="${product.id}" aria-label="${html(product.name)} ürününü incele"><span class="tag">${html(product.category).toUpperCase()}</span><span class="product-symbol">${product.emoji}</span><small>İNCELE →</small></button>
             <div class="product-info"><p class="stock-line ${product.inStock ? "" : "out"}"><i></i>${product.inStock ? `${product.stock || "Sınırlı"} adet stokta` : "Stokta yok"}</p>
-                <button class="product-name" data-view-product="${product.id}">${html(product.name)}</button><p class="product-excerpt">${html(product.description)}</p>
+                <button class="product-name" data-view-product="${product.id}">${html(product.name)}</button><p class="product-excerpt">${html(product.description)}</p><p class="product-seller">Satıcı: <b>${html(product.sellerName)}</b></p>
                 <div class="product-bottom"><div><small>Bugünün fiyatı</small><strong class="price">${currency(product.price)}</strong></div><button class="add-button" data-add-product="${product.id}" aria-label="${html(product.name)} sepete ekle" ${product.inStock ? "" : "disabled"}><span>+</span><em>Sepete ekle</em></button></div>
             </div></article>`;
     }).join("");
@@ -143,7 +143,9 @@ async function loadProducts() {
 
 async function resolveProduct(product) {
     if (product.variantId) return product;
+    const sellerName = product.sellerName;
     Object.assign(product, normaliseProduct(await api(`/api/v1/products/${product.id}`, {headers: {Authorization: ""}})));
+    product.sellerName = sellerName || product.sellerName;
     return product;
 }
 
@@ -238,6 +240,7 @@ function updateAuthUI() {
     $("#authButtonLabel").textContent = state.token ? name : "Giriş yap"; $("#menuUserName").textContent = state.token ? name : "NexaMarketli";
     $("#menuUserEmail").textContent = state.user?.email || "Hesabına giriş yap"; $("#authButton").classList.toggle("signed-in", Boolean(state.token)); closeAccountMenu();
     $("#courierAreaButton").hidden = state.user?.role !== "COURIER";
+    $("#adminPanelButton").hidden = state.user?.role !== "ADMIN";
 }
 async function openAccount() {
     if (!state.token) return openModal("authModal");
@@ -300,6 +303,62 @@ async function openCourierArea() {
     if (!state.token) { openModal("authModal"); $("#authMessage").textContent = "Kurye alanı için önce giriş yapmalısın."; return; }
     if (state.user?.role !== "COURIER") { toast("Bu alan yalnızca COURIER hesapları içindir.", "error"); return; }
     openModal("courierModal"); await loadCourierOrders();
+}
+async function openAdminPanel() {
+    if (!state.token) { openModal("authModal"); $("#authMessage").textContent = "Yönetim paneli için önce giriş yapmalısın."; return; }
+    if (state.user?.role !== "ADMIN") { toast("Bu alan yalnızca ADMIN hesapları içindir.", "error"); return; }
+    openModal("adminModal"); await loadAdminUsers();
+}
+async function loadAdminUsers() {
+    $("#adminUsers").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>Kullanıcılar hazırlanıyor…</div>`;
+    try {
+        const users = await api("/api/v1/admin/auth/users");
+        state.adminUsers = users.filter(user => ["CUSTOMER", "SELLER", "COURIER"].includes(user.role));
+        renderAdminUsers();
+    } catch (error) { $("#adminUsers").innerHTML = `<div class="inventory-empty"><b>Kullanıcılar yüklenemedi</b><small>${html(error.message)}</small></div>`; }
+}
+function renderAdminUsers() {
+    const users = state.adminUsers || [];
+    $("#adminUserCount").textContent = `${users.length} yönetilebilir kullanıcı`;
+    if (!users.length) { $("#adminUsers").innerHTML = `<div class="inventory-empty"><span>◫</span><b>Yönetilecek kullanıcı yok</b><small>Soldaki formdan ilk kullanıcıyı ekleyebilirsin.</small></div>`; return; }
+    const roleLabels = {CUSTOMER: "Alıcı", SELLER: "Satıcı", COURIER: "Kurye"};
+    $("#adminUsers").innerHTML = users.map(user => {
+        const nextStatus = user.status === "ACTIVE" ? "DISABLED" : "ACTIVE";
+        const statusAction = user.status === "ACTIVE" ? "Devre dışı bırak" : "Etkinleştir";
+        const roleActions = user.role === "CUSTOMER" ? `<button data-admin-role="SELLER" data-admin-user="${user.id}">Satıcı yap</button><button data-admin-role="COURIER" data-admin-user="${user.id}">Kurye yap</button>` : "";
+        return `<article class="admin-user-row"><div class="admin-user-avatar">${html(user.email.charAt(0).toUpperCase())}</div><div class="admin-user-copy"><div><span class="status-badge status-${user.status.toLowerCase()}">${user.status === "ACTIVE" ? "Aktif" : "Devre dışı"}</span><small>${html(roleLabels[user.role] || user.role)}</small></div><b>${html(user.email)}</b><strong>ID #${user.id}</strong></div><div class="admin-user-actions">${roleActions}<button data-admin-status="${nextStatus}" data-admin-user="${user.id}">${statusAction}</button><button class="delete-product" data-admin-delete="${user.id}">Sil</button></div></article>`;
+    }).join("");
+    $$('[data-admin-role]').forEach(button => button.addEventListener("click", () => updateAdminUserRole(button.dataset.adminUser, button.dataset.adminRole, button)));
+    $$('[data-admin-status]').forEach(button => button.addEventListener("click", () => updateAdminUserStatus(button.dataset.adminUser, button.dataset.adminStatus, button)));
+    $$('[data-admin-delete]').forEach(button => button.addEventListener("click", () => requestAdminUserDeletion(button.dataset.adminDelete)));
+}
+async function updateAdminUserRole(userId, role, button) {
+    setBusy(button, true, "Güncelleniyor");
+    try { await api(`/api/v1/admin/users/${userId}/role`, {method: "PATCH", body: JSON.stringify({role})}); toast("Kullanıcı rolü güncellendi.", "success"); await loadAdminUsers(); }
+    catch (error) { toast(error.message, "error"); setBusy(button, false); }
+}
+async function updateAdminUserStatus(userId, status, button) {
+    setBusy(button, true, "Güncelleniyor");
+    try { await api(`/api/v1/admin/users/${userId}/status`, {method: "PATCH", body: JSON.stringify({status})}); toast("Kullanıcı durumu güncellendi.", "success"); await loadAdminUsers(); }
+    catch (error) { toast(error.message, "error"); setBusy(button, false); }
+}
+function requestAdminUserDeletion(userId) {
+    const user = state.adminUsers.find(item => String(item.id) === String(userId));
+    if (user) askConfirmation("Kullanıcı silinsin mi?", `${user.email} hesabı ve oturumları silinecek. Geçmiş sipariş kayıtları korunur.`, "Kullanıcıyı sil", () => deleteAdminUser(user.id));
+}
+async function deleteAdminUser(userId) {
+    await api(`/api/v1/admin/users/${userId}`, {method: "DELETE"});
+    toast("Kullanıcı silindi.", "success"); await loadAdminUsers();
+}
+async function submitAdminUser(event) {
+    event.preventDefault(); const submit = $("#adminUserSubmitButton");
+    $("#adminUserMessage").textContent = ""; setBusy(submit, true, "Kullanıcı ekleniyor");
+    try {
+        await api("/api/v1/admin/auth/users", {method: "POST", body: JSON.stringify({email: $("#adminUserEmail").value.trim(), password: $("#adminUserPassword").value, role: $("#adminUserRole").value})});
+        $("#adminUserForm").reset(); $("#adminUserMessage").textContent = "Kullanıcı oluşturuldu."; $("#adminUserMessage").classList.add("success");
+        await loadAdminUsers();
+    } catch (error) { $("#adminUserMessage").classList.remove("success"); $("#adminUserMessage").textContent = error.message; }
+    finally { setBusy(submit, false); }
 }
 async function loadCourierOrders() {
     $("#courierOrders").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>Siparişlerin hazırlanıyor…</div>`;
@@ -460,6 +519,7 @@ function initEvents() {
     $$('[data-open-seller]').forEach(button => button.addEventListener("click", openSellerArea)); $$('[data-close-modal]').forEach(button => button.addEventListener("click", closeModals));
     $("#authButton").addEventListener("click", event => { event.stopPropagation(); toggleAccountMenu(); }); $("#accountOverviewButton").addEventListener("click", openAccount);
     $("#courierAreaButton").addEventListener("click", openCourierArea); $("#refreshCourierButton").addEventListener("click", loadCourierOrders);
+    $("#adminPanelButton").addEventListener("click", openAdminPanel); $("#refreshAdminUsersButton").addEventListener("click", loadAdminUsers); $("#adminUserForm").addEventListener("submit", submitAdminUser);
     $("#logoutButton").addEventListener("click", logout); $("#headerLogoutButton").addEventListener("click", logout);
     $("#favoritesButton").addEventListener("click", () => { state.favoriteOnly = !state.favoriteOnly; updateFavoritesUI(); renderCatalog(); $("#discover").scrollIntoView({behavior: "smooth"}); });
     $$("[data-auth-tab]").forEach(button => button.addEventListener("click", () => setAuthMode(button.dataset.authTab)));

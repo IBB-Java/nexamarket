@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -209,6 +210,29 @@ class UsersApiIntegrationTest {
                         .header("Authorization", "Bearer " + courierAccess))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    void adminCanDeleteManagedCustomerButCannotDeleteAnAdminAccount() throws Exception {
+        String customerEmail = "delete-customer@nexamarket.test";
+        registerAndLogin(customerEmail, "StrongPass!2026");
+        UserAccount customer = userAccountRepository.findByEmailIgnoreCase(customerEmail).orElseThrow();
+        UserAccount admin = userAccountRepository.save(UserAccount.builder()
+                .email("admin-delete-user@nexamarket.test")
+                .passwordHash(passwordEncoder.encode("StrongPass!2026"))
+                .role(UserRole.ADMIN)
+                .status(UserStatus.ACTIVE)
+                .build());
+        String adminAccess = login(admin.getEmail(), "StrongPass!2026");
+
+        mockMvc.perform(delete("/api/v1/admin/users/{userId}", customer.getId())
+                        .header("Authorization", "Bearer " + adminAccess))
+                .andExpect(status().isNoContent());
+        org.assertj.core.api.Assertions.assertThat(userAccountRepository.findById(customer.getId())).isEmpty();
+
+        mockMvc.perform(delete("/api/v1/admin/users/{userId}", admin.getId())
+                        .header("Authorization", "Bearer " + adminAccess))
+                .andExpect(status().isForbidden());
     }
 
     private String registerAndLogin(String email, String password) throws Exception {

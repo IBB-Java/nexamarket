@@ -8,6 +8,7 @@ import com.nexamarket.users.application.SellerProfileConflictException;
 import com.nexamarket.users.application.SellerProfileNotFoundException;
 import com.nexamarket.users.application.UserNotFoundException;
 import com.nexamarket.users.application.UserAccountUnavailableException;
+import com.nexamarket.users.application.UserDeletionNotAllowedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -41,6 +42,11 @@ public class UsersExceptionHandler {
     @ExceptionHandler(InvalidUserStatusChangeException.class)
     ProblemDetail invalidUserStatus(InvalidUserStatusChangeException exception) {
         return problem(HttpStatus.BAD_REQUEST, "Geçersiz kullanıcı durumu", exception.getMessage());
+    }
+
+    @ExceptionHandler(UserDeletionNotAllowedException.class)
+    ProblemDetail deletionNotAllowed(UserDeletionNotAllowedException exception) {
+        return problem(HttpStatus.FORBIDDEN, "Kullanıcı silinemez", exception.getMessage());
     }
 
     @ExceptionHandler(InvalidUserRoleChangeException.class)

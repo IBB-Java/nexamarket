@@ -11,6 +11,8 @@ import java.util.Optional;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
 
+    void deleteByUserId(Long userId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select token from RefreshToken token join fetch token.user where token.tokenId = :tokenId")
     Optional<RefreshToken> findForUpdateByTokenId(@Param("tokenId") String tokenId);
