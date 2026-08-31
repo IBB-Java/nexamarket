@@ -5,7 +5,7 @@ const state = {
     catalog: [], cart: JSON.parse(localStorage.getItem("nexa_cart") || "[]"),
     orders: JSON.parse(localStorage.getItem("nexa_orders") || "[]"),
     favorites: new Set(JSON.parse(localStorage.getItem("nexa_favorites") || "[]").map(String)),
-    sellerProducts: [], authMode: "login", activeCategory: "all", sort: "featured",
+    sellerProducts: [], courierOrders: [], authMode: "login", activeCategory: "all", sort: "featured",
     favoriteOnly: false, coupon: "", lastOrder: null, selectedProduct: null,
     catalogLoading: true, confirmAction: null
 };
@@ -189,7 +189,7 @@ function applyCartResponse(cart) {
 }
 async function syncCart(cart = null) {
     if (!state.token) return;
-    if (state.user?.role === "SELLER") { state.cart = []; saveCart(); renderCart(); return; }
+    if (state.user?.role !== "CUSTOMER") { state.cart = []; saveCart(); renderCart(); return; }
     try { applyCartResponse(cart || await api("/api/v1/cart/items")); } catch { toast("Sepetin şu an güncellenemedi.", "error"); }
 }
 
@@ -197,7 +197,7 @@ async function addToCart(productId, button = null) {
     const product = state.catalog.find(item => String(item.id) === String(productId));
     if (!product) return;
     if (!state.token) { openModal("authModal"); $("#authMessage").textContent = "Sepete eklemek için önce giriş yapmalısın."; return; }
-    if (state.user?.role === "SELLER") { toast("SELLER hesapları ürün satın alamaz.", "error"); return; }
+    if (state.user?.role !== "CUSTOMER") { toast("Yalnızca CUSTOMER hesapları ürün satın alabilir.", "error"); return; }
     setBusy(button, true, "Ekleniyor");
     try {
         await resolveProduct(product);
@@ -238,6 +238,7 @@ function updateAuthUI() {
     const name = state.user?.email?.split("@")[0] || "Hesabım";
     $("#authButtonLabel").textContent = state.token ? name : "Giriş yap"; $("#menuUserName").textContent = state.token ? name : "NexaMarketli";
     $("#menuUserEmail").textContent = state.user?.email || "Hesabına giriş yap"; $("#authButton").classList.toggle("signed-in", Boolean(state.token)); closeAccountMenu();
+    $("#courierAreaButton").hidden = state.user?.role !== "COURIER";
 }
 async function openAccount() {
     if (!state.token) return openModal("authModal");
@@ -283,6 +284,48 @@ async function openSellerArea() {
     if (!state.token) { openModal("authModal"); $("#authMessage").textContent = "Ürün eklemek için önce giriş yapmalısın."; return; }
     if (state.user?.role !== "SELLER") { toast("Ürün eklemek için ADMIN tarafından SELLER rolüne yükseltilmelisin.", "error"); return; }
     openModal("sellerModal"); await loadSellerProducts();
+}
+async function openCourierArea() {
+    if (!state.token) { openModal("authModal"); $("#authMessage").textContent = "Kurye alanı için önce giriş yapmalısın."; return; }
+    if (state.user?.role !== "COURIER") { toast("Bu alan yalnızca COURIER hesapları içindir.", "error"); return; }
+    openModal("courierModal"); await loadCourierOrders();
+}
+async function loadCourierOrders() {
+    $("#courierOrders").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>Siparişlerin hazırlanıyor…</div>`;
+    try { state.courierOrders = await api("/api/v1/courier/orders"); renderCourierOrders(); }
+    catch (error) { $("#courierOrders").innerHTML = `<div class="inventory-empty"><b>Siparişler yüklenemedi</b><small>${html(error.message)}</small></div>`; }
+}
+function formatOrderDate(value) {
+    return value ? new Intl.DateTimeFormat("tr-TR", {dateStyle: "medium", timeStyle: "short"}).format(new Date(value)) : "Tarih bilgisi yok";
+}
+function renderCourierOrders() {
+    const orders = state.courierOrders || [];
+    $("#courierOrderCount").textContent = `${orders.length} atanmış sipariş`;
+    if (!orders.length) {
+        $("#courierOrders").innerHTML = `<div class="inventory-empty"><span>▣</span><b>Henüz sana atanmış sipariş yok</b><small>Yönetici bir siparişi sana atadığında burada görünecek.</small></div>`;
+        return;
+    }
+    const labels = {PAID: "Ödeme alındı", PROCESSING: "Hazırlanıyor", SHIPPED: "Kargoda", DELIVERED: "Teslim edildi", CANCELLED: "İptal edildi"};
+    $("#courierOrders").innerHTML = orders.map(order => {
+        const status = labels[order.status] || order.status;
+        const action = order.status === "PROCESSING"
+            ? `<button class="primary-button small" data-courier-status="SHIPPED" data-sub-order-id="${order.subOrderId}">Kargoya ver</button>`
+            : order.status === "SHIPPED"
+                ? `<button class="primary-button small" data-courier-status="DELIVERED" data-sub-order-id="${order.subOrderId}">Teslim edildi</button>`
+                : order.status === "PAID"
+                    ? `<small class="courier-note">Satıcının hazırlaması bekleniyor.</small>`
+                    : `<small class="courier-note">Bu sipariş için işlem tamamlandı.</small>`;
+        return `<article class="courier-order-row"><div class="courier-order-icon">▣</div><div class="courier-order-copy"><div><span class="status-badge status-${String(order.status).toLowerCase()}">${status}</span><small>${formatOrderDate(order.createdAt)}</small></div><b>#${html(String(order.subOrderId).slice(0, 8).toUpperCase())}</b><strong>${currency(order.subtotal)}</strong></div><div class="courier-order-action">${action}</div></article>`;
+    }).join("");
+    $$('[data-courier-status]').forEach(button => button.addEventListener("click", () => updateCourierOrderStatus(button.dataset.subOrderId, button.dataset.courierStatus, button)));
+}
+async function updateCourierOrderStatus(subOrderId, status, button) {
+    setBusy(button, true, status === "SHIPPED" ? "Kargoya veriliyor" : "Güncelleniyor");
+    try {
+        await api(`/api/v1/courier/orders/${subOrderId}/status`, {method: "PATCH", body: JSON.stringify({status})});
+        toast(status === "SHIPPED" ? "Sipariş kargoya verildi." : "Sipariş teslim edildi.", "success");
+        await loadCourierOrders();
+    } catch (error) { toast(error.message, "error"); setBusy(button, false); }
 }
 async function ensureCategory(name) {
     const categories = await api("/api/v1/categories");
@@ -378,7 +421,7 @@ async function runConfirmedAction() {
 
 async function checkout() {
     if (!state.token) { openModal("authModal"); $("#authMessage").textContent = "Sipariş oluşturmak için giriş yapmalısın."; return; }
-    if (state.user?.role === "SELLER") { toast("SELLER hesapları sipariş veremez.", "error"); return; }
+    if (state.user?.role !== "CUSTOMER") { toast("Yalnızca CUSTOMER hesapları sipariş verebilir.", "error"); return; }
     const button = $("#checkoutButton"); setBusy(button, true, "Sipariş hazırlanıyor");
     try {
         const order = await api("/api/v1/cart/items/checkout", {method: "POST", body: JSON.stringify({promotionCodes: state.coupon ? [state.coupon] : []})});
@@ -406,6 +449,7 @@ function initEvents() {
     $("#cartButton").addEventListener("click", openCart); $$('[data-close-cart]').forEach(button => button.addEventListener("click", closeCart)); $("#overlay").addEventListener("click", closeCart);
     $$('[data-open-seller]').forEach(button => button.addEventListener("click", openSellerArea)); $$('[data-close-modal]').forEach(button => button.addEventListener("click", closeModals));
     $("#authButton").addEventListener("click", event => { event.stopPropagation(); toggleAccountMenu(); }); $("#accountOverviewButton").addEventListener("click", openAccount);
+    $("#courierAreaButton").addEventListener("click", openCourierArea); $("#refreshCourierButton").addEventListener("click", loadCourierOrders);
     $("#logoutButton").addEventListener("click", logout); $("#headerLogoutButton").addEventListener("click", logout);
     $("#favoritesButton").addEventListener("click", () => { state.favoriteOnly = !state.favoriteOnly; updateFavoritesUI(); renderCatalog(); $("#discover").scrollIntoView({behavior: "smooth"}); });
     $$("[data-auth-tab]").forEach(button => button.addEventListener("click", () => setAuthMode(button.dataset.authTab)));

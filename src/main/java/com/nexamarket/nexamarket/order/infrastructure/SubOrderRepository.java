@@ -21,6 +21,9 @@ public interface SubOrderRepository extends JpaRepository<SubOrder, UUID> {
     @Query("select subOrder from SubOrder subOrder join fetch subOrder.order where subOrder.sellerId = :sellerId")
     List<SubOrder> findBySellerIdWithOrder(@Param("sellerId") Long sellerId);
 
+    @Query("select subOrder from SubOrder subOrder join fetch subOrder.order where subOrder.courierId = :courierId")
+    List<SubOrder> findByCourierIdWithOrder(@Param("courierId") Long courierId);
+
     @Query("select subOrder from SubOrder subOrder join fetch subOrder.order")
     List<SubOrder> findAllWithOrder();
 

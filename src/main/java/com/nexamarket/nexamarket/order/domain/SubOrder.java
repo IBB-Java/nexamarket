@@ -37,6 +37,9 @@ public class SubOrder {
     @Column(name = "seller_id", nullable = false, updatable = false)
     private Long sellerId;
 
+    @Column(name = "courier_id")
+    private Long courierId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private OrderStatus status;
@@ -81,6 +84,14 @@ public class SubOrder {
 
     public Long getSellerId() {
         return sellerId;
+    }
+
+    public Long getCourierId() {
+        return courierId;
+    }
+
+    public void assignCourier(Long courierId) {
+        this.courierId = Objects.requireNonNull(courierId, "Courier id is required.");
     }
 
     public UUID getId() {

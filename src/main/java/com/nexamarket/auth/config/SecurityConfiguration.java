@@ -54,6 +54,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/courier/**").hasRole("COURIER")
                         .requestMatchers("/api/v1/auth/me", "/api/v1/users/me/**").authenticated()
                         .requestMatchers("/api/v1/sellers/me/**").hasRole("SELLER")
                         .requestMatchers("/api/v1/sellers/me/reports/**").hasRole("SELLER")

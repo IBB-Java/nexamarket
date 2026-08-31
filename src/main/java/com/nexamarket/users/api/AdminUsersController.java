@@ -27,10 +27,10 @@ public class AdminUsersController {
     }
 
     @PatchMapping("/{userId}/role")
-    public MyProfileResponse promoteToSeller(
+    public MyProfileResponse updateRole(
             @PathVariable Long userId,
             @Valid @RequestBody UpdateUserRoleRequest request
     ) {
-        return usersService.promoteCustomerToSeller(userId, request);
+        return usersService.assignOperationalRole(userId, request);
     }
 }

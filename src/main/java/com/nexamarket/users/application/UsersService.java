@@ -147,13 +147,14 @@ public class UsersService {
     }
 
     @Transactional
-    public MyProfileResponse promoteCustomerToSeller(Long userId, UpdateUserRoleRequest request) {
+    public MyProfileResponse assignOperationalRole(Long userId, UpdateUserRoleRequest request) {
         UserAccount user = userAccountRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
-        if (request.role() != UserRole.SELLER || user.getRole() != UserRole.CUSTOMER) {
+        boolean supportedRole = request.role() == UserRole.SELLER || request.role() == UserRole.COURIER;
+        if (!supportedRole || user.getRole() != UserRole.CUSTOMER) {
             throw new InvalidUserRoleChangeException();
         }
-        user.setRole(UserRole.SELLER);
+        user.setRole(request.role());
         return MyProfileResponse.from(user, userProfileRepository.findByUserId(userId).orElse(null));
     }
 

@@ -375,6 +375,26 @@ select:focus-visible {
     overflow: auto;
 }
 
+.courier-modal { width: min(760px, calc(100vw - 32px)); max-height: min(760px, calc(100vh - 32px)); overflow: auto; }
+.courier-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 22px 0 12px; color: var(--ink-muted); font-size: .72rem; font-weight: 700; }
+.courier-toolbar button { border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink); padding: 7px 10px; font-size: .66rem; font-weight: 800; }
+.courier-orders { display: grid; gap: 9px; max-height: 480px; overflow: auto; padding-right: 4px; }
+.courier-order-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 13px; border: 1px solid rgba(22,44,53,.1); border-radius: 15px; background: #fff; }
+.courier-order-icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 12px; background: linear-gradient(145deg, var(--mint), var(--peach-soft)); color: var(--ink); font-size: 1.35rem; }
+.courier-order-copy { min-width: 0; }
+.courier-order-copy > div { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.courier-order-copy small { color: var(--ink-muted); font-size: .58rem; }
+.courier-order-copy b { display: block; font-size: .78rem; letter-spacing: .04em; }
+.courier-order-copy strong { display: block; margin-top: 4px; color: var(--ink-muted); font-family: Fraunces, serif; font-size: .78rem; }
+.courier-order-action { display: flex; align-items: center; justify-content: flex-end; text-align: right; }
+.courier-order-action .primary-button { padding: 9px 12px; margin: 0; font-size: .66rem; white-space: nowrap; }
+.courier-note { max-width: 150px; color: var(--ink-muted); font-size: .61rem; line-height: 1.4; }
+.status-badge.status-paid { background: #e5edf8; color: #335b8e; }
+.status-badge.status-processing { background: #fff0c7; color: #8b651f; }
+.status-badge.status-shipped { background: #e7e0f8; color: #654a9b; }
+.status-badge.status-delivered { background: #dcf2e6; color: #1d6b4d; }
+.status-badge.status-cancelled { background: #fde5e1; color: var(--danger); }
+
 .seller-modal .modal-header { max-width: 600px; }
 .seller-workspace {
     display: grid;
@@ -582,6 +602,10 @@ select:focus-visible {
     .site-header nav { gap: 16px; }
     .product-grid { grid-template-columns: repeat(3, 1fr); }
     .seller-workspace { grid-template-columns: 1fr; }
+    .courier-order-row { grid-template-columns: 44px minmax(0, 1fr); }
+    .courier-order-icon { width: 44px; height: 44px; }
+    .courier-order-action { grid-column: 1 / -1; justify-content: stretch; }
+    .courier-order-action .primary-button { width: 100%; }
     .seller-inventory { max-height: 360px; }
 }
 
