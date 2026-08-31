@@ -189,6 +189,7 @@ function applyCartResponse(cart) {
 }
 async function syncCart(cart = null) {
     if (!state.token) return;
+    if (state.user?.role === "SELLER") { state.cart = []; saveCart(); renderCart(); return; }
     try { applyCartResponse(cart || await api("/api/v1/cart/items")); } catch { toast("Sepetin şu an güncellenemedi.", "error"); }
 }
 
@@ -196,6 +197,7 @@ async function addToCart(productId, button = null) {
     const product = state.catalog.find(item => String(item.id) === String(productId));
     if (!product) return;
     if (!state.token) { openModal("authModal"); $("#authMessage").textContent = "Sepete eklemek için önce giriş yapmalısın."; return; }
+    if (state.user?.role === "SELLER") { toast("SELLER hesapları ürün satın alamaz.", "error"); return; }
     setBusy(button, true, "Ekleniyor");
     try {
         await resolveProduct(product);
@@ -376,6 +378,7 @@ async function runConfirmedAction() {
 
 async function checkout() {
     if (!state.token) { openModal("authModal"); $("#authMessage").textContent = "Sipariş oluşturmak için giriş yapmalısın."; return; }
+    if (state.user?.role === "SELLER") { toast("SELLER hesapları sipariş veremez.", "error"); return; }
     const button = $("#checkoutButton"); setBusy(button, true, "Sipariş hazırlanıyor");
     try {
         const order = await api("/api/v1/cart/items/checkout", {method: "POST", body: JSON.stringify({promotionCodes: state.coupon ? [state.coupon] : []})});

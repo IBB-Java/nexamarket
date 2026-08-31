@@ -104,11 +104,40 @@ class CheckoutPaymentFlowIntegrationTest {
         assertThat(productVariantRepository.findById(variant.getId()).orElseThrow().getStockQuantity()).isEqualTo(3);
     }
 
+    @Test
+    void sellerCannotAddToCartOrCheckout() throws Exception {
+        UserAccount seller = userAccountRepository.save(UserAccount.builder()
+                .email("seller-no-shopping@nexamarket.test")
+                .passwordHash(passwordEncoder.encode("StrongPass!2026"))
+                .role(UserRole.SELLER).status(UserStatus.ACTIVE).build());
+        Product product = productRepository.save(Product.builder()
+                .name("Satıcıya Kapalı Ürün").description("Rol testi")
+                .basePrice(new BigDecimal("20.00")).sellerId(seller.getId()).status(ProductStatus.ACTIVE).build());
+        ProductVariant variant = productVariantRepository.save(ProductVariant.builder()
+                .product(product).sku("NO-SHOPPING-01").price(new BigDecimal("20.00")).stockQuantity(5).build());
+
+        String sellerToken = login("seller-no-shopping@nexamarket.test");
+
+        mockMvc.perform(post("/api/v1/cart/items")
+                        .header("Authorization", "Bearer " + sellerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"productVariantId\":" + variant.getId() + ",\"quantity\":1}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/v1/cart/items/checkout")
+                        .header("Authorization", "Bearer " + sellerToken))
+                .andExpect(status().isForbidden());
+    }
+
     private String registerAndLogin(String email) throws Exception {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"" + email + "\",\"password\":\"StrongPass!2026\"}"))
                 .andExpect(status().isCreated());
+        return login(email);
+    }
+
+    private String login(String email) throws Exception {
         String response = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"" + email + "\",\"password\":\"StrongPass!2026\"}"))
