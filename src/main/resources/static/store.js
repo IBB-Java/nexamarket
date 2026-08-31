@@ -1,10 +1,23 @@
+function favoritesStorageKey(user) {
+    const identity = user?.id ?? user?.email;
+    return identity ? `nexa_favorites_${String(identity).replace(/[^a-zA-Z0-9_.-]/g, "_")}` : "nexa_favorites_guest";
+}
+
+function readFavorites(user) {
+    try {
+        const raw = localStorage.getItem(favoritesStorageKey(user));
+        return new Set(JSON.parse(raw || "[]").map(String));
+    } catch { return new Set(); }
+}
+
+const initialUser = JSON.parse(localStorage.getItem("nexa_user") || "null");
 const state = {
     token: localStorage.getItem("nexa_access_token") || "",
     refreshToken: localStorage.getItem("nexa_refresh_token") || "",
-    user: JSON.parse(localStorage.getItem("nexa_user") || "null"),
+    user: initialUser,
     catalog: [], cart: JSON.parse(localStorage.getItem("nexa_cart") || "[]"),
     orders: [],
-    favorites: new Set(JSON.parse(localStorage.getItem("nexa_favorites") || "[]").map(String)),
+    favorites: readFavorites(initialUser),
     sellerProducts: [], courierOrders: [], adminUsers: [], authMode: "login", activeCategory: "all", sort: "featured",
     favoriteOnly: false, coupon: "", lastOrder: null, selectedProduct: null,
     catalogLoading: true, confirmAction: null
@@ -40,7 +53,8 @@ function saveSession() {
     if (state.user) localStorage.setItem("nexa_user", JSON.stringify(state.user)); else localStorage.removeItem("nexa_user");
 }
 function saveCart() { localStorage.setItem("nexa_cart", JSON.stringify(state.cart)); }
-function saveFavorites() { localStorage.setItem("nexa_favorites", JSON.stringify([...state.favorites])); }
+function saveFavorites() { localStorage.setItem(favoritesStorageKey(state.user), JSON.stringify([...state.favorites])); }
+function loadFavoritesForCurrentUser() { state.favorites = readFavorites(state.user); updateFavoritesUI(); renderCatalog(); updateDetailFavorite(); }
 
 function toast(message, type = "info") {
     const target = $("#toast");
@@ -262,8 +276,8 @@ async function openAccount() {
     openModal("accountModal");
 }
 function clearLocalSession() {
-    state.token = ""; state.refreshToken = ""; state.user = null; state.cart = []; state.orders = [];
-    saveSession(); saveCart(); renderCart(); updateAuthUI(); closeModals();
+    state.token = ""; state.refreshToken = ""; state.user = null; state.cart = []; state.orders = []; state.favorites = readFavorites(null);
+    saveSession(); saveCart(); renderCart(); updateFavoritesUI(); renderCatalog(); updateAuthUI(); closeModals();
 }
 async function logout() {
     const refreshToken = state.refreshToken;
@@ -273,7 +287,7 @@ async function logout() {
 }
 async function hydrateUser() {
     if (!state.token) return;
-    try { state.user = await api("/api/v1/auth/me"); saveSession(); } catch { clearLocalSession(); }
+    try { state.user = await api("/api/v1/auth/me"); saveSession(); loadFavoritesForCurrentUser(); } catch { clearLocalSession(); }
     updateAuthUI();
 }
 
@@ -290,7 +304,7 @@ async function submitAuth(event) {
         if (state.authMode === "register") await api("/api/v1/auth/register", {method: "POST", body: JSON.stringify({email, password})});
         const login = await api("/api/v1/auth/login", {method: "POST", body: JSON.stringify({email, password})});
         state.token = login.accessToken; state.refreshToken = login.refreshToken || ""; state.user = await api("/api/v1/auth/me");
-        saveSession(); updateAuthUI(); closeModals(); await syncCart(); toast("Hoş geldin! Alışverişe devam edebilirsin.", "success");
+        saveSession(); loadFavoritesForCurrentUser(); updateAuthUI(); closeModals(); await syncCart(); toast("Hoş geldin! Alışverişe devam edebilirsin.", "success");
     } catch (error) { $("#authMessage").textContent = error.message; } finally { setBusy(submit, false); }
 }
 
