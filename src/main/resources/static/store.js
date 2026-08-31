@@ -3,7 +3,7 @@ const state = {
     refreshToken: localStorage.getItem("nexa_refresh_token") || "",
     user: JSON.parse(localStorage.getItem("nexa_user") || "null"),
     catalog: [], cart: JSON.parse(localStorage.getItem("nexa_cart") || "[]"),
-    orders: JSON.parse(localStorage.getItem("nexa_orders") || "[]"),
+    orders: [],
     favorites: new Set(JSON.parse(localStorage.getItem("nexa_favorites") || "[]").map(String)),
     sellerProducts: [], courierOrders: [], authMode: "login", activeCategory: "all", sort: "featured",
     favoriteOnly: false, coupon: "", lastOrder: null, selectedProduct: null,
@@ -40,7 +40,6 @@ function saveSession() {
     if (state.user) localStorage.setItem("nexa_user", JSON.stringify(state.user)); else localStorage.removeItem("nexa_user");
 }
 function saveCart() { localStorage.setItem("nexa_cart", JSON.stringify(state.cart)); }
-function saveOrders() { localStorage.setItem("nexa_orders", JSON.stringify(state.orders)); }
 function saveFavorites() { localStorage.setItem("nexa_favorites", JSON.stringify([...state.favorites])); }
 
 function toast(message, type = "info") {
@@ -242,13 +241,25 @@ function updateAuthUI() {
 }
 async function openAccount() {
     if (!state.token) return openModal("authModal");
-    $("#accountName").textContent = `Merhaba, ${state.user?.email?.split("@")[0] || "NexaMarketli"}`; $("#orderCount").textContent = state.orders.length;
-    $("#recentOrders").innerHTML = state.orders.length ? state.orders.slice(0, 3).map(order => `<div class="recent-order"><div><b>#${html(order.id.slice(0, 8).toUpperCase())}</b><small>${html(order.date)}</small></div><strong>${currency(order.total)}</strong></div>`).join("") : "<span>Henüz bir siparişin yok.</span>";
+    $("#accountName").textContent = `Merhaba, ${state.user?.email?.split("@")[0] || "NexaMarketli"}`;
+    if (state.user?.role !== "CUSTOMER") {
+        $("#loyaltyPoints").textContent = "—"; $("#loyaltyUnit").textContent = ""; $("#loyaltyLabel").textContent = "Sadakat programı CUSTOMER hesapları içindir";
+        $("#orderCount").textContent = "—"; $("#orderUnit").textContent = ""; $("#orderLabel").textContent = "Alışveriş yalnızca CUSTOMER hesapları içindir";
+        $("#recentOrdersTitle").textContent = "Hesap bilgisi";
+        $("#recentOrders").innerHTML = `<span>${html(state.user?.role || "Bu")} hesabında müşteri sipariş geçmişi bulunmaz.</span>`;
+        return openModal("accountModal");
+    }
+    $("#loyaltyUnit").textContent = "puan"; $("#loyaltyLabel").textContent = "Sadakat bakiyen";
+    $("#orderUnit").textContent = "sipariş"; $("#orderLabel").textContent = "Son alışverişlerin"; $("#recentOrdersTitle").textContent = "Son siparişlerin";
+    try { state.orders = await api("/api/v1/orders/me"); } catch { state.orders = []; }
+    $("#orderCount").textContent = state.orders.length;
+    const statusLabels = {PAYMENT_PENDING: "Ödeme bekleniyor", PAID: "Ödeme alındı", PROCESSING: "Hazırlanıyor", SHIPPED: "Kargoda", DELIVERED: "Teslim edildi", CANCELLED: "İptal edildi", RETURN_REQUESTED: "İade talebi"};
+    $("#recentOrders").innerHTML = state.orders.length ? state.orders.slice(0, 3).map(order => `<div class="recent-order"><div><b>#${html(String(order.orderId).slice(0, 8).toUpperCase())}</b><small>${html(formatOrderDate(order.createdAt))} · ${html(statusLabels[order.status] || order.status)}</small></div><strong>${currency(order.totalAmount)}</strong></div>`).join("") : "<span>Henüz bir siparişin yok.</span>";
     try { $("#loyaltyPoints").textContent = (await api("/api/v1/loyalty/me")).points ?? 0; } catch { $("#loyaltyPoints").textContent = "0"; }
     openModal("accountModal");
 }
 function clearLocalSession() {
-    state.token = ""; state.refreshToken = ""; state.user = null; state.cart = [];
+    state.token = ""; state.refreshToken = ""; state.user = null; state.cart = []; state.orders = [];
     saveSession(); saveCart(); renderCart(); updateAuthUI(); closeModals();
 }
 async function logout() {
@@ -436,7 +447,6 @@ async function pay() {
     try {
         const payment = await api("/api/v1/payments", {method: "POST", body: JSON.stringify({orderId: state.lastOrder.id, idempotencyKey: `web-${crypto.randomUUID()}`, walletAmount: 0, cardAmount: state.lastOrder.total.toFixed(2)})});
         if (payment.providerPaymentId) await api(`/mock-payment-provider/payments/${payment.providerPaymentId}/outcomes`, {method: "POST", headers: {Authorization: ""}, body: JSON.stringify({status: "SUCCEEDED", failureReason: null, callbackDelaySeconds: 0, duplicateDeliveries: 1})});
-        state.orders.unshift({id: state.lastOrder.id, total: state.lastOrder.total, date: new Intl.DateTimeFormat("tr-TR", {day:"numeric", month:"long"}).format(new Date())}); saveOrders();
         $("#paymentPanel").hidden = true; $("#successPanel").hidden = false; state.cart = []; saveCart(); renderCart();
     } catch (error) { $("#checkoutMessage").textContent = error.message; } finally { setBusy(button, false); }
 }

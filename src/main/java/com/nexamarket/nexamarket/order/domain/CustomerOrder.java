@@ -135,6 +135,10 @@ public class CustomerOrder {
         return promotionCodes;
     }
 
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
     public List<SubOrder> getSubOrders() {
         return Collections.unmodifiableList(subOrders);
     }
