@@ -8,23 +8,26 @@ tek uygulamada entegredir.
 ## İlk kez çalıştırma
 
 1. Docker Desktop’ı açın.
-2. Proje klasöründe bütün bağımlılıkları başlatın:
+2. Proje klasöründe uygulama dahil bütün sistemi başlatın:
 
    ```bash
    docker compose up -d
    ```
 
-3. Uygulamayı başlatın:
+3. Uygulamanın hazır olmasını bekleyin ve durumunu kontrol edin:
 
    ```bash
-   ./mvnw spring-boot:run
+   docker compose ps
    ```
 
 4. Tarayıcıdan mağaza arayüzünü açın: <http://localhost:8080>
 5. API dokümantasyonu ve teknik test ekranı için Swagger'ı açın:
    <http://localhost:8080/swagger-ui.html>
 
-Compose; PostgreSQL, RabbitMQ, Redis, Elasticsearch ve MinIO’yu başlatır.
+Compose; NexaMarket uygulaması, PostgreSQL, RabbitMQ, Redis, Elasticsearch ve
+MinIO’yu başlatır. Yalnız altyapıyı Docker'da çalıştırıp uygulamayı IDE/Maven ile
+başlatmak isteyenler `docker compose up -d postgres rabbitmq redis elasticsearch
+minio` ve ardından `./mvnw spring-boot:run` komutlarını kullanabilir.
 MinIO konsolu `http://localhost:9001`, RabbitMQ yönetim paneli ise
 `http://localhost:15672` adresindedir. Her ikisinin varsayılan kullanıcı adı ve
 parolası `nexamarket` / `nexamarket` (MinIO için `minioadmin` / `minioadmin`) olur.
@@ -60,8 +63,11 @@ yerine görünür bir kullanıcı deneyimi üzerinden göstermek için tasarlanm
 ```
 
 Bu komut birim/entegrasyon testlerini, JaCoCo raporunu ve en az %70 satır kapsamı
-kontrolünü çalıştırır. Docker aktifse ayrıca PostgreSQL 16 üzerinde Flyway migration
-smoke testi çalışır; Docker yoksa bu tek test otomatik atlanır.
+kontrolünü çalıştırır. Kritik stok, sepet, sipariş durum makinesi, ödeme ve
+kampanya sınıflarının her biri için de ayrı ayrı en az %70 kapsam zorunludur.
+Docker aktifse ayrıca PostgreSQL 16 üzerinde Flyway migration smoke testi
+çalışır; Docker yoksa bu tek test otomatik atlanır. Katalog aramasının 95.
+yüzdelik yanıt süresinin 300 ms altında kaldığı kabul testi de bu komuta dahildir.
 
 ## Ana kullanıcı akışı
 
@@ -75,4 +81,5 @@ smoke testi çalışır; Docker yoksa bu tek test otomatik atlanır.
 
 Detaylı DOCX gereksinim eşlemesi için
 [gereksinim takip kaydına](docs/requirements-traceability.md), modül ve sunum
-notları için [handoff belgesine](docs/nexamarket-handoff.md) bakın.
+notları için [handoff belgesine](docs/nexamarket-handoff.md), dört mantıksal
+servisin iletişim kuralları için [mimari belgesine](docs/architecture.md) bakın.

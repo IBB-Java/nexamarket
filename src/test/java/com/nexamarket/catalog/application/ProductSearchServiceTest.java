@@ -1,7 +1,5 @@
 package com.nexamarket.catalog.application;
 
-import com.nexamarket.auth.entity.UserAccount;
-import com.nexamarket.auth.repository.UserAccountRepository;
 import com.nexamarket.catalog.api.ProductSearchResponse;
 import com.nexamarket.catalog.entity.ProductStatus;
 import com.nexamarket.catalog.search.ProductSearchCriteria;
@@ -14,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,7 +24,7 @@ class ProductSearchServiceTest {
     @Mock
     private ProductSearchGateway productSearchGateway;
     @Mock
-    private UserAccountRepository userAccountRepository;
+    private SellerDirectoryGateway sellerDirectoryGateway;
 
     @Test
     void addsTheSellerEmailToSearchResults() {
@@ -33,10 +32,9 @@ class ProductSearchServiceTest {
                 .id("301").sellerId(44L).name("Satıcı Bilgili Ürün").description("Açıklama")
                 .status(ProductStatus.ACTIVE.name()).categoryIds(List.of()).categoryNames(List.of())
                 .minPrice(10.0).maxPrice(10.0).totalStock(5L).inStock(true).build();
-        UserAccount seller = UserAccount.builder().id(44L).email("seller@nexamarket.test").build();
         when(productSearchGateway.search(any())).thenReturn(new ProductSearchPage(List.of(document), 1, 0, 20));
-        when(userAccountRepository.findAllById(any())).thenReturn(List.of(seller));
-        ProductSearchService service = new ProductSearchService(productSearchGateway, userAccountRepository);
+        when(sellerDirectoryGateway.displayNames(any())).thenReturn(Map.of(44L, "seller@nexamarket.test"));
+        ProductSearchService service = new ProductSearchService(productSearchGateway, sellerDirectoryGateway);
 
         ProductSearchResponse response = service.search(new ProductSearchCriteria(null, null, null, null, null, 0, 20));
 

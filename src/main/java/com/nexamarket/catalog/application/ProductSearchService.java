@@ -3,7 +3,6 @@ package com.nexamarket.catalog.application;
 import com.nexamarket.catalog.api.ProductSearchResponse;
 import com.nexamarket.catalog.search.ProductSearchCriteria;
 import com.nexamarket.catalog.search.ProductSearchGateway;
-import com.nexamarket.auth.repository.UserAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -17,7 +16,7 @@ import java.util.stream.Collectors;
 public class ProductSearchService {
 
     private final ProductSearchGateway productSearchGateway;
-    private final UserAccountRepository userAccountRepository;
+    private final SellerDirectoryGateway sellerDirectoryGateway;
 
     @Cacheable(cacheNames = "catalogSearch", key = "#criteria.toString()")
     public ProductSearchResponse search(ProductSearchCriteria criteria) {
@@ -29,8 +28,7 @@ public class ProductSearchService {
         Set<Long> sellerIds = result.items().stream()
                 .map(document -> document.getSellerId())
                 .collect(Collectors.toSet());
-        Map<Long, String> sellerNames = userAccountRepository.findAllById(sellerIds).stream()
-                .collect(Collectors.toMap(user -> user.getId(), user -> user.getEmail()));
+        Map<Long, String> sellerNames = sellerDirectoryGateway.displayNames(sellerIds);
         return ProductSearchResponse.from(result, sellerNames);
     }
 }

@@ -4,8 +4,6 @@ import com.nexamarket.nexamarket.cart.domain.Cart;
 import com.nexamarket.nexamarket.cart.domain.CartItem;
 import com.nexamarket.nexamarket.cart.domain.CartStatus;
 import com.nexamarket.nexamarket.cart.infrastructure.CartRepository;
-import com.nexamarket.catalog.entity.ProductVariant;
-import com.nexamarket.catalog.repository.ProductVariantRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,13 +15,13 @@ public class CartApplicationService {
 
     private final CartRepository cartRepository;
     private final StockReservationGateway stockReservationGateway;
-    private final ProductVariantRepository productVariantRepository;
+    private final CatalogProductGateway catalogProductGateway;
 
     public CartApplicationService(CartRepository cartRepository, StockReservationGateway stockReservationGateway,
-                                  ProductVariantRepository productVariantRepository) {
+                                  CatalogProductGateway catalogProductGateway) {
         this.cartRepository = cartRepository;
         this.stockReservationGateway = stockReservationGateway;
-        this.productVariantRepository = productVariantRepository;
+        this.catalogProductGateway = catalogProductGateway;
     }
 
     /**
@@ -36,9 +34,11 @@ public class CartApplicationService {
         Cart cart = cartRepository.findByCustomerIdAndStatusForUpdate(command.customerId(), CartStatus.ACTIVE)
                 .orElseGet(() -> new Cart(command.customerId()));
 
-        ProductVariant variant = productVariantRepository.findById(command.productVariantId())
-                .orElseThrow(() -> new IllegalArgumentException("Product variant was not found."));
-        Long sellerId = variant.getProduct().getSellerId();
+        var variant = catalogProductGateway.findVariant(command.productVariantId());
+        if (variant == null) {
+            throw new IllegalArgumentException("Product variant was not found.");
+        }
+        Long sellerId = variant.sellerId();
 
         CartItem existingItem = cart.findItem(command.productVariantId(), sellerId);
         if (existingItem == null) {

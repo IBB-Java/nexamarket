@@ -219,6 +219,7 @@ public class StockService {
                 reservation.getReservationCode(),
                 reservation.getVariant().getId(),
                 reservation.getQuantity(),
+                reservation.getVariant().getPrice(),
                 reservation.getStatus(),
                 reservation.getExpiresAt(),
                 availableStock);

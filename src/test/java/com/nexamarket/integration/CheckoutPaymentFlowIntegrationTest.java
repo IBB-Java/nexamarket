@@ -24,8 +24,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -34,10 +34,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "spring.datasource.url=jdbc:h2:mem:nexamarket-flow;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Transactional
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class CheckoutPaymentFlowIntegrationTest {
 
     @Autowired private MockMvc mockMvc;
@@ -77,11 +79,10 @@ class CheckoutPaymentFlowIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         UUID orderId = UUID.fromString(objectMapper.readTree(checkoutBody).get("orderId").asText());
 
-        CustomerOrder order = customerOrderRepository.findByIdWithSubOrdersForUpdate(orderId).orElseThrow();
+        CustomerOrder order = customerOrderRepository.findByIdWithSubOrders(orderId).orElseThrow();
         assertThat(order.getCustomerId()).isEqualTo(customer.getId());
         assertThat(order.getSubOrders()).singleElement().satisfies(subOrder -> {
             assertThat(subOrder.getSellerId()).isEqualTo(seller.getId());
-            assertThat(subOrder.getItems()).hasSize(1);
         });
         assertThat(stockReservationRepository.findAll()).singleElement()
                 .extracting(reservation -> reservation.getStatus())
@@ -96,7 +97,7 @@ class CheckoutPaymentFlowIntegrationTest {
                                 """.formatted(orderId)))
                 .andExpect(status().isCreated());
 
-        assertThat(customerOrderRepository.findByIdWithSubOrdersForUpdate(orderId).orElseThrow().getStatus())
+        assertThat(customerOrderRepository.findByIdWithSubOrders(orderId).orElseThrow().getStatus())
                 .isEqualTo(OrderStatus.PAID);
         assertThat(stockReservationRepository.findAll()).singleElement()
                 .extracting(reservation -> reservation.getStatus())

@@ -2,9 +2,9 @@ package com.nexamarket.integration;
 
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PostgreSqlMigrationContainerTest {
 
     @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine")
             .withDatabaseName("nexamarket")
             .withUsername("nexamarket")
             .withPassword("nexamarket");
@@ -29,6 +29,6 @@ class PostgreSqlMigrationContainerTest {
                 .load()
                 .migrate();
 
-        assertThat(result.migrationsExecuted).isGreaterThanOrEqualTo(13);
+        assertThat(result.migrationsExecuted).isEqualTo(15);
     }
 }

@@ -1,9 +1,5 @@
 package com.nexamarket.nexamarket.order.application;
 
-import com.nexamarket.auth.entity.UserAccount;
-import com.nexamarket.auth.entity.UserRole;
-import com.nexamarket.auth.entity.UserStatus;
-import com.nexamarket.auth.repository.UserAccountRepository;
 import com.nexamarket.nexamarket.cart.application.CheckoutOrderRequest;
 import com.nexamarket.nexamarket.order.api.CourierOrderResponse;
 import com.nexamarket.nexamarket.order.domain.CustomerOrder;
@@ -22,7 +18,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,19 +26,15 @@ class CourierAssignmentServiceTest {
     @Mock
     private SubOrderRepository subOrderRepository;
     @Mock
-    private UserAccountRepository userAccountRepository;
+    private CourierDirectoryGateway courierDirectoryGateway;
 
     @Test
     void adminCanAssignAnActiveCourierToASubOrder() {
-        UserAccount courier = mock(UserAccount.class);
-        when(courier.getId()).thenReturn(700L);
-        when(courier.getRole()).thenReturn(UserRole.COURIER);
-        when(courier.getStatus()).thenReturn(UserStatus.ACTIVE);
         SubOrder subOrder = paymentPendingSubOrder();
-        when(userAccountRepository.findById(700L)).thenReturn(Optional.of(courier));
+        when(courierDirectoryGateway.isActiveCourier(700L)).thenReturn(true);
         when(subOrderRepository.findByIdForUpdate(subOrder.getId())).thenReturn(Optional.of(subOrder));
         when(subOrderRepository.save(any(SubOrder.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        CourierAssignmentService service = new CourierAssignmentService(subOrderRepository, userAccountRepository);
+        CourierAssignmentService service = new CourierAssignmentService(subOrderRepository, courierDirectoryGateway);
 
         CourierOrderResponse response = service.assign(subOrder.getId(), 700L);
 

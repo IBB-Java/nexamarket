@@ -15,7 +15,6 @@ import com.nexamarket.nexamarket.payment.domain.WalletAccount;
 import com.nexamarket.nexamarket.payment.infrastructure.PaymentTransactionRepository;
 import com.nexamarket.nexamarket.payment.infrastructure.ProcessedPaymentWebhookRepository;
 import com.nexamarket.nexamarket.payment.infrastructure.WalletAccountRepository;
-import com.nexamarket.stock.application.StockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -29,7 +28,7 @@ public class PaymentWebhookService {
     private final CustomerOrderRepository customerOrderRepository;
     private final WalletAccountRepository walletAccountRepository;
     private final OrderStateMachine orderStateMachine;
-    private final StockService stockService;
+    private final StockReservationCommitGateway stockReservationCommitGateway;
     private final OrderStatusEventPublisher orderStatusEventPublisher;
 
     @Autowired
@@ -37,14 +36,14 @@ public class PaymentWebhookService {
                                  ProcessedPaymentWebhookRepository processedPaymentWebhookRepository,
                                  CustomerOrderRepository customerOrderRepository,
                                  WalletAccountRepository walletAccountRepository,
-                                 StockService stockService,
+                                 StockReservationCommitGateway stockReservationCommitGateway,
                                  OrderStatusEventPublisher orderStatusEventPublisher) {
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.processedPaymentWebhookRepository = processedPaymentWebhookRepository;
         this.customerOrderRepository = customerOrderRepository;
         this.walletAccountRepository = walletAccountRepository;
         this.orderStateMachine = new OrderStateMachine();
-        this.stockService = stockService;
+        this.stockReservationCommitGateway = stockReservationCommitGateway;
         this.orderStatusEventPublisher = orderStatusEventPublisher;
     }
 
@@ -88,9 +87,9 @@ public class PaymentWebhookService {
         if (order.getStatus() != OrderStatus.PAYMENT_PENDING) {
             throw new PaymentException(HttpStatus.CONFLICT, "The order is no longer awaiting payment.");
         }
-        if (stockService != null) {
+        if (stockReservationCommitGateway != null) {
             for (SubOrder subOrder : order.getSubOrders()) {
-                subOrder.getItems().forEach(item -> stockService.confirmReservationInternally(item.getStockReservationCode()));
+                subOrder.getItems().forEach(item -> stockReservationCommitGateway.confirm(item.getStockReservationCode()));
             }
         }
         for (SubOrder subOrder : order.getSubOrders()) {

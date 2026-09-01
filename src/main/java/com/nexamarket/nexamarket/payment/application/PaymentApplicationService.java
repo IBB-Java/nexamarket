@@ -12,7 +12,6 @@ import com.nexamarket.nexamarket.payment.domain.PaymentTransaction;
 import com.nexamarket.nexamarket.payment.domain.WalletAccount;
 import com.nexamarket.nexamarket.payment.infrastructure.PaymentTransactionRepository;
 import com.nexamarket.nexamarket.payment.infrastructure.WalletAccountRepository;
-import com.nexamarket.stock.application.StockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -35,7 +34,7 @@ public class PaymentApplicationService {
     private final OrderStateMachine orderStateMachine;
     private final Clock clock;
     private final Duration pollingInterval;
-    private final StockService stockService;
+    private final StockReservationCommitGateway stockReservationCommitGateway;
     private final OrderStatusEventPublisher orderStatusEventPublisher;
 
     @Autowired
@@ -43,11 +42,11 @@ public class PaymentApplicationService {
                                      PaymentTransactionRepository paymentTransactionRepository,
                                      WalletAccountRepository walletAccountRepository,
                                      PaymentProviderGateway paymentProviderGateway,
-                                     StockService stockService,
+                                     StockReservationCommitGateway stockReservationCommitGateway,
                                      OrderStatusEventPublisher orderStatusEventPublisher,
                                      @Value("${payment.polling.interval}") Duration pollingInterval) {
         this(customerOrderRepository, paymentTransactionRepository, walletAccountRepository,
-                paymentProviderGateway, stockService, orderStatusEventPublisher, pollingInterval, Clock.systemUTC());
+                paymentProviderGateway, stockReservationCommitGateway, orderStatusEventPublisher, pollingInterval, Clock.systemUTC());
     }
 
     PaymentApplicationService(CustomerOrderRepository customerOrderRepository,
@@ -63,7 +62,7 @@ public class PaymentApplicationService {
                               PaymentTransactionRepository paymentTransactionRepository,
                               WalletAccountRepository walletAccountRepository,
                               PaymentProviderGateway paymentProviderGateway,
-                              StockService stockService,
+                              StockReservationCommitGateway stockReservationCommitGateway,
                               OrderStatusEventPublisher orderStatusEventPublisher,
                               Duration pollingInterval, Clock clock) {
         this.customerOrderRepository = customerOrderRepository;
@@ -73,7 +72,7 @@ public class PaymentApplicationService {
         this.orderStateMachine = new OrderStateMachine();
         this.pollingInterval = pollingInterval;
         this.clock = clock;
-        this.stockService = stockService;
+        this.stockReservationCommitGateway = stockReservationCommitGateway;
         this.orderStatusEventPublisher = orderStatusEventPublisher;
     }
 
@@ -141,9 +140,9 @@ public class PaymentApplicationService {
     }
 
     private void markOrderPaid(CustomerOrder order) {
-        if (stockService != null) {
+        if (stockReservationCommitGateway != null) {
             for (SubOrder subOrder : order.getSubOrders()) {
-                subOrder.getItems().forEach(item -> stockService.confirmReservationInternally(item.getStockReservationCode()));
+                subOrder.getItems().forEach(item -> stockReservationCommitGateway.confirm(item.getStockReservationCode()));
             }
         }
         for (SubOrder subOrder : order.getSubOrders()) {

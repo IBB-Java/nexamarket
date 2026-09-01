@@ -25,6 +25,11 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, UU
             + "where customerOrder.id = :id")
     Optional<CustomerOrder> findByIdWithSubOrdersForUpdate(@Param("id") UUID id);
 
+    @Query("select distinct customerOrder from CustomerOrder customerOrder "
+            + "left join fetch customerOrder.subOrders "
+            + "where customerOrder.id = :id")
+    Optional<CustomerOrder> findByIdWithSubOrders(@Param("id") UUID id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select distinct customerOrder from CustomerOrder customerOrder "
             + "left join fetch customerOrder.subOrders "

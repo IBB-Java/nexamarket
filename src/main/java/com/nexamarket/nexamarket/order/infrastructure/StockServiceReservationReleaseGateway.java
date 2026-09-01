@@ -1,18 +1,24 @@
 package com.nexamarket.nexamarket.order.infrastructure;
 
 import com.nexamarket.nexamarket.order.application.StockReservationReleaseGateway;
-import com.nexamarket.stock.application.StockService;
-import lombok.RequiredArgsConstructor;
+import com.nexamarket.common.integration.InternalRestClientFactory;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
 public class StockServiceReservationReleaseGateway implements StockReservationReleaseGateway {
 
-    private final StockService stockService;
+    private final InternalRestClientFactory clients;
+
+    public StockServiceReservationReleaseGateway(InternalRestClientFactory clients) {
+        this.clients = clients;
+    }
 
     @Override
     public void releaseReservation(String reservationCode) {
-        stockService.releaseReservationInternally(reservationCode);
+        clients.create("stock-service.base-url")
+                .delete()
+                .uri("/internal/stocks/reservations/{reservationCode}", reservationCode)
+                .retrieve()
+                .toBodilessEntity();
     }
 }

@@ -2,15 +2,14 @@ package com.nexamarket.nexamarket.cart;
 
 import com.nexamarket.nexamarket.cart.application.AddCartItemCommand;
 import com.nexamarket.nexamarket.cart.application.CartApplicationService;
+import com.nexamarket.nexamarket.cart.application.CatalogProductGateway;
 import com.nexamarket.nexamarket.cart.application.CartView;
 import com.nexamarket.nexamarket.cart.application.StockReservation;
 import com.nexamarket.nexamarket.cart.application.StockReservationGateway;
 import com.nexamarket.nexamarket.cart.domain.Cart;
 import com.nexamarket.nexamarket.cart.domain.CartStatus;
 import com.nexamarket.nexamarket.cart.infrastructure.CartRepository;
-import com.nexamarket.catalog.entity.Product;
-import com.nexamarket.catalog.entity.ProductVariant;
-import com.nexamarket.catalog.repository.ProductVariantRepository;
+import com.nexamarket.common.integration.CatalogVariantSnapshot;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -39,7 +38,7 @@ class CartApplicationServiceTest {
     private StockReservationGateway stockReservationGateway;
 
     @Mock
-    private ProductVariantRepository productVariantRepository;
+    private CatalogProductGateway catalogProductGateway;
 
     @Test
     void createsAReservationWhenAddingANewItem() {
@@ -47,11 +46,11 @@ class CartApplicationServiceTest {
         Long variantId = 12L;
         Long sellerId = 13L;
         StockReservation reservation = reservation(2);
-        CartApplicationService service = new CartApplicationService(cartRepository, stockReservationGateway, productVariantRepository);
+        CartApplicationService service = new CartApplicationService(cartRepository, stockReservationGateway, catalogProductGateway);
 
         when(cartRepository.findByCustomerIdAndStatusForUpdate(customerId, CartStatus.ACTIVE))
                 .thenReturn(Optional.empty());
-        when(productVariantRepository.findById(variantId)).thenReturn(Optional.of(variant(sellerId)));
+        when(catalogProductGateway.findVariant(variantId)).thenReturn(variant(variantId, sellerId));
         when(stockReservationGateway.createReservation(customerId, variantId, 2)).thenReturn(reservation);
         when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -75,11 +74,11 @@ class CartApplicationServiceTest {
         Cart existingCart = new Cart(customerId);
         existingCart.addItem(variantId, sellerId, 1, new BigDecimal("499.90"), reservationCode,
                 Instant.now().plusSeconds(600));
-        CartApplicationService service = new CartApplicationService(cartRepository, stockReservationGateway, productVariantRepository);
+        CartApplicationService service = new CartApplicationService(cartRepository, stockReservationGateway, catalogProductGateway);
 
         when(cartRepository.findByCustomerIdAndStatusForUpdate(customerId, CartStatus.ACTIVE))
                 .thenReturn(Optional.of(existingCart));
-        when(productVariantRepository.findById(variantId)).thenReturn(Optional.of(variant(sellerId)));
+        when(catalogProductGateway.findVariant(variantId)).thenReturn(variant(variantId, sellerId));
         when(stockReservationGateway.increaseReservation(reservationCode, 2)).thenReturn(reservation(3));
         when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -97,7 +96,7 @@ class CartApplicationServiceTest {
         var item = cart.addItem(32L, 33L, 1, new BigDecimal("49.90"), "remove-reservation",
                 Instant.now().plusSeconds(600));
         ReflectionTestUtils.setField(item, "id", java.util.UUID.randomUUID());
-        CartApplicationService service = new CartApplicationService(cartRepository, stockReservationGateway, productVariantRepository);
+        CartApplicationService service = new CartApplicationService(cartRepository, stockReservationGateway, catalogProductGateway);
 
         when(cartRepository.findByCustomerIdAndStatusForUpdate(customerId, CartStatus.ACTIVE)).thenReturn(Optional.of(cart));
         when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -116,7 +115,7 @@ class CartApplicationServiceTest {
                 Instant.now().plusSeconds(600));
     }
 
-    private ProductVariant variant(Long sellerId) {
-        return ProductVariant.builder().product(Product.builder().sellerId(sellerId).build()).price(new BigDecimal("499.90")).build();
+    private CatalogVariantSnapshot variant(Long variantId, Long sellerId) {
+        return new CatalogVariantSnapshot(variantId, 1L, sellerId, "Test ürünü", new BigDecimal("499.90"));
     }
 }

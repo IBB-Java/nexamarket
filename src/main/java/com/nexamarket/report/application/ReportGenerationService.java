@@ -4,9 +4,7 @@ import com.lowagie.text.Document;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfWriter;
 import com.nexamarket.catalog.storage.ObjectStorage;
-import com.nexamarket.nexamarket.order.domain.SubOrder;
-import com.nexamarket.nexamarket.order.domain.OrderStatus;
-import com.nexamarket.nexamarket.order.infrastructure.SubOrderRepository;
+import com.nexamarket.common.integration.OrderReportRowSnapshot;
 import com.nexamarket.report.entity.ReportFormat;
 import com.nexamarket.report.entity.ReportJob;
 import com.nexamarket.report.entity.ReportType;
@@ -28,13 +26,13 @@ import java.time.Instant;
 public class ReportGenerationService {
 
     private final ReportJobRepository reportJobRepository;
-    private final SubOrderRepository subOrderRepository;
+    private final OrderReportGateway orderReportGateway;
     private final ObjectStorage objectStorage;
 
-    public ReportGenerationService(ReportJobRepository reportJobRepository, SubOrderRepository subOrderRepository,
+    public ReportGenerationService(ReportJobRepository reportJobRepository, OrderReportGateway orderReportGateway,
                                    ObjectStorage objectStorage) {
         this.reportJobRepository = reportJobRepository;
-        this.subOrderRepository = subOrderRepository;
+        this.orderReportGateway = orderReportGateway;
         this.objectStorage = objectStorage;
     }
 
@@ -46,8 +44,8 @@ public class ReportGenerationService {
             return;
         }
         try {
-            List<SubOrder> rows = job.getType() == ReportType.SELLER_SALES
-                    ? subOrderRepository.findBySellerIdWithOrder(job.getSellerId())
+            List<OrderReportRowSnapshot> rows = job.getType() == ReportType.SELLER_SALES
+                    ? orderReportGateway.sellerRows(job.getSellerId())
                     : dailyRows(job);
             byte[] content = job.getFormat() == ReportFormat.PDF ? createPdf(job, rows) : createXlsx(job, rows);
             String objectKey = "reports/" + job.getId() + "." + job.getFormat().extension();
@@ -58,7 +56,7 @@ public class ReportGenerationService {
         }
     }
 
-    private byte[] createPdf(ReportJob job, List<SubOrder> rows) {
+    private byte[] createPdf(ReportJob job, List<OrderReportRowSnapshot> rows) {
         try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             Document document = new Document();
             PdfWriter.getInstance(document, output);
@@ -71,9 +69,9 @@ public class ReportGenerationService {
                 document.add(new Paragraph("Commission (10%): " + commission(rows)));
                 document.add(new Paragraph("Return count: " + returnCount(rows)));
             }
-            for (SubOrder row : rows) {
-                document.add(new Paragraph(row.getId() + " | seller=" + row.getSellerId()
-                        + " | " + row.getStatus() + " | " + row.getSubtotal()));
+            for (OrderReportRowSnapshot row : rows) {
+                document.add(new Paragraph(row.subOrderId() + " | seller=" + row.sellerId()
+                        + " | " + row.status() + " | " + row.subtotal()));
             }
             document.close();
             return output.toByteArray();
@@ -82,7 +80,7 @@ public class ReportGenerationService {
         }
     }
 
-    private byte[] createXlsx(ReportJob job, List<SubOrder> rows) {
+    private byte[] createXlsx(ReportJob job, List<OrderReportRowSnapshot> rows) {
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             var sheet = workbook.createSheet(job.getType() == ReportType.SELLER_SALES ? "Seller sales" : "Admin daily");
             var header = sheet.createRow(0);
@@ -91,12 +89,12 @@ public class ReportGenerationService {
             header.createCell(2).setCellValue("Status");
             header.createCell(3).setCellValue("Subtotal");
             for (int index = 0; index < rows.size(); index++) {
-                SubOrder row = rows.get(index);
+                OrderReportRowSnapshot row = rows.get(index);
                 var excelRow = sheet.createRow(index + 1);
-                excelRow.createCell(0).setCellValue(row.getId().toString());
-                excelRow.createCell(1).setCellValue(row.getSellerId());
-                excelRow.createCell(2).setCellValue(row.getStatus().name());
-                excelRow.createCell(3).setCellValue(row.getSubtotal().doubleValue());
+                excelRow.createCell(0).setCellValue(row.subOrderId().toString());
+                excelRow.createCell(1).setCellValue(row.sellerId());
+                excelRow.createCell(2).setCellValue(row.status());
+                excelRow.createCell(3).setCellValue(row.subtotal().doubleValue());
             }
             if (job.getType() == ReportType.ADMIN_DAILY) {
                 int summaryRow = rows.size() + 2;
@@ -115,22 +113,22 @@ public class ReportGenerationService {
         }
     }
 
-    private BigDecimal total(List<SubOrder> rows) {
-        return rows.stream().filter(row -> row.getStatus() != OrderStatus.CANCELLED)
-                .map(SubOrder::getSubtotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+    private BigDecimal total(List<OrderReportRowSnapshot> rows) {
+        return rows.stream().filter(row -> !"CANCELLED".equals(row.status()))
+                .map(OrderReportRowSnapshot::subtotal).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private List<SubOrder> dailyRows(ReportJob job) {
+    private List<OrderReportRowSnapshot> dailyRows(ReportJob job) {
         Instant startsAt = job.getRequestedAt().atZone(ZoneOffset.UTC).toLocalDate().atStartOfDay().toInstant(ZoneOffset.UTC);
-        return subOrderRepository.findCreatedBetweenWithOrder(startsAt, startsAt.plusSeconds(86_400));
+        return orderReportGateway.dailyRows(startsAt, startsAt.plusSeconds(86_400));
     }
 
-    private BigDecimal commission(List<SubOrder> rows) {
+    private BigDecimal commission(List<OrderReportRowSnapshot> rows) {
         return total(rows).movePointLeft(1);
     }
 
-    private long returnCount(List<SubOrder> rows) {
-        return rows.stream().filter(row -> row.getStatus() == OrderStatus.RETURN_REQUESTED
-                || row.getStatus() == OrderStatus.RETURN_APPROVED).count();
+    private long returnCount(List<OrderReportRowSnapshot> rows) {
+        return rows.stream().filter(row -> "RETURN_REQUESTED".equals(row.status())
+                || "RETURN_APPROVED".equals(row.status())).count();
     }
 }

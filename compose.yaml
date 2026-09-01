@@ -1,4 +1,36 @@
 services:
+  app:
+    build:
+      context: .
+    container_name: nexamarket-app
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/nexamarket
+      DB_USERNAME: nexamarket
+      DB_PASSWORD: nexamarket
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USERNAME: nexamarket
+      RABBITMQ_PASSWORD: nexamarket
+      REDIS_HOST: redis
+      ELASTICSEARCH_URIS: http://elasticsearch:9200
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      INTERNAL_API_KEY: compose-internal-key-change-in-production
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+
   postgres:
     image: postgres:16-alpine
     container_name: nexamarket-postgres

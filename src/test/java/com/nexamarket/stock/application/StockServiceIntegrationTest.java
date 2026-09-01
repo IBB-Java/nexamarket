@@ -29,6 +29,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
@@ -108,6 +109,38 @@ class StockServiceIntegrationTest {
         assertEquals(10, successfulReservations);
         assertEquals(0, stockService.getStockLevel(variant.getId()).availableStock());
         assertEquals(10, stockReservationRepository.count());
+    }
+
+    @Test
+    void supportsIncreaseConfirmAndIdempotentInternalLifecycleOperations() {
+        ProductVariant variant = createVariant(5);
+        StockReservationResponse created = stockService.reserve(
+                new CreateStockReservationRequest(variant.getId(), 1), customer());
+
+        StockReservationResponse increased = stockService.increaseReservationInternally(
+                created.reservationCode(), 2);
+        assertEquals(3, increased.quantity());
+        assertEquals(2, increased.availableStock());
+
+        stockService.confirmReservationInternally(created.reservationCode());
+        stockService.confirmReservationInternally(created.reservationCode());
+        stockService.releaseReservationInternally(created.reservationCode());
+
+        assertEquals("CONFIRMED", stockReservationRepository.findAll().getFirst().getStatus().name());
+        assertEquals(2, stockService.getStockLevel(variant.getId()).availableStock());
+    }
+
+    @Test
+    void rejectsInvalidIncreaseAndAccessFromAnotherCustomer() {
+        ProductVariant variant = createVariant(3);
+        StockReservationResponse created = stockService.reserve(
+                new CreateStockReservationRequest(variant.getId(), 1), customer());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> stockService.increaseReservationInternally(created.reservationCode(), 0));
+        assertThrows(StockAccessDeniedException.class,
+                () -> stockService.release(created.reservationCode(),
+                        new AuthPrincipal(100L, "other@nexamarket.test", UserRole.CUSTOMER)));
     }
 
     private ProductVariant createVariant(int stockQuantity) {

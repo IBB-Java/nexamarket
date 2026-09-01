@@ -1,47 +1,59 @@
 package com.nexamarket.nexamarket.cart.infrastructure;
 
-import com.nexamarket.auth.entity.UserRole;
-import com.nexamarket.auth.security.AuthPrincipal;
-import com.nexamarket.catalog.repository.ProductVariantRepository;
+import com.nexamarket.common.integration.InternalRestClientFactory;
 import com.nexamarket.nexamarket.cart.application.StockReservation;
 import com.nexamarket.nexamarket.cart.application.StockReservationGateway;
-import com.nexamarket.stock.api.CreateStockReservationRequest;
+import com.nexamarket.stock.api.StockInternalController;
 import com.nexamarket.stock.api.StockReservationResponse;
-import com.nexamarket.stock.application.StockService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.ZoneOffset;
 
 @Component
-@RequiredArgsConstructor
 public class StockServiceReservationGateway implements StockReservationGateway {
 
-    private final StockService stockService;
-    private final ProductVariantRepository productVariantRepository;
+    private final InternalRestClientFactory clients;
+
+    public StockServiceReservationGateway(InternalRestClientFactory clients) {
+        this.clients = clients;
+    }
 
     @Override
     public StockReservation createReservation(Long customerId, Long productVariantId, int quantity) {
-        StockReservationResponse response = stockService.reserve(
-                new CreateStockReservationRequest(productVariantId, quantity),
-                new AuthPrincipal(customerId, "cart-customer-" + customerId, UserRole.CUSTOMER));
+        StockReservationResponse response = clients.create("stock-service.base-url")
+                .post()
+                .uri("/internal/stocks/reservations")
+                .body(new StockInternalController.InternalReservationRequest(customerId, productVariantId, quantity))
+                .retrieve()
+                .body(StockReservationResponse.class);
         return toCartReservation(response);
     }
 
     @Override
     public StockReservation increaseReservation(String reservationCode, int additionalQuantity) {
-        return toCartReservation(stockService.increaseReservationInternally(reservationCode, additionalQuantity));
+        StockReservationResponse response = clients.create("stock-service.base-url")
+                .patch()
+                .uri("/internal/stocks/reservations/{reservationCode}", reservationCode)
+                .body(new StockInternalController.IncreaseReservationRequest(additionalQuantity))
+                .retrieve()
+                .body(StockReservationResponse.class);
+        return toCartReservation(response);
     }
 
     @Override
     public void releaseReservation(String reservationCode) {
-        stockService.releaseReservationInternally(reservationCode);
+        clients.create("stock-service.base-url")
+                .delete()
+                .uri("/internal/stocks/reservations/{reservationCode}", reservationCode)
+                .retrieve()
+                .toBodilessEntity();
     }
 
     private StockReservation toCartReservation(StockReservationResponse response) {
-        var variant = productVariantRepository.findById(response.variantId())
-                .orElseThrow(() -> new IllegalStateException("Reserved product variant was not found."));
-        return new StockReservation(response.reservationCode(), response.quantity(), variant.getPrice(),
+        if (response == null) {
+            throw new IllegalStateException("Stock service returned an empty reservation response.");
+        }
+        return new StockReservation(response.reservationCode(), response.quantity(), response.unitPrice(),
                 response.expiresAt().atZone(ZoneOffset.UTC).toInstant());
     }
 }

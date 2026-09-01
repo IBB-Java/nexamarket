@@ -27,6 +27,7 @@
         <resilience4j.version>2.3.0</resilience4j.version>
         <bucket4j.version>8.14.0</bucket4j.version>
         <redisson.version>3.40.2</redisson.version>
+        <testcontainers.version>2.0.5</testcontainers.version>
     </properties>
 
     <dependencies>
@@ -154,12 +155,14 @@
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -204,6 +207,25 @@
                             <rules>
                                 <rule>
                                     <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.70</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                                <rule>
+                                    <element>CLASS</element>
+                                    <includes>
+                                        <include>com.nexamarket.stock.application.StockService</include>
+                                        <include>com.nexamarket.nexamarket.cart.application.CartApplicationService</include>
+                                        <include>com.nexamarket.nexamarket.cart.application.CartCheckoutService</include>
+                                        <include>com.nexamarket.nexamarket.order.domain.OrderStateMachine</include>
+                                        <include>com.nexamarket.nexamarket.payment.application.PaymentApplicationService</include>
+                                        <include>com.nexamarket.nexamarket.payment.application.PaymentWebhookService</include>
+                                        <include>com.nexamarket.promotion.application.PromotionService</include>
+                                    </includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>

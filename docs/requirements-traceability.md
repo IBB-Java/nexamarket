@@ -1,18 +1,19 @@
 # NexaMarket — gereksinim ve teslim denetimi
 
-Kaynak: `NexaMarket_Analist_Belgesi.docx` (v1.0). Bu kayıt, 27 Ağustos 2026
+Kaynak: `NexaMarket_Analist_Belgesi.docx` (v1.0). Bu kayıt, 1 Eylül 2026
 itibarıyla entegre dalın kod, migration ve test denetimini gösterir. “Karşılandı”
 ifadesi, yalnızca tasarım niyetini değil ilgili kodun ve en az bir doğrulama
 senaryosunun bulunduğunu belirtir.
 
 ## Mimari özeti
 
-Tek Spring Boot uygulamasıdır; modüller `auth`, `catalog`, `users`, `stock`,
-`cart`, `order`, `payment`, `notification`, `promotion`, `loyalty` ve `report`
-paketleriyle mantıksal servis sınırlarına ayrılmıştır. Modüller aynı veritabanını
-paylaşsa da aralarındaki çağrılar arayüz/gateway üzerinden kurulur. Bu yaklaşım,
-ders projesi için tek komutta çalıştırılabilirlik ile gerçek servis ayrımına
-yakın bir yapı arasında dengedir.
+Tek Spring Boot çalıştırılabilir dosyası içinde **Identity**, **Catalog &
+Inventory**, **Commerce** ve **Engagement & Reporting** olmak üzere dört mantıksal
+servis bulunur. Servis sınırlarını geçen senkron işlemler korumalı iç REST,
+asenkron bildirimler ise transactional outbox ve RabbitMQ kullanır; servisler
+birbirlerinin application/service/repository sınıflarını doğrudan çağırmaz.
+`ServiceBoundaryArchitectureTest` bu kuralı derleme sırasında korur. Ayrıntılı
+harita `docs/architecture.md` dosyasındadır.
 
 ## Fonksiyonel gereksinimler
 
@@ -49,7 +50,7 @@ yakın bir yapı arasında dengedir.
 | Konu | Durum | Not |
 | --- | --- | --- |
 | Java 17+ / Spring Boot 3 | Karşılandı | Java 21 hedefi, Spring Boot 3.5 |
-| JPA, PostgreSQL, Flyway | Karşılandı | V1–V13 migration; H2 test doğrulaması ve Docker varsa PostgreSQL Testcontainers testi |
+| JPA, PostgreSQL, Flyway | Karşılandı | V1–V15 migration; H2 test doğrulaması ve Docker varsa PostgreSQL Testcontainers testi |
 | RabbitMQ | Karşılandı | Kalıcı exchange/queue + outbox relay |
 | Redis / Redisson | Karşılandı | 5 saniyelik katalog arama cache’i, stok varyantı Redisson kilidi |
 | Elasticsearch | Karşılandı | Gerçek ve bellek-içi gateway seçenekleri |
@@ -61,9 +62,11 @@ yakın bir yapı arasında dengedir.
 | JSON log + correlation ID | Karşılandı | Logstash biçimi ve `X-Correlation-Id` |
 | Bucket4j rate limit | Karşılandı | IP başına yapılandırılabilir bir dakikalık limit |
 | Audit | Karşılandı | Değiştiren HTTP işlemleri için `audit_logs`; parola/gövde saklanmaz |
-| Testcontainers | Karşılandı | PostgreSQL migration smoke testi; Docker yoksa otomatik atlanır |
-| Kritik satır kapsamı | Karşılandı | JaCoCo `verify` eşiği %70; son ölçüm: **%75,81** (1811/2389) |
-| Docker Compose | Karşılandı | PostgreSQL, RabbitMQ, Redis, Elasticsearch ve MinIO tek `docker compose up -d` komutuyla |
+| Testcontainers | Karşılandı | Testcontainers 2.0.5 ile PostgreSQL 16 üzerinde V1–V15 migration testi; Docker yoksa otomatik atlanır |
+| p95 performans | Karşılandı | `ApiPerformanceAcceptanceTest`, ısınma sonrası katalog araması p95 değerini **300 ms altında** zorunlu tutar |
+| Kritik satır kapsamı | Karşılandı | JaCoCo genel eşik %70, kritik sınıflarda ayrı %70; son ölçüm: **%77,05** (2072/2689) |
+| Servisler arası iletişim | Karşılandı | İç REST + `X-Internal-Api-Key`; bildirimlerde outbox + RabbitMQ; mimari sınır testi |
+| Docker Compose | Karşılandı | Uygulama, PostgreSQL, RabbitMQ, Redis, Elasticsearch ve MinIO tek `docker compose up -d` komutuyla |
 
 ## Kabul senaryoları
 
@@ -72,6 +75,13 @@ yakın bir yapı arasında dengedir.
 3. Durum geçişi: `OrderStateMachineTest` izinli/izinli olmayan geçişleri doğrular.
 4. Uçtan uca akış: `CheckoutPaymentFlowIntegrationTest` kayıt → sepet → stok rezervasyonu → checkout → cüzdan ödemesi → kesin stok düşümü zincirini doğrular.
 5. Migration: `PostgreSqlMigrationContainerTest`, Docker kullanılabiliyorsa migration’ları PostgreSQL 16 üzerinde yürütür.
+6. Performans: `ApiPerformanceAcceptanceTest`, katalog aramasının p95 yanıt süresini 300 ms altında doğrular.
+7. Servis sınırı: `ServiceBoundaryArchitectureTest`, dört mantıksal servis arasındaki yasak doğrudan Java bağımlılıklarını tarar.
+8. İç API güvenliği: `InternalEndpointSecurityIntegrationTest`, anahtarsız isteğin reddedildiğini ve geçerli iç anahtarın kabul edildiğini doğrular.
+
+Son doğrulama: Docker açıkken `./mvnw verify` ile **93 test, 0 hata, 0
+başarısız, 0 atlandı**. PostgreSQL Testcontainers testi 15 migration'ın tamamını
+gerçek PostgreSQL 16 örneğine uyguladı.
 
 ## Bilerek alınan proje kararları
 
