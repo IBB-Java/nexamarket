@@ -18,7 +18,7 @@ const state = {
     catalog: [], cart: JSON.parse(localStorage.getItem("nexa_cart") || "[]"),
     orders: [], returns: [], manageableReturns: [], selectedReturnSubOrder: null,
     favorites: readFavorites(initialUser),
-    sellerProducts: [], courierOrders: [], adminUsers: [], authMode: "login", activeCategory: "all", sort: "featured",
+    sellerProducts: [], sellerCategories: [], sellerImagePreviewUrl: "", courierOrders: [], adminUsers: [], authMode: "login", activeCategory: "all", sort: "featured",
     favoriteOnly: false, coupon: "", lastOrder: null, selectedProduct: null,
     catalogLoading: true, confirmAction: null, pendingVerificationEmail: ""
 };
@@ -37,7 +37,7 @@ const html = value => String(value ?? "").replace(/[&<>'"]/g, char => ({"&":"&am
 
 async function api(path, options = {}) {
     const headers = new Headers(options.headers || {});
-    if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+    if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
     if (state.token && !headers.has("Authorization")) headers.set("Authorization", `Bearer ${state.token}`);
     const response = await fetch(path, {...options, headers});
     const raw = await response.text();
@@ -94,7 +94,13 @@ function normaliseProduct(product) {
         price: Number(product.minPrice ?? product.basePrice ?? variant?.price ?? 0),
         inStock: product.inStock ?? Number(product.totalStock ?? variant?.stockQuantity ?? 0) > 0,
         stock: Number(product.totalStock ?? variant?.stockQuantity ?? 0), variantId: variant?.id || null,
-        status: product.status || "ACTIVE", emoji: emojiFor(`${product.name} ${category}`)};
+        status: product.status || "ACTIVE", imageUrl: product.imageUrl || product.primaryImageUrl || null,
+        emoji: emojiFor(`${product.name} ${category}`)};
+}
+
+function productVisual(product) {
+    if (product.imageUrl) return `<img class="product-photo" src="${html(product.imageUrl)}" alt="${html(product.name)}" loading="lazy" decoding="async">`;
+    return `<span class="product-symbol" aria-hidden="true">${product.emoji}</span>`;
 }
 
 function renderCategoryPills() {
@@ -135,7 +141,7 @@ function renderCatalog() {
         const favorite = state.favorites.has(String(product.id));
         return `<article class="product-card" style="--card-delay:${Math.min(index, 8) * 45}ms">
             <button class="favorite-button ${favorite ? "active" : ""}" data-favorite-product="${product.id}" aria-label="${html(product.name)} favorilere ${favorite ? "çıkar" : "ekle"}" aria-pressed="${favorite}">${favorite ? "♥" : "♡"}</button>
-            <button class="product-image" data-view-product="${product.id}" aria-label="${html(product.name)} ürününü incele"><span class="tag">${html(product.category).toUpperCase()}</span><span class="product-symbol">${product.emoji}</span><small>İNCELE →</small></button>
+            <button class="product-image ${product.imageUrl ? "has-photo" : "no-photo"}" data-view-product="${product.id}" aria-label="${html(product.name)} ürününü incele"><span class="tag">${html(product.category).toUpperCase()}</span>${productVisual(product)}<small>İNCELE →</small></button>
             <div class="product-info"><p class="stock-line ${product.inStock ? "" : "out"}"><i></i>${product.inStock ? `${product.stock || "Sınırlı"} adet stokta` : "Stokta yok"}</p>
                 <button class="product-name" data-view-product="${product.id}">${html(product.name)}</button><p class="product-excerpt">${html(product.description)}</p><p class="product-seller">Satıcı: <b>${html(product.sellerName)}</b></p>
                 <div class="product-bottom"><div><small>Bugünün fiyatı</small><strong class="price">${currency(product.price)}</strong></div><button class="add-button" data-add-product="${product.id}" aria-label="${html(product.name)} sepete ekle" ${product.inStock ? "" : "disabled"}><span>+</span><em>Sepete ekle</em></button></div>
@@ -157,9 +163,9 @@ async function loadProducts() {
 
 async function resolveProduct(product) {
     if (product.variantId) return product;
-    const sellerName = product.sellerName;
+    const sellerName = product.sellerName, imageUrl = product.imageUrl;
     Object.assign(product, normaliseProduct(await api(`/api/v1/products/${product.id}`, {headers: {Authorization: ""}})));
-    product.sellerName = sellerName || product.sellerName;
+    product.sellerName = sellerName || product.sellerName; product.imageUrl = imageUrl || product.imageUrl;
     return product;
 }
 
@@ -168,7 +174,10 @@ async function openProductDetail(productId) {
     if (!product) return;
     try { await resolveProduct(product); } catch (error) { return toast(error.message, "error"); }
     state.selectedProduct = product;
-    $("#detailEmoji").textContent = product.emoji; $("#detailCategory").textContent = product.category.toUpperCase();
+    $("#detailArt").classList.toggle("has-photo", Boolean(product.imageUrl));
+    $("#detailArt").innerHTML = product.imageUrl
+        ? `<img src="${html(product.imageUrl)}" alt="${html(product.name)}" loading="eager"><small id="detailCategory">${html(product.category).toUpperCase()}</small>`
+        : `<span id="detailEmoji">${product.emoji}</span><small id="detailCategory">${html(product.category).toUpperCase()}</small>`;
     $("#detailName").textContent = product.name; $("#detailDescription").textContent = product.description;
     $("#detailPrice").textContent = currency(product.price);
     $("#detailStock").innerHTML = product.inStock ? `<i></i><b>Stokta</b><span>${product.stock || "Sınırlı"} adet, gönderime hazır</span>` : `<i class="out"></i><b>Stokta yok</b><span>Bu ürün şu an siparişe kapalı</span>`;
@@ -198,7 +207,7 @@ function applyCartResponse(cart) {
         const name = item.productName || product?.name || "Sepetteki ürün";
         return {cartItemId: item.id, id: item.productId ?? product?.id ?? item.productVariantId, variantId: item.productVariantId,
             name, price: Number(item.unitPrice ?? product?.price ?? 0), quantity: item.quantity,
-            category: product?.category || "Seçki", emoji: product?.emoji || emojiFor(name)};
+            category: product?.category || "Seçki", imageUrl: product?.imageUrl || null, emoji: product?.emoji || emojiFor(name)};
     });
     saveCart(); renderCart();
 }
@@ -225,7 +234,7 @@ async function addToCart(productId, button = null) {
 function renderCart() {
     const total = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
     $("#cartCount").textContent = state.cart.reduce((sum, item) => sum + item.quantity, 0);
-    $("#cartItems").innerHTML = state.cart.map(item => `<div class="cart-row"><div class="cart-row-art">${item.emoji}</div><div><small>${html(item.category)}</small><h3>${html(item.name)}</h3><p>${item.quantity} adet · ${currency(item.price)}</p></div><div><strong>${currency(item.price * item.quantity)}</strong><button class="remove-item" data-remove-cart="${item.cartItemId || item.id}" aria-label="${html(item.name)} ürününü sepetten çıkar">Sil</button></div></div>`).join("");
+    $("#cartItems").innerHTML = state.cart.map(item => `<div class="cart-row"><div class="cart-row-art">${productVisual(item)}</div><div><small>${html(item.category)}</small><h3>${html(item.name)}</h3><p>${item.quantity} adet · ${currency(item.price)}</p></div><div><strong>${currency(item.price * item.quantity)}</strong><button class="remove-item" data-remove-cart="${item.cartItemId || item.id}" aria-label="${html(item.name)} ürününü sepetten çıkar">Sil</button></div></div>`).join("");
     $("#cartTotal").textContent = currency(total); $("#cartEmpty").hidden = state.cart.length > 0; $("#cartSummary").hidden = state.cart.length === 0;
     $$('[data-remove-cart]').forEach(button => button.addEventListener("click", () => requestCartRemoval(button.dataset.removeCart)));
 }
@@ -437,7 +446,7 @@ async function submitAuth(event) {
 async function openSellerArea() {
     if (!state.token) { openModal("authModal"); $("#authMessage").textContent = "Ürün eklemek için önce giriş yapmalısın."; return; }
     if (state.user?.role !== "SELLER") { toast("Ürün eklemek için ADMIN tarafından SELLER rolüne yükseltilmelisin.", "error"); return; }
-    openModal("sellerModal"); await loadSellerProducts();
+    openModal("sellerModal"); await Promise.all([loadSellerProducts(), loadSellerCategories()]);
 }
 async function openCourierArea() {
     if (!state.token) { openModal("authModal"); $("#authMessage").textContent = "Kurye alanı için önce giriş yapmalısın."; return; }
@@ -543,16 +552,70 @@ async function ensureCategory(name) {
     if (existing) return existing.id;
     throw new Error(`“${name}” kategorisi bulunamadı. Önce ADMIN tarafından oluşturulmalı.`);
 }
+
+async function loadSellerCategories() {
+    const field = $("#sellerCategory"), selected = field.value;
+    field.disabled = true;
+    field.innerHTML = `<option value="">Kategoriler yükleniyor…</option>`;
+    try {
+        state.sellerCategories = await api("/api/v1/categories", {headers: {Authorization: ""}});
+        if (!state.sellerCategories.length) throw new Error("Henüz ürün eklenebilecek kategori yok.");
+        field.innerHTML = `<option value="" disabled ${selected ? "" : "selected"}>Kategori seçin</option>${state.sellerCategories.map(category => `<option value="${category.id}">${html(category.name)}</option>`).join("")}`;
+        if (state.sellerCategories.some(category => String(category.id) === selected)) field.value = selected;
+        field.disabled = false;
+    } catch (error) {
+        state.sellerCategories = [];
+        field.innerHTML = `<option value="">Kategoriler yüklenemedi</option>`;
+        field.disabled = true;
+        toast(error.message, "error");
+    }
+}
+
+function clearSellerImagePreview() {
+    if (state.sellerImagePreviewUrl) URL.revokeObjectURL(state.sellerImagePreviewUrl);
+    state.sellerImagePreviewUrl = "";
+    const preview = $("#sellerImagePreview");
+    preview.hidden = true; preview.innerHTML = "";
+}
+
+function updateSellerImagePreview() {
+    clearSellerImagePreview();
+    const file = $("#sellerImage").files?.[0];
+    if (!file) return;
+    const preview = $("#sellerImagePreview");
+    state.sellerImagePreviewUrl = URL.createObjectURL(file);
+    preview.innerHTML = `<img src="${state.sellerImagePreviewUrl}" alt="Seçilen ürün görseli ön izlemesi"><span>${html(file.name)}</span>`;
+    preview.hidden = false;
+}
+
+function resetSellerForm() {
+    $("#sellerForm").reset();
+    $("#sellerPrice").value = "249.90"; $("#sellerStock").value = "12"; $("#sellerPublish").checked = true;
+    $("#sellerCategory").value = "";
+    clearSellerImagePreview();
+}
+
+async function uploadProductImage(productId, file) {
+    if (!file) return null;
+    if (!["image/jpeg", "image/png"].includes(file.type)) throw new Error("Görsel JPG veya PNG biçiminde olmalı.");
+    if (file.size > 5 * 1024 * 1024) throw new Error("Görsel en fazla 5 MB olabilir.");
+    const formData = new FormData(); formData.append("file", file);
+    return api(`/api/v1/products/${productId}/images`, {method: "POST", body: formData});
+}
+
 function generatedSku(name) {
     const slug = name.toLocaleUpperCase("tr").replace(/İ/g, "I").replace(/Ş/g, "S").replace(/Ğ/g, "G").replace(/Ü/g, "U").replace(/Ö/g, "O").replace(/Ç/g, "C").replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 22) || "URUN";
     return `NX-${slug}-${Date.now().toString(36).slice(-5).toUpperCase()}`;
 }
 async function createProduct(payload, silent = false) {
-    const categoryId = await ensureCategory(payload.category);
+    const categoryId = payload.categoryId || await ensureCategory(payload.category);
+    if (!Number.isInteger(Number(categoryId))) throw new Error("Lütfen listeden geçerli bir kategori seç.");
     let product = await api("/api/v1/products", {method: "POST", body: JSON.stringify({name: payload.name, description: payload.description,
         basePrice: payload.price, categoryIds: [categoryId], variants: [{sku: payload.sku || generatedSku(payload.name), attributes: {"Seçenek": "Standart"}, price: payload.price, stockQuantity: payload.stock}]})});
+    const image = await uploadProductImage(product.id, payload.imageFile);
     if (payload.publish !== false) product = await api(`/api/v1/products/${product.id}/publication`, {method: "PATCH", body: JSON.stringify({status: "ACTIVE"})});
     const normalised = normaliseProduct(product);
+    normalised.imageUrl = image?.thumbnailUrl || image?.originalUrl || normalised.imageUrl;
     if (normalised.status === "ACTIVE") state.catalog = [normalised, ...state.catalog.filter(item => String(item.id) !== String(normalised.id))];
     renderCategoryPills(); renderCatalog();
     if (!silent) toast(normalised.status === "ACTIVE" ? "Ürün vitrinde yayına alındı." : "Ürün taslak olarak kaydedildi.", "success");
@@ -571,9 +634,9 @@ async function submitSeller(event) {
     $("#sellerMessage").textContent = ""; setBusy(submit, true, "Ürün kaydediliyor");
     try {
         if (state.user?.role !== "SELLER") throw new Error("Bu işlem yalnızca SELLER rolündeki kullanıcılar içindir.");
-        const product = await createProduct({name: $("#sellerProductName").value.trim(), category: $("#sellerCategory").value.trim(), price: Number($("#sellerPrice").value), stock: Number($("#sellerStock").value), sku: $("#sellerSku").value.trim(), description: $("#sellerDescription").value.trim() || "NexaMarket satıcısından yeni ürün.", publish: $("#sellerPublish").checked}, true);
+        const product = await createProduct({name: $("#sellerProductName").value.trim(), categoryId: Number($("#sellerCategory").value), price: Number($("#sellerPrice").value), stock: Number($("#sellerStock").value), sku: $("#sellerSku").value.trim(), description: $("#sellerDescription").value.trim() || "NexaMarket satıcısından yeni ürün.", imageFile: $("#sellerImage").files?.[0] || null, publish: $("#sellerPublish").checked}, true);
         $("#sellerMessage").textContent = product.status === "ACTIVE" ? `${product.name} vitrinde yayına alındı.` : `${product.name} taslak olarak kaydedildi.`; $("#sellerMessage").classList.add("success");
-        $("#sellerForm").reset(); $("#sellerCategory").value = "Yaşam"; $("#sellerPrice").value = "249.90"; $("#sellerStock").value = "12"; $("#sellerPublish").checked = true;
+        resetSellerForm();
         await loadSellerProducts(); renderCategoryPills(); renderCatalog();
     } catch (error) { $("#sellerMessage").classList.remove("success"); $("#sellerMessage").textContent = error.message; } finally { setBusy(submit, false); }
 }
@@ -598,7 +661,7 @@ async function changeProductPublication(productId, status, button) {
     try {
         const updated = await api(`/api/v1/products/${productId}/publication`, {method: "PATCH", body: JSON.stringify({status})});
         state.sellerProducts = state.sellerProducts.map(product => String(product.id) === String(productId) ? updated : product);
-        if (status === "ACTIVE") { const item = normaliseProduct(updated); state.catalog = [item, ...state.catalog.filter(product => String(product.id) !== String(productId))]; }
+        if (status === "ACTIVE") { const existing = state.catalog.find(product => String(product.id) === String(productId)); const item = normaliseProduct(updated); item.imageUrl = existing?.imageUrl || item.imageUrl; state.catalog = [item, ...state.catalog.filter(product => String(product.id) !== String(productId))]; }
         else state.catalog = state.catalog.filter(product => String(product.id) !== String(productId));
         renderSellerProducts(); renderCategoryPills(); renderCatalog(); toast(status === "ACTIVE" ? "Ürün vitrinde yayınlandı." : "Ürün satıştan kaldırıldı.", "success");
     } catch (error) { toast(error.message, "error"); setBusy(button, false); }
@@ -660,11 +723,37 @@ function shopCategory(category) {
     state.activeCategory = category === "all" ? "all" : (available.find(item => item.toLocaleLowerCase("tr").includes(category.toLocaleLowerCase("tr"))) || "all");
     state.favoriteOnly = false; updateFavoritesUI(); renderCategoryPills(); renderCatalog(); $("#discover").scrollIntoView({behavior: "smooth"});
 }
+
+const helpTopics = {
+    discover: {
+        title: "Ürünleri keşfetmek çok kolay",
+        lead: "Katalogdaki her ürün, güncel stok ve fiyat bilgisiyle listelenir.",
+        content: `<ol class="help-list"><li><b>Arama yap</b><span>Ürün adı, kategori veya satıcı ile hızlıca filtrele.</span></li><li><b>İncele</b><span>Karta dokunarak açıklama, stok ve ürün görselini görüntüle.</span></li><li><b>Favorile</b><span>Beğendiğin ürünleri kalp simgesiyle daha sonra bulmak üzere kaydet.</span></li></ol>`
+    },
+    checkout: {
+        title: "Sepet ve ödeme akışı",
+        lead: "Satın alma adımları açık ve her aşamada kontrol sende.",
+        content: `<ol class="help-list"><li><b>Sepete ekle</b><span>Stokta olan bir ürünü sepetine ekle; adet ve toplam tutar anında güncellenir.</span></li><li><b>Siparişi oluştur</b><span>Sepeti onayladığında sipariş oluşturulur ve stok ayrılır.</span></li><li><b>Güvenli ödeme</b><span>Ödemeyi tamamladığında sipariş durumunu hesabındaki Siparişlerim alanından takip edebilirsin.</span></li></ol>`
+    },
+    delivery: {
+        title: "Teslimat, takip ve iade",
+        lead: "Siparişin her adımı hesabındaki Siparişlerim ve İadelerim alanında görünür.",
+        content: `<ol class="help-list"><li><b>Hazırlanma ve kargo</b><span>Satıcı siparişini hazırlar; kurye kargoya verildi ve teslim edildi durumlarını günceller.</span></li><li><b>İade talebi</b><span>Uygun siparişlerde Hesabım → İadelerim ekranından iade nedenini seçerek talep oluşturabilirsin.</span></li><li><b>Sonuç bildirimi</b><span>İade onay veya red kararı hesabında görünür; e-posta bildirimleri de hesabındaki gelişmelerden haberdar eder.</span></li></ol>`
+    }
+};
+
+function openHelp(topic) {
+    const help = helpTopics[topic] || helpTopics.discover;
+    $("#helpTitle").textContent = help.title; $("#helpLead").textContent = help.lead; $("#helpContent").innerHTML = help.content;
+    openModal("helpModal");
+}
+
 function initEvents() {
     $("#cartButton").addEventListener("click", openCart); $$('[data-close-cart]').forEach(button => button.addEventListener("click", closeCart)); $("#overlay").addEventListener("click", closeCart);
     $$('[data-open-seller]').forEach(button => button.addEventListener("click", openSellerArea)); $$('[data-close-modal]').forEach(button => button.addEventListener("click", closeModals));
     $("#authButton").addEventListener("click", event => { event.stopPropagation(); toggleAccountMenu(); }); $("#accountOverviewButton").addEventListener("click", () => openAccount("overview"));
     $("#ordersReturnsButton").addEventListener("click", () => openAccount("orders")); $("#footerReturnsButton").addEventListener("click", () => openAccount("returns"));
+    $("#footerHowItWorksButton").addEventListener("click", () => openHelp("discover")); $("#footerDeliveryButton").addEventListener("click", () => openHelp("delivery"));
     $$("[data-account-tab]").forEach(button => button.addEventListener("click", () => switchAccountTab(button.dataset.accountTab)));
     $$("[data-account-target]").forEach(button => button.addEventListener("click", () => switchAccountTab(button.dataset.accountTarget)));
     $("#refreshOrdersButton").addEventListener("click", loadOrders); $("#refreshReturnsButton").addEventListener("click", loadCustomerReturns);
@@ -676,7 +765,7 @@ function initEvents() {
     $$("[data-auth-tab]").forEach(button => button.addEventListener("click", () => setAuthMode(button.dataset.authTab)));
     $("#resendVerificationButton").addEventListener("click", resendVerification);
     $("#verificationLoginButton").addEventListener("click", () => { setAuthMode("login"); $("#authEmail").value = state.pendingVerificationEmail; });
-    $("#authForm").addEventListener("submit", submitAuth); $("#sellerForm").addEventListener("submit", submitSeller); $("#refreshSellerButton").addEventListener("click", loadSellerProducts);
+    $("#authForm").addEventListener("submit", submitAuth); $("#sellerForm").addEventListener("submit", submitSeller); $("#sellerImage").addEventListener("change", updateSellerImagePreview); $("#refreshSellerButton").addEventListener("click", loadSellerProducts);
     $("#checkoutButton").addEventListener("click", checkout); $("#payButton").addEventListener("click", pay);
     $("#detailAddButton").addEventListener("click", () => state.selectedProduct && addToCart(state.selectedProduct.id, $("#detailAddButton")));
     $("#detailFavoriteButton").addEventListener("click", () => state.selectedProduct && toggleFavorite(state.selectedProduct.id));
@@ -688,6 +777,7 @@ function initEvents() {
     $("#searchInput").addEventListener("input", event => { $("#globalSearchInput").value = event.target.value; });
     $$('[data-shop-category]').forEach(button => button.addEventListener("click", () => shopCategory(button.dataset.shopCategory)));
     $$('[data-campaign-category]').forEach(button => button.addEventListener("click", () => shopCategory(button.dataset.campaignCategory)));
+    $$('[data-open-help]').forEach(button => button.addEventListener("click", () => openHelp(button.dataset.openHelp)));
     document.addEventListener("keydown", event => { if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase("tr") === "k") { event.preventDefault(); $("#globalSearchInput").focus(); } });
     $("#sortSelect").addEventListener("change", event => { state.sort = event.target.value; renderCatalog(); }); $("#clearFiltersButton").addEventListener("click", clearFilters);
     document.addEventListener("click", event => { if (!event.target.closest(".account-shell")) closeAccountMenu(); });

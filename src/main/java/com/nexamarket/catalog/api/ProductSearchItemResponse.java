@@ -18,9 +18,10 @@ public record ProductSearchItemResponse(
         BigDecimal maxPrice,
         BigDecimal sellerRating,
         long totalStock,
-        boolean inStock
+        boolean inStock,
+        String imageUrl
 ) implements Serializable {
-    public static ProductSearchItemResponse from(ProductSearchDocument document, String sellerName) {
+    public static ProductSearchItemResponse from(ProductSearchDocument document, String sellerName, String imageUrl) {
         return new ProductSearchItemResponse(
                 Long.valueOf(document.getId()),
                 document.getSellerId(),
@@ -33,7 +34,8 @@ public record ProductSearchItemResponse(
                 BigDecimal.valueOf(document.getMaxPrice()),
                 document.getSellerRating() == null ? null : BigDecimal.valueOf(document.getSellerRating()),
                 document.getTotalStock() == null ? 0 : document.getTotalStock(),
-                Boolean.TRUE.equals(document.getInStock())
+                Boolean.TRUE.equals(document.getInStock()),
+                imageUrl
         );
     }
 }

@@ -1,6 +1,8 @@
 package com.nexamarket.catalog.application;
 
 import com.nexamarket.catalog.api.ProductSearchResponse;
+import com.nexamarket.catalog.api.ProductImageResponse;
+import com.nexamarket.catalog.repository.ProductImageRepository;
 import com.nexamarket.catalog.search.ProductSearchCriteria;
 import com.nexamarket.catalog.search.ProductSearchGateway;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ public class ProductSearchService {
 
     private final ProductSearchGateway productSearchGateway;
     private final SellerDirectoryGateway sellerDirectoryGateway;
+    private final ProductImageRepository productImageRepository;
 
     @Cacheable(cacheNames = "catalogSearch", key = "#criteria.toString()")
     public ProductSearchResponse search(ProductSearchCriteria criteria) {
@@ -28,7 +31,16 @@ public class ProductSearchService {
         Set<Long> sellerIds = result.items().stream()
                 .map(document -> document.getSellerId())
                 .collect(Collectors.toSet());
+        Set<Long> productIds = result.items().stream()
+                .map(document -> Long.valueOf(document.getId()))
+                .collect(Collectors.toSet());
         Map<Long, String> sellerNames = sellerDirectoryGateway.displayNames(sellerIds);
-        return ProductSearchResponse.from(result, sellerNames);
+        Map<Long, String> imageUrls = productImageRepository.findAllByProduct_IdInOrderByProduct_IdAscIdAsc(productIds).stream()
+                .collect(Collectors.toMap(
+                        image -> image.getProduct().getId(),
+                        image -> ProductImageResponse.from(image).originalUrl(),
+                        (first, ignored) -> first
+                ));
+        return ProductSearchResponse.from(result, sellerNames, imageUrls);
     }
 }

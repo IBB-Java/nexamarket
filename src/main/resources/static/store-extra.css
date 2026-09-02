@@ -1345,3 +1345,132 @@ footer a { color: #625a76; font-weight: 700; }
     .process-steps article:nth-child(3) { min-height: 0; margin-top: 0; }
     .process-steps h3 { margin-top: 15px; }
 }
+
+/* Catalogue photos and no-photo states */
+.product-image > .tag {
+    z-index: 4;
+    max-width: calc(100% - 82px);
+    overflow: hidden;
+    color: #625a70;
+    font-size: .6rem;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.product-image > .product-symbol {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 42%;
+    aspect-ratio: 1;
+    border: 1px solid rgba(255,255,255,.38);
+    border-radius: 50%;
+    color: #645d76;
+    font-size: 4.25rem;
+    line-height: 1;
+    background: rgba(255,255,255,.34);
+    box-shadow: 0 16px 30px rgba(78,69,96,.08);
+}
+
+.product-image > .product-photo {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .35s ease;
+}
+
+.product-card:hover .product-image > .product-photo { transform: scale(1.06); }
+.product-image.has-photo::after {
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    background: linear-gradient(180deg, rgba(28,24,42,.08), transparent 42%, rgba(28,24,42,.2));
+    box-shadow: none;
+}
+.product-image.has-photo > small { z-index: 3; color: #fff; text-shadow: 0 1px 8px rgba(19,16,29,.5); }
+.product-image.has-photo > .tag { box-shadow: 0 5px 14px rgba(29,24,42,.12); }
+
+.detail-art.has-photo { overflow: hidden; background: #e7e0ef; }
+.detail-art.has-photo::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 52%, rgba(28,24,42,.42));
+}
+.detail-art.has-photo > img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.detail-art.has-photo > small { position: relative; z-index: 2; align-self: end; margin-bottom: 34px; color: #fff; text-shadow: 0 1px 8px rgba(19,16,29,.6); }
+
+.cart-row-art { overflow: hidden; }
+.cart-row-art .product-photo { width: 100%; height: 100%; object-fit: cover; }
+.cart-row-art .product-symbol { font-size: 1.65rem; color: #645d76; }
+
+/* Seller image upload and category selection */
+.seller-form select {
+    width: 100%;
+    margin-top: 6px;
+    border: 1px solid #d6d7ce;
+    border-radius: 8px;
+    padding: 11px;
+    background: #fff;
+    color: var(--ink);
+    outline-color: var(--coral);
+    font-size: .88rem;
+}
+.seller-form select:disabled { cursor: wait; color: var(--ink-muted); background: #f4f1f2; }
+.seller-image-field { display: grid; gap: 2px; }
+.seller-image-field input[type="file"] { padding: 8px; font-size: .75rem; cursor: pointer; }
+.seller-image-preview {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 3px;
+    padding: 7px;
+    border: 1px solid rgba(109,99,126,.12);
+    border-radius: 10px;
+    background: #f6f2f7;
+    color: #625a70;
+    font-size: .67rem;
+    overflow: hidden;
+}
+.seller-image-preview img { width: 40px; height: 40px; flex: 0 0 40px; border-radius: 7px; object-fit: cover; }
+.seller-image-preview span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Interactive store guide */
+.process-more {
+    margin-top: 11px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #625a76;
+    font-size: .66rem;
+    font-weight: 800;
+}
+.process-more:hover,
+.footer-links button:hover { color: var(--coral-dark); text-decoration: underline; text-underline-offset: 3px; }
+.info-modal { width: min(510px, calc(100vw - 32px)); }
+.help-content { margin-top: 21px; }
+.help-list { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; counter-reset: help; }
+.help-list li { position: relative; min-height: 58px; padding: 12px 12px 12px 48px; border: 1px solid rgba(109,99,126,.1); border-radius: 13px; background: #f6f2f7; counter-increment: help; }
+.help-list li::before { content: counter(help); position: absolute; left: 12px; top: 12px; display: grid; width: 25px; height: 25px; place-items: center; border-radius: 50%; background: #716982; color: #fff; font: .72rem Fraunces, Georgia, serif; }
+.help-list b,
+.help-list span { display: block; }
+.help-list b { color: #4a4557; font-size: .77rem; }
+.help-list span { margin-top: 3px; color: #756e80; font-size: .7rem; line-height: 1.45; }
+
+@media (max-width: 520px) {
+    .product-image > .product-symbol { font-size: 3.2rem; }
+    .seller-image-preview { align-items: flex-start; }
+}

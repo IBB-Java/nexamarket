@@ -11,6 +11,7 @@ import com.nexamarket.catalog.storage.ObjectStorage;
 import com.nexamarket.catalog.storage.StoredObject;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,6 +34,7 @@ public class ProductImageService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
+    @CacheEvict(cacheNames = "catalogSearch", allEntries = true)
     public ProductImageResponse upload(Long productId, Long sellerId, MultipartFile file) {
         validate(file);
         Product product = productRepository.findById(productId)

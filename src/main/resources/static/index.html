@@ -117,14 +117,14 @@
     <section class="process-section" id="how-it-works">
         <div class="process-intro"><p class="eyebrow">NEXAMARKET DENEYİMİ</p><h2>Alışverişin en keyifli hâli.</h2><p>İlham veren seçimleri keşfet, sana uygun olanı bul ve sevdiğin ürünleri güvenle kapına getir.</p></div>
         <div class="process-steps">
-            <article><span>1</span><h3>Keşfet</h3><p>Günlük hayatına eşlik edecek yeni favorilerini bul.</p></article>
-            <article><span>2</span><h3>Seç</h3><p>Sevdiklerini sepete ekle, kararını sakince ver.</p></article>
-            <article><span>3</span><h3>Keyfini sür</h3><p>Siparişin hazırlanırken sen yeni keşiflere devam et.</p></article>
+            <article><span>1</span><h3>Keşfet</h3><p>Günlük hayatına eşlik edecek yeni favorilerini bul.</p><button class="process-more" data-open-help="discover">Detayları gör →</button></article>
+            <article><span>2</span><h3>Seç</h3><p>Sevdiklerini sepete ekle, kararını sakince ver.</p><button class="process-more" data-open-help="checkout">Detayları gör →</button></article>
+            <article><span>3</span><h3>Keyfini sür</h3><p>Siparişin hazırlanırken sen yeni keşiflere devam et.</p><button class="process-more" data-open-help="delivery">Detayları gör →</button></article>
         </div>
     </section>
 </main>
 
-<footer><div class="footer-brand"><div class="brand"><span class="brand-mark">N</span><span>Nexa<span>Market</span></span></div><p>Günlük hayatına iyi gelen seçimler burada.</p></div><div class="footer-links"><div><b>Alışveriş</b><a href="#discover">Tüm ürünler</a><a href="#campaigns">Fırsatlar</a></div><div><b>Destek</b><button id="footerReturnsButton">İade merkezi</button><a href="#how-it-works">Nasıl çalışır?</a></div></div><a class="footer-top" href="#home">Yukarı dön ↑</a></footer>
+<footer><div class="footer-brand"><div class="brand"><span class="brand-mark">N</span><span>Nexa<span>Market</span></span></div><p>Günlük hayatına iyi gelen seçimler burada.</p></div><div class="footer-links"><div><b>Alışveriş</b><a href="#discover">Tüm ürünler</a><a href="#campaigns">Fırsatlar</a></div><div><b>Destek</b><button id="footerReturnsButton">İade merkezi</button><button id="footerHowItWorksButton">Nasıl çalışır?</button><button id="footerDeliveryButton">Teslimat &amp; iade</button></div></div><a class="footer-top" href="#home">Yukarı dön ↑</a></footer>
 
 <aside class="cart-drawer" id="cartDrawer" aria-label="Alışveriş sepeti" aria-hidden="true">
     <div class="drawer-header"><div><p class="eyebrow">SEPETİN</p><h2>Seçtiklerin</h2></div><button class="icon-button" data-close-cart aria-label="Sepeti kapat">×</button></div>
@@ -234,10 +234,11 @@
         <section class="seller-create-panel">
             <div class="panel-title"><span>01</span><div><b>Yeni ürün</b><small>Vitrinine yeni bir seçim ekle</small></div></div>
             <form id="sellerForm" class="seller-form">
-                <div class="form-row"><label>Ürün adı<input id="sellerProductName" required maxlength="255" placeholder="Örn. Seramik Kahve Fincanı"></label><label>Kategori<input id="sellerCategory" required value="Yaşam" maxlength="60" placeholder="Örn. Yaşam"></label></div>
+                <div class="form-row"><label>Ürün adı<input id="sellerProductName" required maxlength="255" placeholder="Örn. Seramik Kahve Fincanı"></label><label>Kategori<select id="sellerCategory" required disabled><option value="">Kategoriler yükleniyor…</option></select></label></div>
                 <div class="form-row"><label>Fiyat (₺)<input id="sellerPrice" type="number" min="1" step="0.01" required value="249.90"></label><label>Stok adedi<input id="sellerStock" type="number" min="0" max="100000" required value="12"></label></div>
                 <div class="form-row"><label>Stok kodu <small>(isteğe bağlı)</small><input id="sellerSku" maxlength="80" placeholder="Boş bırakırsan otomatik oluşur"></label></div>
                 <label>Açıklama<textarea id="sellerDescription" rows="3" maxlength="1000" placeholder="Ürünün malzemesini, kullanımını ve öne çıkan yönünü anlat"></textarea></label>
+                <label class="seller-image-field">Ürün görseli <small>İsteğe bağlı · JPG veya PNG · en fazla 5 MB</small><input id="sellerImage" type="file" accept="image/jpeg,image/png"><span class="seller-image-preview" id="sellerImagePreview" hidden></span></label>
                 <label class="publish-option"><input id="sellerPublish" type="checkbox" checked><span><b>Ürünü hemen vitrine çıkar</b><small>Kapalı bırakırsan ürün taslak olarak kaydedilir.</small></span></label>
                 <button class="primary-button full" type="submit" id="sellerSubmitButton">Ürünü kaydet <span>→</span></button>
             </form>
@@ -248,6 +249,12 @@
             <div class="seller-inventory" id="sellerInventory"><div class="inventory-loading">Ürünlerin hazırlanıyor…</div></div>
         </section>
     </div>
+</dialog>
+
+<dialog class="modal info-modal" id="helpModal">
+    <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
+    <div class="modal-header"><p class="eyebrow">NEXAMARKET REHBERİ</p><h2 id="helpTitle">NexaMarket nasıl çalışır?</h2><p id="helpLead"></p></div>
+    <div class="help-content" id="helpContent"></div>
 </dialog>
 
 <dialog class="modal product-modal" id="productModal">
