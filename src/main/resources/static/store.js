@@ -628,7 +628,6 @@ async function ensureCategory(name) {
     if (existing) return existing.id;
     throw new Error(`“${name}” kategorisi bulunamadı. Önce ADMIN tarafından oluşturulmalı.`);
 }
-
 async function loadSellerCategories() {
     const field = $("#sellerCategory"), selected = field.value;
     field.disabled = true;
@@ -684,7 +683,7 @@ function generatedSku(name) {
     return `NX-${slug}-${Date.now().toString(36).slice(-5).toUpperCase()}`;
 }
 async function createProduct(payload, silent = false) {
-    const categoryId = payload.categoryId || await ensureCategory(payload.category);
+    const categoryId = payload.categoryId ?? await ensureCategory(payload.category);
     if (!Number.isInteger(Number(categoryId))) throw new Error("Lütfen listeden geçerli bir kategori seç.");
     let product = await api("/api/v1/products", {method: "POST", body: JSON.stringify({name: payload.name, description: payload.description,
         basePrice: payload.price, categoryIds: [categoryId], variants: [{sku: payload.sku || generatedSku(payload.name), attributes: {"Seçenek": "Standart"}, price: payload.price, stockQuantity: payload.stock}]})});
