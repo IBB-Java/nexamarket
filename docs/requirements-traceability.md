@@ -50,7 +50,7 @@ harita `docs/architecture.md` dosyasındadır.
 | Konu | Durum | Not |
 | --- | --- | --- |
 | Java 17+ / Spring Boot 3 | Karşılandı | Java 21 hedefi, Spring Boot 3.5 |
-| JPA, PostgreSQL, Flyway | Karşılandı | V1–V17 migration; H2 test doğrulaması ve Docker varsa PostgreSQL Testcontainers testi |
+| JPA, PostgreSQL, Flyway | Karşılandı | V1–V18 migration; H2 test doğrulaması ve Docker varsa PostgreSQL Testcontainers testi |
 | RabbitMQ | Karşılandı | Kalıcı exchange/queue + outbox relay |
 | Redis / Redisson | Karşılandı | 5 saniyelik katalog arama cache’i, stok varyantı Redisson kilidi |
 | Elasticsearch | Karşılandı | Gerçek ve bellek-içi gateway seçenekleri |
@@ -62,7 +62,7 @@ harita `docs/architecture.md` dosyasındadır.
 | JSON log + correlation ID | Karşılandı | Logstash biçimi ve `X-Correlation-Id` |
 | Bucket4j rate limit | Karşılandı | IP başına yapılandırılabilir bir dakikalık limit |
 | Audit | Karşılandı | Değiştiren HTTP işlemleri için `audit_logs`; parola/gövde saklanmaz |
-| Testcontainers | Karşılandı | Testcontainers 2.0.5 ile PostgreSQL 16 üzerinde V1–V17 migration testi; Docker yoksa otomatik atlanır |
+| Testcontainers | Karşılandı | Testcontainers 2.0.5 ile PostgreSQL 16 üzerinde V1–V18 migration testi; Docker yoksa otomatik atlanır |
 | p95 performans | Karşılandı | `ApiPerformanceAcceptanceTest`, ısınma sonrası katalog araması p95 değerini **300 ms altında** zorunlu tutar |
 | Kritik satır kapsamı | Karşılandı | JaCoCo genel eşik %70, kritik sınıflarda ayrı %70; son ölçüm: **%76,59** (2156/2815) |
 | Servisler arası iletişim | Karşılandı | İç REST + `X-Internal-Api-Key`; bildirimlerde outbox + RabbitMQ; mimari sınır testi |
@@ -81,7 +81,7 @@ harita `docs/architecture.md` dosyasındadır.
 9. E-posta doğrulama güvenliği: `EmailVerificationServiceTest`, altı haneli doğrulama kodunun gönderildiğini, açık kod yerine SHA-256 özetinin saklandığını ve geçerli kodun hesabı doğruladığını doğrular.
 
 Son doğrulama: Docker açıkken `./mvnw verify` ile **98 test, 0 hata, 0
-başarısız, 0 atlandı**. PostgreSQL Testcontainers testi 17 migration'ın tamamını
+başarısız, 0 atlandı**. PostgreSQL Testcontainers testi 18 migration'ın tamamını
 gerçek PostgreSQL 16 örneğine uyguladı.
 
 ## Bilerek alınan proje kararları

@@ -35,7 +35,6 @@ const curatedProductImages = Object.freeze({
     "Kum Seramik Fincan": "/images/products/kum-seramik-fincan.png",
     "Luma Masa Lambası": "/images/products/luma-masa-lambasi.png",
     "Terra Günlük Çanta": "/images/products/terra-gunluk-canta.png",
-    "melike mali": "/images/products/melike-mali.png",
     "telefon": "/images/products/telefon.png",
     "Aria Paslanmaz Su Matarası": "/images/products/aria-su-matarasi.png",
     "Mira Keten Defter": "/images/products/mira-keten-defter.png",
