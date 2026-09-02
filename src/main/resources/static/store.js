@@ -20,7 +20,7 @@ const state = {
     favorites: readFavorites(initialUser),
     sellerProducts: [], courierOrders: [], adminUsers: [], authMode: "login", activeCategory: "all", sort: "featured",
     favoriteOnly: false, coupon: "", lastOrder: null, selectedProduct: null,
-    catalogLoading: true, confirmAction: null
+    catalogLoading: true, confirmAction: null, pendingVerificationEmail: ""
 };
 
 const demoProducts = [
@@ -379,10 +379,45 @@ async function hydrateUser() {
 }
 
 function setAuthMode(mode) {
+    hideVerificationPanel();
     state.authMode = mode; $$("[data-auth-tab]").forEach(button => button.classList.toggle("active", button.dataset.authTab === mode));
     $("#authTitle").textContent = mode === "login" ? "Alışverişe başla" : "Hesabını oluştur";
     $("#authSubtitle").textContent = mode === "login" ? "Sepete eklemek ve sipariş vermek için giriş yap." : "NexaMarket deneyimine birkaç saniyede katıl.";
-    $("#authSubmit").innerHTML = mode === "login" ? "Giriş yap <span>→</span>" : "Hesap oluştur <span>→</span>"; $("#authMessage").textContent = "";
+    $("#authSubmit").innerHTML = mode === "login" ? "Giriş yap <span>→</span>" : "Hesap oluştur <span>→</span>"; setAuthMessage("");
+}
+
+function setAuthMessage(message, success = false) {
+    const target = $("#authMessage");
+    target.textContent = message;
+    target.classList.toggle("success", success);
+}
+
+function hideVerificationPanel() {
+    $("#verificationPanel").hidden = true;
+    $("#authTabs").hidden = false;
+    $("#authForm").hidden = false;
+}
+
+function showVerificationPanel(email) {
+    state.pendingVerificationEmail = email;
+    $("#verificationEmail").textContent = email;
+    $("#authTabs").hidden = true;
+    $("#authForm").hidden = true;
+    $("#verificationPanel").hidden = false;
+    $("#authTitle").textContent = "Son bir adım kaldı";
+    $("#authSubtitle").textContent = "E-posta adresini doğruladığında hesabın alışverişe hazır olacak.";
+    setAuthMessage("");
+}
+
+async function resendVerification() {
+    const button = $("#resendVerificationButton");
+    if (!state.pendingVerificationEmail) return;
+    setBusy(button, true, "Gönderiliyor");
+    try {
+        await api("/api/v1/auth/resend-verification", {method: "POST", body: JSON.stringify({email: state.pendingVerificationEmail})});
+        toast("Doğrulama e-postası yeniden gönderildi.", "success");
+    } catch (error) { toast(error.message, "error"); }
+    finally { setBusy(button, false); }
 }
 async function submitAuth(event) {
     event.preventDefault(); const email = $("#authEmail").value.trim(), password = $("#authPassword").value, submit = $("#authSubmit");
@@ -390,15 +425,13 @@ async function submitAuth(event) {
     try {
         if (state.authMode === "register") {
             await api("/api/v1/auth/register", {method: "POST", body: JSON.stringify({email, password})});
-            setAuthMode("login");
-            $("#authEmail").value = email;
-            $("#authMessage").textContent = "Doğrulama bağlantısı e-posta adresine gönderildi. Mailpit kullanıyorsan http://localhost:8025 adresinden açıp bağlantıya tıkla.";
+            showVerificationPanel(email);
             return;
         }
         const login = await api("/api/v1/auth/login", {method: "POST", body: JSON.stringify({email, password})});
         state.token = login.accessToken; state.refreshToken = login.refreshToken || ""; state.user = await api("/api/v1/auth/me");
         saveSession(); loadFavoritesForCurrentUser(); updateAuthUI(); closeModals(); await syncCart(); toast("Hoş geldin! Alışverişe devam edebilirsin.", "success");
-    } catch (error) { $("#authMessage").textContent = error.message; } finally { setBusy(submit, false); }
+    } catch (error) { setAuthMessage(error.message); } finally { setBusy(submit, false); }
 }
 
 async function openSellerArea() {
@@ -641,6 +674,8 @@ function initEvents() {
     $("#logoutButton").addEventListener("click", logout); $("#headerLogoutButton").addEventListener("click", logout);
     $("#favoritesButton").addEventListener("click", () => { state.favoriteOnly = !state.favoriteOnly; updateFavoritesUI(); renderCatalog(); $("#discover").scrollIntoView({behavior: "smooth"}); });
     $$("[data-auth-tab]").forEach(button => button.addEventListener("click", () => setAuthMode(button.dataset.authTab)));
+    $("#resendVerificationButton").addEventListener("click", resendVerification);
+    $("#verificationLoginButton").addEventListener("click", () => { setAuthMode("login"); $("#authEmail").value = state.pendingVerificationEmail; });
     $("#authForm").addEventListener("submit", submitAuth); $("#sellerForm").addEventListener("submit", submitSeller); $("#refreshSellerButton").addEventListener("click", loadSellerProducts);
     $("#checkoutButton").addEventListener("click", checkout); $("#payButton").addEventListener("click", pay);
     $("#detailAddButton").addEventListener("click", () => state.selectedProduct && addToCart(state.selectedProduct.id, $("#detailAddButton")));
@@ -662,7 +697,10 @@ async function boot() {
     initEvents(); renderCart(); updateAuthUI(); updateFavoritesUI(); renderCatalog();
     if (new URLSearchParams(window.location.search).get("verification") === "success") {
         window.history.replaceState({}, document.title, window.location.pathname);
-        setTimeout(() => toast("E-posta adresin doğrulandı. Artık giriş yapabilirsin.", "success"), 200);
+        setAuthMode("login");
+        openModal("authModal");
+        setAuthMessage("E-posta adresin doğrulandı. Artık güvenle giriş yapabilirsin.", true);
+        setTimeout(() => toast("E-posta adresin başarıyla doğrulandı.", "success"), 200);
     }
     await hydrateUser(); await loadProducts(); await syncCart();
 }
