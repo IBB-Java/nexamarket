@@ -608,7 +608,6 @@ async function ensureCategory(name) {
     if (existing) return existing.id;
     throw new Error(`“${name}” kategorisi bulunamadı. Önce ADMIN tarafından oluşturulmalı.`);
 }
-
 async function loadSellerCategories() {
     const field = $("#sellerCategory"), selected = field.value;
     field.disabled = true;
@@ -664,7 +663,7 @@ function generatedSku(name) {
     return `NX-${slug}-${Date.now().toString(36).slice(-5).toUpperCase()}`;
 }
 async function createProduct(payload, silent = false) {
-    const categoryId = payload.categoryId || await ensureCategory(payload.category);
+    const categoryId = payload.categoryId ?? await ensureCategory(payload.category);
     if (!Number.isInteger(Number(categoryId))) throw new Error("Lütfen listeden geçerli bir kategori seç.");
     let product = await api("/api/v1/products", {method: "POST", body: JSON.stringify({name: payload.name, description: payload.description,
         basePrice: payload.price, categoryIds: [categoryId], variants: [{sku: payload.sku || generatedSku(payload.name), attributes: {"Seçenek": "Standart"}, price: payload.price, stockQuantity: payload.stock}]})});
@@ -771,7 +770,6 @@ async function pay() {
 
 function clearFilters() {
     state.activeCategory = "all"; state.favoriteOnly = false; $("#searchInput").value = ""; $("#sortSelect").value = "featured"; state.sort = "featured";
-    $("#globalSearchInput").value = "";
     renderCategoryPills(); updateFavoritesUI(); renderCatalog();
 }
 function shopCategory(category) {
@@ -831,13 +829,10 @@ function initEvents() {
     $("#confirmCancelButton").addEventListener("click", () => { state.confirmAction = null; $("#confirmModal").close(); }); $("#confirmActionButton").addEventListener("click", runConfirmedAction);
     $("#applyCouponButton").addEventListener("click", () => { const code = $("#couponInput").value.trim().toUpperCase(); state.coupon = code; $("#couponInput").value = code; $("#couponNote").textContent = code ? `${code} ödeme adımında uygulanacak.` : ""; });
     $("#emptySeedButton").addEventListener("click", seedCatalog); $("#refreshButton").addEventListener("click", loadProducts); $("#searchInput").addEventListener("input", renderCatalog);
-    $("#globalSearchInput").addEventListener("input", event => { $("#searchInput").value = event.target.value; renderCatalog(); });
-    $("#globalSearchInput").addEventListener("keydown", event => { if (event.key === "Enter") $("#discover").scrollIntoView({behavior: "smooth"}); });
-    $("#searchInput").addEventListener("input", event => { $("#globalSearchInput").value = event.target.value; });
     $$('[data-shop-category]').forEach(button => button.addEventListener("click", () => shopCategory(button.dataset.shopCategory)));
     $$('[data-campaign-category]').forEach(button => button.addEventListener("click", () => shopCategory(button.dataset.campaignCategory)));
     $$('[data-open-help]').forEach(button => button.addEventListener("click", () => openHelp(button.dataset.openHelp)));
-    document.addEventListener("keydown", event => { if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase("tr") === "k") { event.preventDefault(); $("#globalSearchInput").focus(); } });
+    document.addEventListener("keydown", event => { if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase("tr") === "k") { event.preventDefault(); $("#discover").scrollIntoView({behavior: "smooth"}); $("#searchInput").focus(); } });
     $("#sortSelect").addEventListener("change", event => { state.sort = event.target.value; renderCatalog(); }); $("#clearFiltersButton").addEventListener("click", clearFilters);
     document.addEventListener("click", event => { if (!event.target.closest(".account-shell")) closeAccountMenu(); });
 }
