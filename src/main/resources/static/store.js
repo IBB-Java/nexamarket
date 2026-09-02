@@ -16,7 +16,7 @@ const state = {
     refreshToken: localStorage.getItem("nexa_refresh_token") || "",
     user: initialUser,
     catalog: [], cart: JSON.parse(localStorage.getItem("nexa_cart") || "[]"),
-    orders: [],
+    orders: [], returns: [], manageableReturns: [], selectedReturnSubOrder: null,
     favorites: readFavorites(initialUser),
     sellerProducts: [], courierOrders: [], adminUsers: [], authMode: "login", activeCategory: "all", sort: "featured",
     favoriteOnly: false, coupon: "", lastOrder: null, selectedProduct: null,
@@ -255,28 +255,115 @@ function updateAuthUI() {
     $("#menuUserEmail").textContent = state.user?.email || "Hesabına giriş yap"; $("#authButton").classList.toggle("signed-in", Boolean(state.token)); closeAccountMenu();
     $("#courierAreaButton").hidden = state.user?.role !== "COURIER";
     $("#adminPanelButton").hidden = state.user?.role !== "ADMIN";
+    $("#returnManagementButton").hidden = !["SELLER", "ADMIN"].includes(state.user?.role);
 }
-async function openAccount() {
+const orderStatusLabels = {PAYMENT_PENDING: "Ödeme bekleniyor", PAID: "Ödeme alındı", PROCESSING: "Hazırlanıyor", SHIPPED: "Kargoda", DELIVERED: "Teslim edildi", CANCELLED: "İptal edildi", RETURN_REQUESTED: "İade inceleniyor", RETURN_APPROVED: "İade onaylandı", RETURN_REJECTED: "İade reddedildi"};
+const returnStatusLabels = {REQUESTED: "İnceleniyor", APPROVED: "Onaylandı", REJECTED: "Reddedildi"};
+
+function switchAccountTab(tab) {
+    $$("[data-account-tab]").forEach(button => button.classList.toggle("active", button.dataset.accountTab === tab));
+    $$("[data-account-panel]").forEach(panel => panel.classList.toggle("active", panel.dataset.accountPanel === tab));
+}
+
+async function openAccount(initialTab = "overview") {
     if (!state.token) return openModal("authModal");
-    $("#accountName").textContent = `Merhaba, ${state.user?.email?.split("@")[0] || "NexaMarketli"}`;
+    const displayName = state.user?.email?.split("@")[0] || "NexaMarketli";
+    $("#accountName").textContent = `Merhaba, ${displayName}`; $("#accountNavName").textContent = displayName; $("#accountNavEmail").textContent = state.user?.email || "";
+    $$("[data-account-tab='orders'], [data-account-tab='returns']").forEach(button => button.hidden = state.user?.role !== "CUSTOMER");
+    $$("[data-account-target]").forEach(button => button.hidden = state.user?.role !== "CUSTOMER");
     if (state.user?.role !== "CUSTOMER") {
         $("#loyaltyPoints").textContent = "—"; $("#loyaltyUnit").textContent = ""; $("#loyaltyLabel").textContent = "Sadakat programı CUSTOMER hesapları içindir";
         $("#orderCount").textContent = "—"; $("#orderUnit").textContent = ""; $("#orderLabel").textContent = "Alışveriş yalnızca CUSTOMER hesapları içindir";
-        $("#recentOrdersTitle").textContent = "Hesap bilgisi";
-        $("#recentOrders").innerHTML = `<span>${html(state.user?.role || "Bu")} hesabında müşteri sipariş geçmişi bulunmaz.</span>`;
-        return openModal("accountModal");
+        $("#returnCount").textContent = "—"; switchAccountTab("overview"); return openModal("accountModal");
     }
     $("#loyaltyUnit").textContent = "puan"; $("#loyaltyLabel").textContent = "Sadakat bakiyen";
-    $("#orderUnit").textContent = "sipariş"; $("#orderLabel").textContent = "Son alışverişlerin"; $("#recentOrdersTitle").textContent = "Son siparişlerin";
-    try { state.orders = await api("/api/v1/orders/me"); } catch { state.orders = []; }
+    $("#orderUnit").textContent = "sipariş"; $("#orderLabel").textContent = "Toplam alışverişin";
+    openModal("accountModal"); switchAccountTab(initialTab);
+    await Promise.all([loadOrders(), loadCustomerReturns()]);
     $("#orderCount").textContent = state.orders.length;
-    const statusLabels = {PAYMENT_PENDING: "Ödeme bekleniyor", PAID: "Ödeme alındı", PROCESSING: "Hazırlanıyor", SHIPPED: "Kargoda", DELIVERED: "Teslim edildi", CANCELLED: "İptal edildi", RETURN_REQUESTED: "İade talebi"};
-    $("#recentOrders").innerHTML = state.orders.length ? state.orders.slice(0, 3).map(order => `<div class="recent-order"><div><b>#${html(String(order.orderId).slice(0, 8).toUpperCase())}</b><small>${html(formatOrderDate(order.createdAt))} · ${html(statusLabels[order.status] || order.status)}</small></div><strong>${currency(order.totalAmount)}</strong></div>`).join("") : "<span>Henüz bir siparişin yok.</span>";
+    $("#returnCount").textContent = state.returns.length;
     try { $("#loyaltyPoints").textContent = (await api("/api/v1/loyalty/me")).points ?? 0; } catch { $("#loyaltyPoints").textContent = "0"; }
-    openModal("accountModal");
+}
+
+async function loadOrders() {
+    $("#accountOrderList").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>Siparişlerin hazırlanıyor…</div>`;
+    try { state.orders = await api("/api/v1/orders/me"); renderAccountOrders(); }
+    catch (error) { state.orders = []; $("#accountOrderList").innerHTML = `<div class="inventory-empty"><b>Siparişler yüklenemedi</b><small>${html(error.message)}</small></div>`; }
+}
+
+function renderAccountOrders() {
+    if (!state.orders.length) {
+        $("#accountOrderList").innerHTML = `<div class="inventory-empty"><span>▤</span><b>Henüz siparişin yok</b><small>Yeni favorilerini keşfettiğinde siparişlerini buradan takip edebilirsin.</small><button class="primary-button small" data-close-modal onclick="document.querySelector('#discover').scrollIntoView({behavior:'smooth'})">Alışverişe başla</button></div>`;
+        return;
+    }
+    $("#accountOrderList").innerHTML = state.orders.map(order => {
+        const subOrders = order.subOrders || [];
+        const latestStatus = subOrders[0]?.status || order.status;
+        const progress = {PAYMENT_PENDING: 1, PAID: 2, PROCESSING: 2, SHIPPED: 3, DELIVERED: 4, RETURN_REQUESTED: 4, RETURN_APPROVED: 4, RETURN_REJECTED: 4}[latestStatus] || 1;
+        const parts = subOrders.map(subOrder => {
+            const canReturn = ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"].includes(subOrder.status);
+            const returnAction = canReturn ? `<button class="order-return-button" data-return-sub-order="${subOrder.subOrderId}" data-return-order="${order.orderId}">↺ İade talebi oluştur</button>` : `<span class="suborder-status">${html(orderStatusLabels[subOrder.status] || subOrder.status)}</span>`;
+            return `<div class="suborder-row"><div><span>${subOrder.itemCount} ürün · Satıcı #${subOrder.sellerId}</span><b>${currency(subOrder.subtotal)}</b></div>${returnAction}</div>`;
+        }).join("");
+        return `<article class="account-order-card"><header><div><span>Sipariş #${html(String(order.orderId).slice(0, 8).toUpperCase())}</span><small>${html(formatOrderDate(order.createdAt))}</small></div><strong>${currency(order.totalAmount)}</strong></header><div class="order-progress progress-${progress}"><i></i><i></i><i></i><i></i></div><div class="order-progress-labels"><span>Alındı</span><span>Hazırlanıyor</span><span>Kargoda</span><span>Teslim</span></div><div class="suborder-list">${parts || `<span>${html(orderStatusLabels[order.status] || order.status)}</span>`}</div></article>`;
+    }).join("");
+    $$('[data-return-sub-order]').forEach(button => button.addEventListener("click", () => openReturnRequest(button.dataset.returnSubOrder, button.dataset.returnOrder)));
+}
+
+async function loadCustomerReturns() {
+    $("#customerReturnList").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>İadelerin hazırlanıyor…</div>`;
+    try { state.returns = await api("/api/v1/returns/me"); renderCustomerReturns(); }
+    catch (error) { state.returns = []; $("#customerReturnList").innerHTML = `<div class="inventory-empty"><b>İadeler yüklenemedi</b><small>${html(error.message)}</small></div>`; }
+}
+
+function renderCustomerReturns() {
+    $("#returnCount").textContent = state.returns.length;
+    if (!state.returns.length) { $("#customerReturnList").innerHTML = `<div class="inventory-empty"><span>↺</span><b>Henüz iade talebin yok</b><small>İade edilebilir siparişlerini “Siparişlerim” alanından seçebilirsin.</small></div>`; return; }
+    $("#customerReturnList").innerHTML = state.returns.map(item => `<article class="return-card"><div class="return-card-icon">↺</div><div><span class="status-badge return-${item.status.toLowerCase()}">${html(returnStatusLabels[item.status] || item.status)}</span><b>Sipariş #${html(String(item.orderId).slice(0, 8).toUpperCase())}</b><small>${html(formatOrderDate(item.createdAt))} · ${currency(item.amount)}</small><p>${html(item.reason)}</p></div></article>`).join("");
+}
+
+function openReturnRequest(subOrderId, orderId) {
+    state.selectedReturnSubOrder = subOrderId; $("#returnRequestForm").reset(); $("#returnRequestMessage").textContent = "";
+    $("#returnOrderSummary").textContent = `#${String(orderId).slice(0, 8).toUpperCase()} numaralı siparişindeki ürünler için iade nedeni paylaş.`;
+    openModal("returnRequestModal");
+}
+
+async function submitReturnRequest(event) {
+    event.preventDefault(); const button = $("#submitReturnButton"), preset = $("#returnReasonPreset").value, detail = $("#returnReasonDetail").value.trim();
+    const reason = preset === "other" ? detail : [preset, detail].filter(Boolean).join(" — ");
+    if (!reason) { $("#returnRequestMessage").textContent = "Lütfen iade nedenini yaz."; return; }
+    setBusy(button, true, "Talep oluşturuluyor");
+    try {
+        await api("/api/v1/returns", {method: "POST", body: JSON.stringify({subOrderId: state.selectedReturnSubOrder, reason})});
+        toast("İade talebin oluşturuldu. Durumunu iade merkezinden takip edebilirsin.", "success"); await openAccount("returns");
+    } catch (error) { $("#returnRequestMessage").textContent = error.message; }
+    finally { setBusy(button, false); }
+}
+
+async function openReturnManagement() {
+    if (!["SELLER", "ADMIN"].includes(state.user?.role)) return toast("Bu alan yalnızca satıcı ve yönetici hesapları içindir.", "error");
+    openModal("returnManagementModal"); await loadManageableReturns();
+}
+
+async function loadManageableReturns() {
+    $("#manageableReturnList").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>Talepler hazırlanıyor…</div>`;
+    try { state.manageableReturns = await api("/api/v1/returns/manageable"); renderManageableReturns(); }
+    catch (error) { $("#manageableReturnList").innerHTML = `<div class="inventory-empty"><b>Talepler yüklenemedi</b><small>${html(error.message)}</small></div>`; }
+}
+
+function renderManageableReturns() {
+    if (!state.manageableReturns.length) { $("#manageableReturnList").innerHTML = `<div class="inventory-empty"><span>✓</span><b>Bekleyen iade yok</b><small>Yeni bir talep geldiğinde burada görüntülenecek.</small></div>`; return; }
+    $("#manageableReturnList").innerHTML = state.manageableReturns.map(item => `<article class="return-card manageable"><div class="return-card-icon">↺</div><div><span class="status-badge return-${item.status.toLowerCase()}">${html(returnStatusLabels[item.status] || item.status)}</span><b>#${html(String(item.orderId).slice(0, 8).toUpperCase())} · Satıcı #${item.sellerId}</b><small>${html(formatOrderDate(item.createdAt))} · ${currency(item.amount)}</small><p>${html(item.reason)}</p></div>${item.status === "REQUESTED" ? `<div class="return-actions"><button data-resolve-return="${item.id}" data-return-status="REJECTED">Reddet</button><button class="approve" data-resolve-return="${item.id}" data-return-status="APPROVED">Onayla</button></div>` : ""}</article>`).join("");
+    $$('[data-resolve-return]').forEach(button => button.addEventListener("click", () => resolveReturn(button.dataset.resolveReturn, button.dataset.returnStatus, button)));
+}
+
+async function resolveReturn(returnId, status, button) {
+    setBusy(button, true, status === "APPROVED" ? "Onaylanıyor" : "Reddediliyor");
+    try { await api(`/api/v1/returns/${returnId}`, {method: "PATCH", body: JSON.stringify({status})}); toast(status === "APPROVED" ? "İade talebi onaylandı." : "İade talebi reddedildi.", "success"); await loadManageableReturns(); }
+    catch (error) { toast(error.message, "error"); setBusy(button, false); }
 }
 function clearLocalSession() {
-    state.token = ""; state.refreshToken = ""; state.user = null; state.cart = []; state.orders = []; state.favorites = readFavorites(null);
+    state.token = ""; state.refreshToken = ""; state.user = null; state.cart = []; state.orders = []; state.returns = []; state.manageableReturns = []; state.favorites = readFavorites(null);
     saveSession(); saveCart(); renderCart(); updateFavoritesUI(); renderCatalog(); updateAuthUI(); closeModals();
 }
 async function logout() {
@@ -532,12 +619,23 @@ async function pay() {
 
 function clearFilters() {
     state.activeCategory = "all"; state.favoriteOnly = false; $("#searchInput").value = ""; $("#sortSelect").value = "featured"; state.sort = "featured";
+    $("#globalSearchInput").value = "";
     renderCategoryPills(); updateFavoritesUI(); renderCatalog();
+}
+function shopCategory(category) {
+    const available = [...new Set(state.catalog.map(product => product.category))];
+    state.activeCategory = category === "all" ? "all" : (available.find(item => item.toLocaleLowerCase("tr").includes(category.toLocaleLowerCase("tr"))) || "all");
+    state.favoriteOnly = false; updateFavoritesUI(); renderCategoryPills(); renderCatalog(); $("#discover").scrollIntoView({behavior: "smooth"});
 }
 function initEvents() {
     $("#cartButton").addEventListener("click", openCart); $$('[data-close-cart]').forEach(button => button.addEventListener("click", closeCart)); $("#overlay").addEventListener("click", closeCart);
     $$('[data-open-seller]').forEach(button => button.addEventListener("click", openSellerArea)); $$('[data-close-modal]').forEach(button => button.addEventListener("click", closeModals));
-    $("#authButton").addEventListener("click", event => { event.stopPropagation(); toggleAccountMenu(); }); $("#accountOverviewButton").addEventListener("click", openAccount);
+    $("#authButton").addEventListener("click", event => { event.stopPropagation(); toggleAccountMenu(); }); $("#accountOverviewButton").addEventListener("click", () => openAccount("overview"));
+    $("#ordersReturnsButton").addEventListener("click", () => openAccount("orders")); $("#footerReturnsButton").addEventListener("click", () => openAccount("returns"));
+    $$("[data-account-tab]").forEach(button => button.addEventListener("click", () => switchAccountTab(button.dataset.accountTab)));
+    $$("[data-account-target]").forEach(button => button.addEventListener("click", () => switchAccountTab(button.dataset.accountTarget)));
+    $("#refreshOrdersButton").addEventListener("click", loadOrders); $("#refreshReturnsButton").addEventListener("click", loadCustomerReturns);
+    $("#returnRequestForm").addEventListener("submit", submitReturnRequest); $("#returnManagementButton").addEventListener("click", openReturnManagement); $("#refreshManageableReturnsButton").addEventListener("click", loadManageableReturns);
     $("#courierAreaButton").addEventListener("click", openCourierArea); $("#refreshCourierButton").addEventListener("click", loadCourierOrders);
     $("#adminPanelButton").addEventListener("click", openAdminPanel); $("#refreshAdminUsersButton").addEventListener("click", loadAdminUsers); $("#adminUserForm").addEventListener("submit", submitAdminUser);
     $("#logoutButton").addEventListener("click", logout); $("#headerLogoutButton").addEventListener("click", logout);
@@ -550,6 +648,12 @@ function initEvents() {
     $("#confirmCancelButton").addEventListener("click", () => { state.confirmAction = null; $("#confirmModal").close(); }); $("#confirmActionButton").addEventListener("click", runConfirmedAction);
     $("#applyCouponButton").addEventListener("click", () => { const code = $("#couponInput").value.trim().toUpperCase(); state.coupon = code; $("#couponInput").value = code; $("#couponNote").textContent = code ? `${code} ödeme adımında uygulanacak.` : ""; });
     $("#emptySeedButton").addEventListener("click", seedCatalog); $("#refreshButton").addEventListener("click", loadProducts); $("#searchInput").addEventListener("input", renderCatalog);
+    $("#globalSearchInput").addEventListener("input", event => { $("#searchInput").value = event.target.value; renderCatalog(); });
+    $("#globalSearchInput").addEventListener("keydown", event => { if (event.key === "Enter") $("#discover").scrollIntoView({behavior: "smooth"}); });
+    $("#searchInput").addEventListener("input", event => { $("#globalSearchInput").value = event.target.value; });
+    $$('[data-shop-category]').forEach(button => button.addEventListener("click", () => shopCategory(button.dataset.shopCategory)));
+    $$('[data-campaign-category]').forEach(button => button.addEventListener("click", () => shopCategory(button.dataset.campaignCategory)));
+    document.addEventListener("keydown", event => { if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase("tr") === "k") { event.preventDefault(); $("#globalSearchInput").focus(); } });
     $("#sortSelect").addEventListener("change", event => { state.sort = event.target.value; renderCatalog(); }); $("#clearFiltersButton").addEventListener("click", clearFilters);
     document.addEventListener("click", event => { if (!event.target.closest(".account-shell")) closeAccountMenu(); });
 }

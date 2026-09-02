@@ -79,4 +79,20 @@ public class ReturnRequest {
     public ReturnRequestStatus getStatus() {
         return status;
     }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public Long getResolvedBy() {
+        return resolvedBy;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getResolvedAt() {
+        return resolvedAt;
+    }
 }

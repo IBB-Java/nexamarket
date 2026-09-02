@@ -62,7 +62,11 @@ class CustomerOrderHistoryApiIntegrationTest {
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].orderId").value(firstOrder.getId().toString()))
-                .andExpect(jsonPath("$[0].totalAmount").value(199.90));
+                .andExpect(jsonPath("$[0].totalAmount").value(199.90))
+                .andExpect(jsonPath("$[0].subOrders.length()").value(1))
+                .andExpect(jsonPath("$[0].subOrders[0].subOrderId")
+                        .value(firstOrder.getSubOrders().getFirst().getId().toString()))
+                .andExpect(jsonPath("$[0].subOrders[0].itemCount").value(1));
 
         mockMvc.perform(get("/api/v1/orders/me")
                         .header("Authorization", "Bearer " + secondToken))

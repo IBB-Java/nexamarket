@@ -17,7 +17,10 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, UU
 
     Optional<CustomerOrder> findBySourceCartId(UUID sourceCartId);
 
-    List<CustomerOrder> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
+    @Query("select distinct customerOrder from CustomerOrder customerOrder "
+            + "left join fetch customerOrder.subOrders "
+            + "where customerOrder.customerId = :customerId order by customerOrder.createdAt desc")
+    List<CustomerOrder> findByCustomerIdOrderByCreatedAtDesc(@Param("customerId") Long customerId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select distinct customerOrder from CustomerOrder customerOrder "

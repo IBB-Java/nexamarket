@@ -74,6 +74,10 @@ public class OrderItem {
         return unitPrice.multiply(BigDecimal.valueOf(quantity));
     }
 
+    public int getQuantity() {
+        return quantity;
+    }
+
     public String getStockReservationCode() {
         return stockReservationCode;
     }

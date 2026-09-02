@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.List;
 
 @Service
 public class ReturnRequestService {
@@ -102,6 +103,22 @@ public class ReturnRequestService {
         }
         publishStatus(saved.getSubOrder());
         return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReturnRequest> listForCustomer(Long customerId) {
+        return returnRequestRepository.findForCustomer(customerId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReturnRequest> listManageableBy(AuthPrincipal principal) {
+        if (principal.role() == UserRole.ADMIN) {
+            return returnRequestRepository.findAllWithOrderDetails();
+        }
+        if (principal.role() == UserRole.SELLER) {
+            return returnRequestRepository.findForSeller(principal.userId());
+        }
+        throw new OrderAccessDeniedException("İade taleplerini yalnızca ilgili satıcı veya yönetici görüntüleyebilir.");
     }
 
     private void publishStatus(SubOrder subOrder) {

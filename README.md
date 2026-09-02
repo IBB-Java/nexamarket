@@ -60,9 +60,15 @@ NexaMarket Store bulunur. Buradan:
   çıkış yapabilir,
 - ürünleri arayabilir, kategoriye göre filtreleyebilir, sıralayabilir, detaylarını
   inceleyebilir ve favorilerine kaydedebilir,
+- üst arama alanı, kategori menüsü ve kampanya kartlarıyla güncel mağaza
+  deneyimi üzerinden ürünlere hızlıca ulaşabilir,
 - ürünleri sepete ekleyip, silme onayıyla sunucu tarafında rezerve edilen sepetini
   yönetebilir,
 - mock kart ödemesiyle siparişi tamamlayabilir,
+- “Hesabım” ekranından sipariş adımlarını takip edebilir, uygun alt sipariş için
+  iade talebi açabilir ve talebin inceleniyor/onaylandı/reddedildi durumunu görebilir,
+- satıcı veya yönetici hesabıyla “İade yönetimi” alanından talepleri onaylayabilir
+  ya da reddedebilir,
 - “Satıcı alanı” ile otomatik stok kodlu yeni ürün ve varyant ekleyebilir, ürünü
   hemen vitrinde yayınlayabilir veya taslak olarak saklayabilir; mevcut ürünleri
   yayınlayabilir, satıştan kaldırabilir ve geçmiş siparişleri bozmadan silebilirsiniz.

@@ -18,19 +18,17 @@
     <a class="brand" href="#home" aria-label="NexaMarket ana sayfa">
         <span class="brand-mark">N</span><span>Nexa<span>Market</span></span>
     </a>
-    <nav aria-label="Ana menü">
-        <a href="#discover">Yeni gelenler</a>
-        <a href="#how-it-works">Neden NexaMarket?</a>
-        <button class="nav-link" data-open-seller>Ürün sat</button>
-    </nav>
+    <label class="header-search"><span>⌕</span><input id="globalSearchInput" type="search" placeholder="Ürün, kategori veya satıcı ara"><kbd>⌘ K</kbd></label>
     <div class="header-actions">
         <button class="favorite-header-button" id="favoritesButton" aria-label="Favorileri göster" aria-pressed="false">♡ <b id="favoriteCount">0</b></button>
         <div class="account-shell">
             <button class="account-button" id="authButton" aria-expanded="false"><span class="account-avatar">◦</span><span id="authButtonLabel">Giriş yap</span><span class="chevron">⌄</span></button>
             <div class="account-menu" id="accountMenu" hidden>
                 <div class="account-menu-user"><span class="account-avatar">◦</span><div><b id="menuUserName">NexaMarketli</b><small id="menuUserEmail">Hesabına giriş yap</small></div></div>
-                <button id="accountOverviewButton"><span>◎</span> Hesap özeti</button>
+                <button id="accountOverviewButton"><span>◎</span> Hesabım</button>
+                <button id="ordersReturnsButton"><span>↺</span> Siparişlerim & iadeler</button>
                 <button data-open-seller><span>◇</span> Satıcı alanı</button>
+                <button id="returnManagementButton" hidden><span>✓</span> İade yönetimi</button>
                 <button id="courierAreaButton" hidden><span>▣</span> Kurye alanı</button>
                 <button id="adminPanelButton" hidden><span>◫</span> Yönetim paneli</button>
                 <button class="menu-logout" id="headerLogoutButton"><span>↗</span> Güvenli çıkış</button>
@@ -41,6 +39,16 @@
         </button>
     </div>
 </header>
+
+<nav class="commerce-nav" aria-label="Alışveriş kategorileri">
+    <button data-shop-category="all">Tüm ürünler</button>
+    <button data-shop-category="Teknoloji">Teknoloji</button>
+    <button data-shop-category="Yaşam">Yaşam</button>
+    <button data-shop-category="Ev">Ev & dekorasyon</button>
+    <a href="#campaigns">Fırsatlar</a>
+    <a href="#how-it-works">Neden NexaMarket?</a>
+    <button class="commerce-sell" data-open-seller>Mağazanı aç</button>
+</nav>
 
 <main id="home">
     <section class="hero">
@@ -69,6 +77,15 @@
         <div><span>01</span><p><b>Hızlı teslimat</b> Seçtiklerin özenle hazırlanır.</p></div>
         <div><span>02</span><p><b>Kolay iade</b> Fikrini değiştirmek çok kolay.</p></div>
         <div><span>03</span><p><b>Güvenli ödeme</b> İçin rahat ederek alışveriş yap.</p></div>
+    </section>
+
+    <section class="campaign-section" id="campaigns">
+        <div class="campaign-heading"><div><p class="eyebrow">KAÇIRMA</p><h2>Bugün sana ne iyi gelir?</h2></div><a href="#discover">Tümünü keşfet →</a></div>
+        <div class="campaign-grid">
+            <button class="campaign-card campaign-main" data-campaign-category="all"><span>HAFTANIN SEÇKİSİ</span><h3>Yeni favorilerin<br>burada.</h3><p>Özenle seçilen ürünlerde ilham veren fiyatlar.</p><b>Alışverişe başla →</b><i>✦</i></button>
+            <button class="campaign-card campaign-tech" data-campaign-category="Teknoloji"><span>TEKNOLOJİ</span><h3>Gününü kolaylaştır.</h3><p>Akıllı seçimleri keşfet.</p><b>İncele →</b><i>⌁</i></button>
+            <button class="campaign-card campaign-home" data-campaign-category="Ev"><span>EV & YAŞAM</span><h3>Evinin havasını değiştir.</h3><p>Sıcak, yalın ve sana göre.</p><b>İncele →</b><i>⌂</i></button>
+        </div>
     </section>
 
     <section class="catalog-section" id="discover">
@@ -107,7 +124,7 @@
     </section>
 </main>
 
-<footer><div class="brand"><span class="brand-mark">N</span><span>Nexa<span>Market</span></span></div><p>Günlük hayatına iyi gelen seçimler burada.</p><a href="#home">Yukarı dön ↑</a></footer>
+<footer><div class="footer-brand"><div class="brand"><span class="brand-mark">N</span><span>Nexa<span>Market</span></span></div><p>Günlük hayatına iyi gelen seçimler burada.</p></div><div class="footer-links"><div><b>Alışveriş</b><a href="#discover">Tüm ürünler</a><a href="#campaigns">Fırsatlar</a></div><div><b>Destek</b><button id="footerReturnsButton">İade merkezi</button><a href="#how-it-works">Nasıl çalışır?</a></div></div><a class="footer-top" href="#home">Yukarı dön ↑</a></footer>
 
 <aside class="cart-drawer" id="cartDrawer" aria-label="Alışveriş sepeti" aria-hidden="true">
     <div class="drawer-header"><div><p class="eyebrow">SEPETİN</p><h2>Seçtiklerin</h2></div><button class="icon-button" data-close-cart aria-label="Sepeti kapat">×</button></div>
@@ -126,12 +143,51 @@
     <p class="form-message" id="authMessage"></p>
 </dialog>
 
-<dialog class="modal" id="accountModal">
+<dialog class="modal account-center-modal" id="accountModal">
     <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
-    <div class="modal-header"><p class="eyebrow">HESABIM</p><h2 id="accountName">Merhaba</h2><p>Alışverişlerin ve kazandığın avantajlar burada.</p></div>
-    <div class="account-stats"><div><span>✦</span><p><b id="loyaltyPoints">0</b> <span id="loyaltyUnit">puan</span></p><small id="loyaltyLabel">Sadakat bakiyen</small></div><div><span>◌</span><p><b id="orderCount">0</b> <span id="orderUnit">sipariş</span></p><small id="orderLabel">Son alışverişlerin</small></div></div>
-    <div class="recent-orders"><p class="payment-label" id="recentOrdersTitle">Son siparişlerin</p><div id="recentOrders"><span>Henüz bir siparişin yok.</span></div></div>
-    <button class="secondary-button full logout-emphasis" id="logoutButton">Güvenli çıkış yap <span>↗</span></button>
+    <div class="account-center-layout">
+        <aside class="account-center-nav">
+            <div class="account-center-user"><span class="account-avatar">◦</span><div><b id="accountNavName">NexaMarketli</b><small id="accountNavEmail"></small></div></div>
+            <button class="active" data-account-tab="overview"><span>⌂</span> Genel bakış</button>
+            <button data-account-tab="orders"><span>▤</span> Siparişlerim</button>
+            <button data-account-tab="returns"><span>↺</span> İadelerim</button>
+            <button class="logout-emphasis" id="logoutButton"><span>↗</span> Güvenli çıkış</button>
+        </aside>
+        <div class="account-center-content">
+            <section class="account-panel active" data-account-panel="overview">
+                <div class="modal-header"><p class="eyebrow">HESABIM</p><h2 id="accountName">Merhaba</h2><p>Alışverişlerin, iadelerin ve kazandığın avantajlar tek yerde.</p></div>
+                <div class="account-stats"><div><span>✦</span><p><b id="loyaltyPoints">0</b> <span id="loyaltyUnit">puan</span></p><small id="loyaltyLabel">Sadakat bakiyen</small></div><div><span>◌</span><p><b id="orderCount">0</b> <span id="orderUnit">sipariş</span></p><small id="orderLabel">Toplam alışverişin</small></div><div><span>↺</span><p><b id="returnCount">0</b> iade</p><small>İade taleplerin</small></div></div>
+                <div class="account-shortcuts"><button data-account-target="orders"><span>▤</span><div><b>Siparişlerini görüntüle</b><small>Kargo ve teslimat durumunu takip et</small></div><i>→</i></button><button data-account-target="returns"><span>↺</span><div><b>İade merkezine git</b><small>Talep oluştur veya durumunu öğren</small></div><i>→</i></button></div>
+            </section>
+            <section class="account-panel" data-account-panel="orders">
+                <div class="account-panel-heading"><div><p class="eyebrow">SİPARİŞLERİM</p><h2>Tüm siparişlerin</h2></div><button id="refreshOrdersButton">↻ Yenile</button></div>
+                <div class="account-order-list" id="accountOrderList"><div class="inventory-loading"><span class="button-spinner"></span>Siparişlerin hazırlanıyor…</div></div>
+            </section>
+            <section class="account-panel" data-account-panel="returns">
+                <div class="account-panel-heading"><div><p class="eyebrow">İADE MERKEZİ</p><h2>İade taleplerin</h2></div><button id="refreshReturnsButton">↻ Yenile</button></div>
+                <div class="return-help"><span>i</span><p><b>İade nasıl yapılır?</b>Teslim edilen veya gönderim sürecindeki siparişinden “İade talebi oluştur” seçeneğini kullan. Talebin satıcı tarafından değerlendirildiğinde durum burada güncellenir.</p></div>
+                <div class="return-list" id="customerReturnList"><div class="inventory-loading"><span class="button-spinner"></span>İadelerin hazırlanıyor…</div></div>
+            </section>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="modal return-request-modal" id="returnRequestModal">
+    <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
+    <div class="modal-header"><p class="eyebrow">İADE TALEBİ</p><h2>Birlikte çözelim.</h2><p id="returnOrderSummary">İade etmek istediğin sipariş için nedenini paylaş.</p></div>
+    <form id="returnRequestForm">
+        <label>İade nedeni<select id="returnReasonPreset" required><option value="">Bir neden seç</option><option>Ürün hasarlı veya kusurlu geldi</option><option>Yanlış ürün gönderildi</option><option>Ürün açıklamayla uyuşmuyor</option><option>Fikrimi değiştirdim</option><option value="other">Diğer</option></select></label>
+        <label>Detay<textarea id="returnReasonDetail" rows="4" maxlength="1000" placeholder="Satıcının talebini değerlendirmesine yardımcı olacak kısa bir açıklama yazabilirsin."></textarea></label>
+        <label class="return-consent"><input id="returnConsent" type="checkbox" required><span>İade koşullarını okudum ve ürünün uygun şekilde paketleneceğini onaylıyorum.</span></label>
+        <button class="primary-button full" id="submitReturnButton" type="submit">Talebi oluştur <span>→</span></button>
+    </form>
+    <p class="form-message" id="returnRequestMessage"></p>
+</dialog>
+
+<dialog class="modal return-management-modal" id="returnManagementModal">
+    <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
+    <div class="account-panel-heading"><div><p class="eyebrow">İADE YÖNETİMİ</p><h2>İade talepleri</h2><p>Bekleyen talepleri incele, onayla veya gerekçeli şekilde reddet.</p></div><button id="refreshManageableReturnsButton">↻ Yenile</button></div>
+    <div class="return-list" id="manageableReturnList"><div class="inventory-loading"><span class="button-spinner"></span>Talepler hazırlanıyor…</div></div>
 </dialog>
 
 <dialog class="modal courier-modal" id="courierModal">

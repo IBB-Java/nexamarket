@@ -1,6 +1,6 @@
 # NexaMarket — gereksinim ve teslim denetimi
 
-Kaynak: `NexaMarket_Analist_Belgesi.docx` (v1.0). Bu kayıt, 1 Eylül 2026
+Kaynak: `NexaMarket_Analist_Belgesi.docx` (v1.0). Bu kayıt, 2 Eylül 2026
 itibarıyla entegre dalın kod, migration ve test denetimini gösterir. “Karşılandı”
 ifadesi, yalnızca tasarım niyetini değil ilgili kodun ve en az bir doğrulama
 senaryosunun bulunduğunu belirtir.
@@ -32,7 +32,7 @@ harita `docs/architecture.md` dosyasındadır.
 | FR-CART-03 | Karşılandı | Satıcıya göre alt sipariş bölme; tek ana sipariş ve tek ödeme |
 | FR-ORD-01 | Karşılandı | `OrderStateMachine`, geçersiz geçişte `409 Conflict` |
 | FR-ORD-02 | Karşılandı | Ödeme zaman aşımı: rezervasyonları bırakır, alt/ana siparişi iptal eder |
-| FR-ORD-03 | Karşılandı | İade talep/ret/onay; müşteri sahipliği, satıcı/admin çözüm yetkisi |
+| FR-ORD-03 | Karşılandı | İade talep/ret/onay; müşteri sahipliği, satıcı/admin çözüm yetkisi; müşteri ve yönetim web ekranları |
 | FR-ORD-04 | Karşılandı | Transactional outbox, RabbitMQ, kanal bazlı bildirim ve admin WebSocket |
 | FR-PAY-01 | Karşılandı | Gecikmeli/başarılı/başarısız/tekrarlı callback üreten mock sağlayıcı |
 | FR-PAY-02 | Karşılandı | Benzersiz `providerEventId` kaydı; yinelenen webhook etkisiz |
@@ -64,7 +64,7 @@ harita `docs/architecture.md` dosyasındadır.
 | Audit | Karşılandı | Değiştiren HTTP işlemleri için `audit_logs`; parola/gövde saklanmaz |
 | Testcontainers | Karşılandı | Testcontainers 2.0.5 ile PostgreSQL 16 üzerinde V1–V15 migration testi; Docker yoksa otomatik atlanır |
 | p95 performans | Karşılandı | `ApiPerformanceAcceptanceTest`, ısınma sonrası katalog araması p95 değerini **300 ms altında** zorunlu tutar |
-| Kritik satır kapsamı | Karşılandı | JaCoCo genel eşik %70, kritik sınıflarda ayrı %70; son ölçüm: **%77,05** (2072/2689) |
+| Kritik satır kapsamı | Karşılandı | JaCoCo genel eşik %70, kritik sınıflarda ayrı %70; son ölçüm: **%76,79** (2081/2710) |
 | Servisler arası iletişim | Karşılandı | İç REST + `X-Internal-Api-Key`; bildirimlerde outbox + RabbitMQ; mimari sınır testi |
 | Docker Compose | Karşılandı | Uygulama, PostgreSQL, RabbitMQ, Redis, Elasticsearch ve MinIO tek `docker compose up -d` komutuyla |
 
