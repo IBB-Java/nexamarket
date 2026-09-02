@@ -465,7 +465,7 @@ function renderAdminUsers() {
     $("#adminUsers").innerHTML = users.map(user => {
         const nextStatus = user.status === "ACTIVE" ? "DISABLED" : "ACTIVE";
         const statusAction = user.status === "ACTIVE" ? "Devre dışı bırak" : "Etkinleştir";
-        const roleActions = user.role === "CUSTOMER" ? `<button data-admin-role="SELLER" data-admin-user="${user.id}">Satıcı yap</button><button data-admin-role="COURIER" data-admin-user="${user.id}">Kurye yap</button>` : "";
+        const roleActions = ["CUSTOMER", "SELLER", "COURIER"].filter(role => role !== user.role).map(role => `<button data-admin-role="${role}" data-admin-user="${user.id}">${roleLabels[role]} yap</button>`).join("");
         return `<article class="admin-user-row"><div class="admin-user-avatar">${html(user.email.charAt(0).toUpperCase())}</div><div class="admin-user-copy"><div><span class="status-badge status-${user.status.toLowerCase()}">${user.status === "ACTIVE" ? "Aktif" : "Devre dışı"}</span><small>${html(roleLabels[user.role] || user.role)}</small></div><b>${html(user.email)}</b><strong>ID #${user.id}</strong></div><div class="admin-user-actions">${roleActions}<button data-admin-status="${nextStatus}" data-admin-user="${user.id}">${statusAction}</button><button class="delete-product" data-admin-delete="${user.id}">Sil</button></div></article>`;
     }).join("");
     $$('[data-admin-role]').forEach(button => button.addEventListener("click", () => updateAdminUserRole(button.dataset.adminUser, button.dataset.adminRole, button)));

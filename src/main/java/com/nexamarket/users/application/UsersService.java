@@ -152,11 +152,13 @@ public class UsersService {
     public MyProfileResponse assignOperationalRole(Long userId, UpdateUserRoleRequest request) {
         UserAccount user = userAccountRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
-        boolean supportedRole = request.role() == UserRole.SELLER || request.role() == UserRole.COURIER;
-        if (!supportedRole || user.getRole() != UserRole.CUSTOMER) {
+        boolean managedRole = isManagedRole(user.getRole());
+        boolean supportedTargetRole = isManagedRole(request.role());
+        if (!managedRole || !supportedTargetRole) {
             throw new InvalidUserRoleChangeException();
         }
         user.setRole(request.role());
+        refreshTokenRepository.deleteByUserId(userId);
         return MyProfileResponse.from(user, userProfileRepository.findByUserId(userId).orElse(null));
     }
 
@@ -191,6 +193,10 @@ public class UsersService {
             throw new SellerAccessDeniedException();
         }
         return user;
+    }
+
+    private boolean isManagedRole(UserRole role) {
+        return role == UserRole.CUSTOMER || role == UserRole.SELLER || role == UserRole.COURIER;
     }
 
     private String trimToNull(String value) {

@@ -213,6 +213,44 @@ class UsersApiIntegrationTest {
     }
 
     @Test
+    void adminCanSwitchSellerAndCourierBackToCustomerOrAnotherOperationalRole() throws Exception {
+        UserAccount managedUser = userAccountRepository.save(UserAccount.builder()
+                .email("role-switch@nexamarket.test")
+                .passwordHash(passwordEncoder.encode("StrongPass!2026"))
+                .role(UserRole.SELLER)
+                .status(UserStatus.ACTIVE)
+                .build());
+        UserAccount admin = userAccountRepository.save(UserAccount.builder()
+                .email("admin-role-switch@nexamarket.test")
+                .passwordHash(passwordEncoder.encode("StrongPass!2026"))
+                .role(UserRole.ADMIN)
+                .status(UserStatus.ACTIVE)
+                .build());
+        String adminAccess = login(admin.getEmail(), "StrongPass!2026");
+
+        mockMvc.perform(patch("/api/v1/admin/users/{userId}/role", managedUser.getId())
+                        .header("Authorization", "Bearer " + adminAccess)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"COURIER\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("COURIER"));
+
+        mockMvc.perform(patch("/api/v1/admin/users/{userId}/role", managedUser.getId())
+                        .header("Authorization", "Bearer " + adminAccess)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"CUSTOMER\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("CUSTOMER"));
+
+        mockMvc.perform(patch("/api/v1/admin/users/{userId}/role", managedUser.getId())
+                        .header("Authorization", "Bearer " + adminAccess)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Geçersiz kullanıcı rolü"));
+    }
+
+    @Test
     void adminCanDeleteManagedCustomerButCannotDeleteAnAdminAccount() throws Exception {
         String customerEmail = "delete-customer@nexamarket.test";
         registerAndLogin(customerEmail, "StrongPass!2026");
