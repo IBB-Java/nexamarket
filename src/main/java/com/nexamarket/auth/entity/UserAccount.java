@@ -50,5 +50,9 @@ public class UserAccount extends BaseEntity {
     @Builder.Default
     private int failedLoginAttempts = 0;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean emailVerified = true;
+
     private Instant lockedUntil;
 }

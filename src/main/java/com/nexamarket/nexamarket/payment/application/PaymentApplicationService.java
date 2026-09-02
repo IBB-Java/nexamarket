@@ -7,6 +7,7 @@ import com.nexamarket.nexamarket.order.domain.SubOrder;
 import com.nexamarket.nexamarket.order.infrastructure.CustomerOrderRepository;
 import com.nexamarket.nexamarket.order.application.OrderStatusChangedEvent;
 import com.nexamarket.nexamarket.order.application.OrderStatusEventPublisher;
+import com.nexamarket.nexamarket.order.application.AutomaticCourierAssignmentService;
 import com.nexamarket.nexamarket.payment.domain.PaymentStatus;
 import com.nexamarket.nexamarket.payment.domain.PaymentTransaction;
 import com.nexamarket.nexamarket.payment.domain.WalletAccount;
@@ -36,6 +37,7 @@ public class PaymentApplicationService {
     private final Duration pollingInterval;
     private final StockReservationCommitGateway stockReservationCommitGateway;
     private final OrderStatusEventPublisher orderStatusEventPublisher;
+    private final AutomaticCourierAssignmentService automaticCourierAssignmentService;
 
     @Autowired
     public PaymentApplicationService(CustomerOrderRepository customerOrderRepository,
@@ -44,9 +46,11 @@ public class PaymentApplicationService {
                                      PaymentProviderGateway paymentProviderGateway,
                                      StockReservationCommitGateway stockReservationCommitGateway,
                                      OrderStatusEventPublisher orderStatusEventPublisher,
+                                     AutomaticCourierAssignmentService automaticCourierAssignmentService,
                                      @Value("${payment.polling.interval}") Duration pollingInterval) {
         this(customerOrderRepository, paymentTransactionRepository, walletAccountRepository,
-                paymentProviderGateway, stockReservationCommitGateway, orderStatusEventPublisher, pollingInterval, Clock.systemUTC());
+                paymentProviderGateway, stockReservationCommitGateway, orderStatusEventPublisher,
+                automaticCourierAssignmentService, pollingInterval, Clock.systemUTC());
     }
 
     PaymentApplicationService(CustomerOrderRepository customerOrderRepository,
@@ -55,7 +59,7 @@ public class PaymentApplicationService {
                               PaymentProviderGateway paymentProviderGateway,
                               Duration pollingInterval, Clock clock) {
         this(customerOrderRepository, paymentTransactionRepository, walletAccountRepository,
-                paymentProviderGateway, null, null, pollingInterval, clock);
+                paymentProviderGateway, null, null, null, pollingInterval, clock);
     }
 
     PaymentApplicationService(CustomerOrderRepository customerOrderRepository,
@@ -64,6 +68,7 @@ public class PaymentApplicationService {
                               PaymentProviderGateway paymentProviderGateway,
                               StockReservationCommitGateway stockReservationCommitGateway,
                               OrderStatusEventPublisher orderStatusEventPublisher,
+                              AutomaticCourierAssignmentService automaticCourierAssignmentService,
                               Duration pollingInterval, Clock clock) {
         this.customerOrderRepository = customerOrderRepository;
         this.paymentTransactionRepository = paymentTransactionRepository;
@@ -74,6 +79,7 @@ public class PaymentApplicationService {
         this.clock = clock;
         this.stockReservationCommitGateway = stockReservationCommitGateway;
         this.orderStatusEventPublisher = orderStatusEventPublisher;
+        this.automaticCourierAssignmentService = automaticCourierAssignmentService;
     }
 
     /**
@@ -148,6 +154,9 @@ public class PaymentApplicationService {
         for (SubOrder subOrder : order.getSubOrders()) {
             orderStateMachine.transition(subOrder, OrderStatus.PAID);
             publishStatus(order, subOrder);
+        }
+        if (automaticCourierAssignmentService != null) {
+            automaticCourierAssignmentService.assignAfterPayment(order);
         }
         orderStateMachine.transition(order, OrderStatus.PAID);
     }

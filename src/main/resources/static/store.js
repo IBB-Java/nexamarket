@@ -301,7 +301,13 @@ async function submitAuth(event) {
     event.preventDefault(); const email = $("#authEmail").value.trim(), password = $("#authPassword").value, submit = $("#authSubmit");
     $("#authMessage").textContent = ""; setBusy(submit, true, state.authMode === "login" ? "Giriş yapılıyor" : "Hesap oluşturuluyor");
     try {
-        if (state.authMode === "register") await api("/api/v1/auth/register", {method: "POST", body: JSON.stringify({email, password})});
+        if (state.authMode === "register") {
+            await api("/api/v1/auth/register", {method: "POST", body: JSON.stringify({email, password})});
+            setAuthMode("login");
+            $("#authEmail").value = email;
+            $("#authMessage").textContent = "Doğrulama bağlantısı e-posta adresine gönderildi. Mailpit kullanıyorsan http://localhost:8025 adresinden açıp bağlantıya tıkla.";
+            return;
+        }
         const login = await api("/api/v1/auth/login", {method: "POST", body: JSON.stringify({email, password})});
         state.token = login.accessToken; state.refreshToken = login.refreshToken || ""; state.user = await api("/api/v1/auth/me");
         saveSession(); loadFavoritesForCurrentUser(); updateAuthUI(); closeModals(); await syncCart(); toast("Hoş geldin! Alışverişe devam edebilirsin.", "success");
@@ -550,6 +556,10 @@ function initEvents() {
 
 async function boot() {
     initEvents(); renderCart(); updateAuthUI(); updateFavoritesUI(); renderCatalog();
+    if (new URLSearchParams(window.location.search).get("verification") === "success") {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setTimeout(() => toast("E-posta adresin doğrulandı. Artık giriş yapabilirsin.", "success"), 200);
+    }
     await hydrateUser(); await loadProducts(); await syncCart();
 }
 boot();

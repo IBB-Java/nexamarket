@@ -4,8 +4,8 @@ import com.nexamarket.auth.entity.UserAccount;
 import com.nexamarket.auth.entity.UserRole;
 import com.nexamarket.auth.entity.UserStatus;
 
-public record UserResponse(Long id, String email, UserRole role, UserStatus status) {
+public record UserResponse(Long id, String email, UserRole role, UserStatus status, boolean emailVerified) {
     public static UserResponse from(UserAccount user) {
-        return new UserResponse(user.getId(), user.getEmail(), user.getRole(), user.getStatus());
+        return new UserResponse(user.getId(), user.getEmail(), user.getRole(), user.getStatus(), user.isEmailVerified());
     }
 }

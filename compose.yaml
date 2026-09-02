@@ -16,6 +16,15 @@ services:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       INTERNAL_API_KEY: compose-internal-key-change-in-production
+      # Varsayılan olarak yerel Mailpit kullanılır. Gerçek Gmail gönderimi için
+      # .env dosyasındaki MAIL_* değerlerini doldurmak yeterlidir.
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
+      MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-false}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@nexamarket.local}
     ports:
       - "8080:8080"
     depends_on:
@@ -29,6 +38,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     restart: unless-stopped
 
   postgres:
@@ -108,6 +119,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.26
+    container_name: nexamarket-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
 volumes:
   postgres-data:

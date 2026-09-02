@@ -5,6 +5,9 @@ import com.nexamarket.common.integration.InternalRestClientFactory;
 import com.nexamarket.nexamarket.order.application.CourierDirectoryGateway;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
+import java.util.List;
+
 @Component
 public class RestCourierDirectoryGateway implements CourierDirectoryGateway {
 
@@ -22,5 +25,15 @@ public class RestCourierDirectoryGateway implements CourierDirectoryGateway {
                 .retrieve()
                 .body(IdentityUserSnapshot.class);
         return user != null && "COURIER".equals(user.role()) && "ACTIVE".equals(user.status());
+    }
+
+    @Override
+    public List<Long> findActiveCourierIds() {
+        Long[] courierIds = clients.create("identity-service.base-url")
+                .get()
+                .uri("/internal/identity/users/couriers")
+                .retrieve()
+                .body(Long[].class);
+        return courierIds == null ? List.of() : Arrays.asList(courierIds);
     }
 }

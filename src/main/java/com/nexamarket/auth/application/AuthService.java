@@ -6,6 +6,7 @@ import com.nexamarket.auth.api.RegisterRequest;
 import com.nexamarket.auth.api.TokenResponse;
 import com.nexamarket.auth.api.UserResponse;
 import com.nexamarket.auth.config.AuthProperties;
+import com.nexamarket.auth.config.EmailVerificationProperties;
 import com.nexamarket.auth.entity.RefreshToken;
 import com.nexamarket.auth.entity.UserAccount;
 import com.nexamarket.auth.entity.UserRole;
@@ -37,15 +38,21 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthProperties authProperties;
+    private final EmailVerificationProperties emailVerificationProperties;
+    private final EmailVerificationService emailVerificationService;
 
     @Transactional
     public UserResponse registerCustomer(RegisterRequest request) {
-        return UserResponse.from(createUser(normalizeEmail(request.email()), request.password(), UserRole.CUSTOMER));
+        UserAccount user = createUser(normalizeEmail(request.email()), request.password(), UserRole.CUSTOMER);
+        emailVerificationService.sendVerification(user);
+        return UserResponse.from(user);
     }
 
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
-        return UserResponse.from(createUser(normalizeEmail(request.email()), request.password(), request.role()));
+        UserAccount user = createUser(normalizeEmail(request.email()), request.password(), request.role());
+        emailVerificationService.sendVerification(user);
+        return UserResponse.from(user);
     }
 
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
@@ -54,6 +61,7 @@ public class AuthService {
                 .orElseThrow(InvalidCredentialsException::new);
         unlockIfExpired(user);
         rejectUnavailableAccount(user);
+        rejectUnverifiedEmail(user);
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             recordFailedLogin(user);
@@ -81,6 +89,7 @@ public class AuthService {
         }
         unlockIfExpired(user);
         rejectUnavailableAccount(user);
+        rejectUnverifiedEmail(user);
 
         current.setRevokedAt(Instant.now());
         TokenResponse replacement = issueTokenPair(user);
@@ -115,6 +124,18 @@ public class AuthService {
         return userAccountRepository.findAll().stream().map(UserResponse::from).toList();
     }
 
+    @Transactional
+    public void verifyEmail(String rawToken) {
+        emailVerificationService.verify(rawToken);
+    }
+
+    @Transactional
+    public void resendVerification(String email) {
+        userAccountRepository.findByEmailIgnoreCase(normalizeEmail(email))
+                .filter(user -> !user.isEmailVerified())
+                .ifPresent(emailVerificationService::sendVerification);
+    }
+
     private UserAccount createUser(String email, String password, UserRole role) {
         if (userAccountRepository.existsByEmailIgnoreCase(email)) {
             throw new DuplicateEmailException("Bu e-posta adresi zaten kayıtlı");
@@ -124,6 +145,7 @@ public class AuthService {
                 .passwordHash(passwordEncoder.encode(password))
                 .role(role)
                 .status(UserStatus.ACTIVE)
+                .emailVerified(false)
                 .build();
         return userAccountRepository.save(user);
     }
@@ -170,6 +192,12 @@ public class AuthService {
         }
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new AccountDisabledException();
+        }
+    }
+
+    private void rejectUnverifiedEmail(UserAccount user) {
+        if (emailVerificationProperties.isRequired() && !user.isEmailVerified()) {
+            throw new EmailVerificationRequiredException();
         }
     }
 
