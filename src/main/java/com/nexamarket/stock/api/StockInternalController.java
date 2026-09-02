@@ -36,6 +36,12 @@ public class StockInternalController {
         return stockService.increaseReservationInternally(reservationCode, request.additionalQuantity());
     }
 
+    @PatchMapping("/{reservationCode}/decrement")
+    public StockReservationResponse decrease(@PathVariable String reservationCode,
+                                             @Valid @RequestBody DecreaseReservationRequest request) {
+        return stockService.decreaseReservationInternally(reservationCode, request.quantity());
+    }
+
     @PostMapping("/{reservationCode}/confirm")
     public void confirm(@PathVariable String reservationCode) {
         stockService.confirmReservationInternally(reservationCode);
@@ -51,5 +57,8 @@ public class StockInternalController {
     }
 
     public record IncreaseReservationRequest(@Min(1) int additionalQuantity) {
+    }
+
+    public record DecreaseReservationRequest(@Min(1) int quantity) {
     }
 }

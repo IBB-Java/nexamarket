@@ -107,6 +107,35 @@ public class StockService {
         return toResponse(reservation, variant.getStockQuantity());
     }
 
+    /** Internal cart operation that returns part of a still-active reservation to stock. */
+    @Transactional
+    public StockReservationResponse decreaseReservationInternally(String reservationCode, int quantity) {
+        if (quantity < 1) {
+            throw new IllegalArgumentException("Decrease quantity must be at least one.");
+        }
+        StockReservation reservation = findLockedReservation(reservationCode);
+        return stockMutationLock.execute(reservation.getVariant().getId(),
+                () -> decreaseReservationWithinLock(reservation, quantity));
+    }
+
+    private StockReservationResponse decreaseReservationWithinLock(StockReservation reservation, int quantity) {
+        if (expireWhenNecessary(reservation, now())) {
+            throw new InvalidReservationStateException("Süresi dolmuş rezervasyon azaltılamaz");
+        }
+        if (reservation.getStatus() != StockReservationStatus.ACTIVE) {
+            throw new InvalidReservationStateException("Yalnızca aktif rezervasyonlar azaltılabilir");
+        }
+        if (quantity >= reservation.getQuantity()) {
+            throw new IllegalArgumentException("Rezervasyon miktarı en az bir adet kalacak şekilde azaltılmalıdır.");
+        }
+        ProductVariant variant = reservation.getVariant();
+        productVariantRepository.increaseStock(variant.getId(), quantity);
+        entityManager.refresh(variant);
+        reservation.setQuantity(reservation.getQuantity() - quantity);
+        reservation.setExpiresAt(now().plus(reservationProperties.getDuration()));
+        return toResponse(reservation, variant.getStockQuantity());
+    }
+
     /** Used by cart expiry and order timeout jobs, which run with system authority. */
     @Transactional
     public void releaseReservationInternally(String reservationCode) {

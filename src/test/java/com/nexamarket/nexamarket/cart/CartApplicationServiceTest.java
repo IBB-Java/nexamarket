@@ -107,6 +107,26 @@ class CartApplicationServiceTest {
         verify(stockReservationGateway).releaseReservation("remove-reservation");
     }
 
+    @Test
+    void removesOnlyOneUnitWhenTheCartLineContainsSeveralUnits() {
+        Long customerId = 41L;
+        Cart cart = new Cart(customerId);
+        var item = cart.addItem(42L, 43L, 3, new BigDecimal("49.90"), "decrease-reservation",
+                Instant.now().plusSeconds(600));
+        ReflectionTestUtils.setField(item, "id", java.util.UUID.randomUUID());
+        CartApplicationService service = new CartApplicationService(cartRepository, stockReservationGateway, catalogProductGateway);
+
+        when(cartRepository.findByCustomerIdAndStatusForUpdate(customerId, CartStatus.ACTIVE)).thenReturn(Optional.of(cart));
+        when(stockReservationGateway.decreaseReservation("decrease-reservation", 1)).thenReturn(reservation(2));
+        when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CartView updated = service.removeItem(customerId, item.getId());
+
+        assertThat(updated.items()).singleElement().satisfies(view -> assertThat(view.quantity()).isEqualTo(2));
+        verify(stockReservationGateway).decreaseReservation("decrease-reservation", 1);
+        verify(stockReservationGateway, never()).releaseReservation("decrease-reservation");
+    }
+
     private StockReservation reservation(int quantity) {
         return new StockReservation(
                 "reservation-" + quantity,

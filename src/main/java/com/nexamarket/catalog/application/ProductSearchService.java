@@ -35,7 +35,7 @@ public class ProductSearchService {
                 .map(document -> Long.valueOf(document.getId()))
                 .collect(Collectors.toSet());
         Map<Long, String> sellerNames = sellerDirectoryGateway.displayNames(sellerIds);
-        Map<Long, String> imageUrls = productImageRepository.findAllByProduct_IdInOrderByProduct_IdAscIdAsc(productIds).stream()
+        Map<Long, String> imageUrls = productImageRepository.findAllByProduct_IdInOrderByProduct_IdAscIdDesc(productIds).stream()
                 .collect(Collectors.toMap(
                         image -> image.getProduct().getId(),
                         image -> ProductImageResponse.from(image).originalUrl(),

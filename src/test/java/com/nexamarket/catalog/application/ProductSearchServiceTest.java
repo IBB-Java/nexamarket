@@ -41,7 +41,7 @@ class ProductSearchServiceTest {
         when(sellerDirectoryGateway.displayNames(any())).thenReturn(Map.of(44L, "seller@nexamarket.test"));
         Product product = Product.builder().id(301L).build();
         ProductImage image = ProductImage.builder().id(81L).product(product).build();
-        when(productImageRepository.findAllByProduct_IdInOrderByProduct_IdAscIdAsc(any())).thenReturn(List.of(image));
+        when(productImageRepository.findAllByProduct_IdInOrderByProduct_IdAscIdDesc(any())).thenReturn(List.of(image));
         ProductSearchService service = new ProductSearchService(productSearchGateway, sellerDirectoryGateway, productImageRepository);
 
         ProductSearchResponse response = service.search(new ProductSearchCriteria(null, null, null, null, null, 0, 20));

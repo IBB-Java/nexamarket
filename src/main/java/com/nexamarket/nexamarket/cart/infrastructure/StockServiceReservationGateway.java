@@ -41,6 +41,17 @@ public class StockServiceReservationGateway implements StockReservationGateway {
     }
 
     @Override
+    public StockReservation decreaseReservation(String reservationCode, int quantity) {
+        StockReservationResponse response = clients.create("stock-service.base-url")
+                .patch()
+                .uri("/internal/stocks/reservations/{reservationCode}/decrement", reservationCode)
+                .body(new StockInternalController.DecreaseReservationRequest(quantity))
+                .retrieve()
+                .body(StockReservationResponse.class);
+        return toCartReservation(response);
+    }
+
+    @Override
     public void releaseReservation(String reservationCode) {
         clients.create("stock-service.base-url")
                 .delete()

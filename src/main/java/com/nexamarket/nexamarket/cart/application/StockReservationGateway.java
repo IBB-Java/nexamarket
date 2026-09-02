@@ -7,5 +7,7 @@ public interface StockReservationGateway {
 
     StockReservation increaseReservation(String reservationCode, int additionalQuantity);
 
+    StockReservation decreaseReservation(String reservationCode, int quantity);
+
     void releaseReservation(String reservationCode);
 }

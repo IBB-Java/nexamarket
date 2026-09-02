@@ -112,7 +112,7 @@ class StockServiceIntegrationTest {
     }
 
     @Test
-    void supportsIncreaseConfirmAndIdempotentInternalLifecycleOperations() {
+    void supportsIncreasingAndDecreasingAnActiveInternalReservation() {
         ProductVariant variant = createVariant(5);
         StockReservationResponse created = stockService.reserve(
                 new CreateStockReservationRequest(variant.getId(), 1), customer());
@@ -122,12 +122,17 @@ class StockServiceIntegrationTest {
         assertEquals(3, increased.quantity());
         assertEquals(2, increased.availableStock());
 
+        StockReservationResponse decreased = stockService.decreaseReservationInternally(
+                created.reservationCode(), 1);
+        assertEquals(2, decreased.quantity());
+        assertEquals(3, decreased.availableStock());
+
         stockService.confirmReservationInternally(created.reservationCode());
         stockService.confirmReservationInternally(created.reservationCode());
         stockService.releaseReservationInternally(created.reservationCode());
 
         assertEquals("CONFIRMED", stockReservationRepository.findAll().getFirst().getStatus().name());
-        assertEquals(2, stockService.getStockLevel(variant.getId()).availableStock());
+        assertEquals(3, stockService.getStockLevel(variant.getId()).availableStock());
     }
 
     @Test

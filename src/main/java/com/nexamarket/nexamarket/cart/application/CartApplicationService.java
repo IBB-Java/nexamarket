@@ -74,10 +74,7 @@ public class CartApplicationService {
                 .orElseGet(CartView::empty);
     }
 
-    /**
-     * Removing a line immediately releases its inventory reservation, so stock
-     * is never held by an item the customer can no longer see in the cart.
-     */
+    /** Removes one unit. The last unit also removes the cart line and releases its reservation. */
     @Transactional
     public CartView removeItem(Long customerId, UUID cartItemId) {
         Objects.requireNonNull(customerId, "Customer id is required.");
@@ -90,9 +87,19 @@ public class CartApplicationService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Sepet kalemi bulunamadı."));
 
-        stockReservationGateway.releaseReservation(item.getReservationCode());
-        cart.removeItem(item);
-        cart.expireWhenEmpty();
+        if (item.getQuantity() == 1) {
+            stockReservationGateway.releaseReservation(item.getReservationCode());
+            cart.removeItem(item);
+            cart.expireWhenEmpty();
+        } else {
+            StockReservation reservation = stockReservationGateway.decreaseReservation(item.getReservationCode(), 1);
+            validateReservation(reservation, item.getQuantity() - 1);
+            item.refreshReservation(
+                    reservation.reservedQuantity(),
+                    reservation.unitPrice(),
+                    reservation.reservationCode(),
+                    reservation.reservedUntil());
+        }
         return CartView.from(cartRepository.save(cart));
     }
 

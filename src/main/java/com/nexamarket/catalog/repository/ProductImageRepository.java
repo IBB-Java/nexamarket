@@ -14,10 +14,10 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
     Optional<ProductImage> findByIdAndProductId(Long id, Long productId);
 
     /**
-     * The first uploaded image is used as the product's cover in catalogue cards.
+     * The most recently uploaded image is used as the product's cover in catalogue cards.
      * Fetching the product association here keeps the search response free from
      * one query per card.
      */
     @EntityGraph(attributePaths = "product")
-    List<ProductImage> findAllByProduct_IdInOrderByProduct_IdAscIdAsc(Collection<Long> productIds);
+    List<ProductImage> findAllByProduct_IdInOrderByProduct_IdAscIdDesc(Collection<Long> productIds);
 }

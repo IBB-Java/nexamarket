@@ -266,18 +266,22 @@ async function addToCart(productId, button = null) {
 function renderCart() {
     const total = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
     $("#cartCount").textContent = state.cart.reduce((sum, item) => sum + item.quantity, 0);
-    $("#cartItems").innerHTML = state.cart.map(item => `<div class="cart-row"><div class="cart-row-art">${productVisual(item)}</div><div><small>${html(item.category)}</small><h3>${html(item.name)}</h3><p>${item.quantity} adet · ${currency(item.price)}</p></div><div><strong>${currency(item.price * item.quantity)}</strong><button class="remove-item" data-remove-cart="${item.cartItemId || item.id}" aria-label="${html(item.name)} ürününü sepetten çıkar">Sil</button></div></div>`).join("");
+    $("#cartItems").innerHTML = state.cart.map(item => `<div class="cart-row"><div class="cart-row-art">${productVisual(item)}</div><div><small>${html(item.category)}</small><h3>${html(item.name)}</h3><p>${item.quantity} adet · ${currency(item.price)}</p></div><div><strong>${currency(item.price * item.quantity)}</strong><button class="remove-item" data-remove-cart="${item.cartItemId || item.id}" aria-label="${html(item.name)} ürününden bir adet çıkar">${item.quantity > 1 ? "1 adet azalt" : "Sil"}</button></div></div>`).join("");
     $("#cartTotal").textContent = currency(total); $("#cartEmpty").hidden = state.cart.length > 0; $("#cartSummary").hidden = state.cart.length === 0;
     $$('[data-remove-cart]').forEach(button => button.addEventListener("click", () => requestCartRemoval(button.dataset.removeCart)));
 }
 function requestCartRemoval(itemKey) {
     const item = state.cart.find(candidate => String(candidate.cartItemId || candidate.id) === String(itemKey));
-    if (item) askConfirmation("Sepetten çıkarılsın mı?", `${item.name} sepetinden kaldırılacak ve ayrılan stok geri bırakılacak.`, "Sepetten çıkar", () => removeFromCart(item));
+    if (!item) return;
+    const removingLastUnit = item.quantity === 1;
+    askConfirmation(removingLastUnit ? "Sepetten çıkarılsın mı?" : "Bir adet azaltılsın mı?",
+        removingLastUnit ? `${item.name} sepetinden kaldırılacak ve ayrılan stok geri bırakılacak.` : `${item.name} ürününden yalnızca bir adet sepetten çıkarılacak.`,
+        removingLastUnit ? "Sepetten çıkar" : "1 adet azalt", () => removeFromCart(item));
 }
 async function removeFromCart(item) {
     if (!state.token || !item.cartItemId) { state.cart = state.cart.filter(candidate => candidate !== item); saveCart(); renderCart(); return; }
     applyCartResponse(await api(`/api/v1/cart/items/${item.cartItemId}`, {method: "DELETE"}));
-    toast(`${item.name} sepetten çıkarıldı.`, "success");
+    toast(item.quantity > 1 ? `${item.name} ürününden bir adet çıkarıldı.` : `${item.name} sepetten çıkarıldı.`, "success");
 }
 
 function openCart() { closeAccountMenu(); $("#cartDrawer").classList.add("open"); $("#cartDrawer").setAttribute("aria-hidden", "false"); $("#overlay").hidden = false; }
@@ -726,32 +730,39 @@ function renderSellerProducts() {
     $("#sellerInventory").innerHTML = state.sellerProducts.map(product => {
         const stock = (product.variants || []).reduce((sum, variant) => sum + Number(variant.stockQuantity || 0), 0), active = product.status === "ACTIVE";
         const visual = normaliseProduct(product);
-        const currentPrice = Number(product.basePrice ?? visual.price ?? 0);
-        return `<article class="inventory-row"><div class="inventory-art">${visual.imageUrl ? `<img src="${html(visual.imageUrl)}" alt="${html(product.name)}" loading="lazy">` : emojiFor(product.name)}</div><div class="inventory-copy"><div><span class="status-badge status-${product.status.toLowerCase()}">${labels[product.status] || product.status}</span><small>${stock} stok</small></div><b>${html(product.name)}</b><div class="inventory-price-editor"><label>Fiyat (₺)<input type="number" min="0.01" step="0.01" value="${currentPrice.toFixed(2)}" data-price-input="${product.id}" aria-label="${html(product.name)} fiyatı"></label><button class="price-save-button" data-save-product-price="${product.id}">Kaydet</button></div></div><div class="inventory-actions"><button data-toggle-product="${product.id}" data-target-status="${active ? "PASSIVE" : "ACTIVE"}">${active ? "Yayından kaldır" : "Yayınla"}</button><button class="delete-product" data-delete-product="${product.id}">Sil</button></div></article>`;
+        const variants = product.variants || [];
+        const variantEditors = variants.map((variant, index) => `<div class="inventory-variant-editor"><small>${variants.length > 1 ? `Seçenek ${index + 1}` : "Ürün bilgileri"}</small><label>Fiyat (₺)<input type="number" min="0.01" step="0.01" value="${Number(variant.price ?? product.basePrice ?? 0).toFixed(2)}" data-variant-price="${variant.id}" aria-label="${html(product.name)} fiyatı"></label><label>Stok<input type="number" min="0" step="1" value="${Number(variant.stockQuantity ?? 0)}" data-variant-stock="${variant.id}" aria-label="${html(product.name)} stok adedi"></label></div>`).join("");
+        return `<article class="inventory-row"><div class="inventory-art">${visual.imageUrl ? `<img src="${html(visual.imageUrl)}" alt="${html(product.name)}" loading="lazy">` : emojiFor(product.name)}</div><div class="inventory-copy"><div><span class="status-badge status-${product.status.toLowerCase()}">${labels[product.status] || product.status}</span><small>${stock} stok</small></div><b>${html(product.name)}</b><div class="inventory-product-editor">${variantEditors}<label class="inventory-image-editor">Yeni görsel <input type="file" accept="image/jpeg,image/png" data-product-image="${product.id}"></label><button class="product-save-button" data-save-product="${product.id}">Değişiklikleri kaydet</button></div></div><div class="inventory-actions"><button data-toggle-product="${product.id}" data-target-status="${active ? "PASSIVE" : "ACTIVE"}">${active ? "Yayından kaldır" : "Yayınla"}</button><button class="delete-product" data-delete-product="${product.id}">Sil</button></div></article>`;
     }).join("");
     $$('[data-toggle-product]').forEach(button => button.addEventListener("click", () => changeProductPublication(button.dataset.toggleProduct, button.dataset.targetStatus, button)));
     $$('[data-delete-product]').forEach(button => button.addEventListener("click", () => requestProductDelete(button.dataset.deleteProduct)));
-    $$('[data-save-product-price]').forEach(button => button.addEventListener("click", () => {
-        const input = $(`[data-price-input="${button.dataset.saveProductPrice}"]`);
-        if (input) updateSellerPrice(button.dataset.saveProductPrice, input, button);
-    }));
+    $$('[data-save-product]').forEach(button => button.addEventListener("click", () => updateSellerProduct(button.dataset.saveProduct, button)));
 }
-async function updateSellerPrice(productId, input, button) {
+async function updateSellerProduct(productId, button) {
     const product = state.sellerProducts.find(item => String(item.id) === String(productId));
-    const price = Number(input.value);
-    if (!product || !Number.isFinite(price) || price <= 0) { toast("Lütfen sıfırdan büyük geçerli bir fiyat gir.", "error"); input.focus(); return; }
     const variants = product.variants || [];
     if (!variants.length) { toast("Bu ürünün güncellenecek varyantı bulunamadı.", "error"); return; }
+    const updates = variants.map(variant => ({
+        id: variant.id,
+        price: Number($(`[data-variant-price="${variant.id}"]`)?.value),
+        stockQuantity: Number($(`[data-variant-stock="${variant.id}"]`)?.value)
+    }));
+    const invalid = updates.find(update => !Number.isFinite(update.price) || update.price <= 0 || !Number.isInteger(update.stockQuantity) || update.stockQuantity < 0);
+    if (!product || invalid) { toast("Her seçenek için geçerli fiyat ve sıfırdan küçük olmayan stok gir.", "error"); return; }
+    const imageFile = $(`[data-product-image="${productId}"]`)?.files?.[0] || null;
     setBusy(button, true, "Kaydediliyor");
     try {
-        const updated = await api(`/api/v1/products/${productId}`, {method: "PATCH", body: JSON.stringify({basePrice: price, variants: variants.map(variant => ({id: variant.id, price}))})});
-        state.sellerProducts = state.sellerProducts.map(item => String(item.id) === String(productId) ? updated : item);
+        const updated = await api(`/api/v1/products/${productId}`, {method: "PATCH", body: JSON.stringify({basePrice: Math.min(...updates.map(update => update.price)), variants: updates})});
+        const uploadedImage = await uploadProductImage(productId, imageFile);
+        const imageUrl = uploadedImage?.originalUrl || product.imageUrl || state.catalog.find(item => String(item.id) === String(productId))?.imageUrl || null;
+        const updatedSellerProduct = {...updated, imageUrl};
+        state.sellerProducts = state.sellerProducts.map(item => String(item.id) === String(productId) ? updatedSellerProduct : item);
         const existing = state.catalog.find(item => String(item.id) === String(productId));
         if (updated.status === "ACTIVE") {
-            const item = normaliseProduct(updated); item.imageUrl = existing?.imageUrl || item.imageUrl;
+            const item = normaliseProduct(updatedSellerProduct); item.imageUrl = imageUrl || existing?.imageUrl || item.imageUrl;
             state.catalog = [item, ...state.catalog.filter(item => String(item.id) !== String(productId))];
         }
-        renderSellerProducts(); renderCatalog(); toast(`${updated.name} fiyatı güncellendi.`, "success");
+        renderSellerProducts(); renderCatalog(); toast(`${updated.name} güncellendi.`, "success");
     } catch (error) { toast(error.message, "error"); setBusy(button, false); }
 }
 async function changeProductPublication(productId, status, button) {
