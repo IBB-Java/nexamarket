@@ -30,13 +30,33 @@ const demoProducts = [
     {name: "Terra Günlük Çanta", category: "Yaşam", price: 1199.90, stock: 7, sku: "NEXA-TERRA-004", description: "Şehir hayatına uyumlu, hafif ve dayanıklı."}
 ];
 
-const seededProductImages = Object.freeze({
-    "1": "/images/products/nova-kablosuz-kulaklik.png",
-    "2": "/images/products/kum-seramik-fincan.png",
-    "3": "/images/products/luma-masa-lambasi.png",
-    "4": "/images/products/terra-gunluk-canta.png",
-    "5": "/images/products/melike-mali.png",
-    "6": "/images/products/telefon.png"
+const curatedProductImages = Object.freeze({
+    "Nova Kablosuz Kulaklık": "/images/products/nova-kablosuz-kulaklik.png",
+    "Kum Seramik Fincan": "/images/products/kum-seramik-fincan.png",
+    "Luma Masa Lambası": "/images/products/luma-masa-lambasi.png",
+    "Terra Günlük Çanta": "/images/products/terra-gunluk-canta.png",
+    "melike mali": "/images/products/melike-mali.png",
+    "telefon": "/images/products/telefon.png",
+    "Aria Paslanmaz Su Matarası": "/images/products/aria-su-matarasi.png",
+    "Mira Keten Defter": "/images/products/mira-keten-defter.png",
+    "Solis Bluetooth Hoparlör": "/images/products/solis-hoparlor.png",
+    "Orbit Masa Saati": "/images/products/orbit-masa-saati.png",
+    "Pera Mum Seti": "/images/products/pera-mum-seti.png",
+    "Atlas Sırt Çantası": "/images/products/atlas-sirt-cantasi.png",
+    "Lento Kablosuz Şarj Standı": "/images/products/lento-kablosuz-sarj-standi.png",
+    "Noma Cam Sürahi": "/images/products/noma-cam-surahi.png",
+    "Vela Bitki Saksısı": "/images/products/vela-bitki-saksisi.png",
+    "Riva Yoga Matı": "/images/products/riva-yoga-mati.png",
+    "Pixel Mekanik Klavye": "/images/products/pixel-mekanik-klavye.png",
+    "Sera Pamuklu Battaniye": "/images/products/sera-pamuklu-battaniye.png",
+    "Eko Ahşap Kesme Tahtası": "/images/products/eko-ahsap-kesme-tahtasi.png",
+    "Aura Aromaterapi Difüzörü": "/images/products/aura-difuzor.png",
+    "Comet Akıllı Bileklik": "/images/products/comet-akilli-bileklik.png",
+    "Cielo Kahve Öğütücü": "/images/products/cielo-kahve-ogutucu.png",
+    "Kora Seramik Tabak Seti": "/images/products/kora-seramik-tabak-seti.png",
+    "Dune Güneş Gözlüğü": "/images/products/dune-gunes-gozlugu.png",
+    "Halo Taşınabilir Projektör": "/images/products/halo-tasinabilir-projektor.png",
+    "Fika Çay Demliği": "/images/products/fika-cay-demligi.png"
 });
 
 const $ = selector => document.querySelector(selector);
@@ -96,7 +116,7 @@ function emojiFor(name = "") {
 }
 
 function curatedProductImage(product) {
-    return seededProductImages[String(product.id)] || null;
+    return curatedProductImages[product.name] || null;
 }
 
 function normaliseProduct(product) {
@@ -126,7 +146,7 @@ function renderCategoryPills() {
 }
 
 function productsForView() {
-    const query = $("#searchInput").value.trim().toLocaleLowerCase("tr");
+    const query = $("#globalSearchInput").value.trim().toLocaleLowerCase("tr");
     const products = state.catalog.filter(product => {
         const matchesCategory = state.activeCategory === "all" || product.category.toLocaleLowerCase("tr") === state.activeCategory.toLocaleLowerCase("tr");
         const matchesFavorite = !state.favoriteOnly || state.favorites.has(String(product.id));
@@ -154,7 +174,7 @@ function renderCatalog() {
         const favorite = state.favorites.has(String(product.id));
         return `<article class="product-card" style="--card-delay:${Math.min(index, 8) * 45}ms">
             <button class="favorite-button ${favorite ? "active" : ""}" data-favorite-product="${product.id}" aria-label="${html(product.name)} favorilere ${favorite ? "çıkar" : "ekle"}" aria-pressed="${favorite}">${favorite ? "♥" : "♡"}</button>
-            <button class="product-image ${product.imageUrl ? "has-photo" : "no-photo"}" data-view-product="${product.id}" aria-label="${html(product.name)} ürününü incele"><span class="tag">${html(product.category).toUpperCase()}</span>${productVisual(product)}<small>İNCELE →</small></button>
+            <button class="product-image ${product.imageUrl ? "has-photo" : "no-photo"}" data-view-product="${product.id}" aria-label="${html(product.name)} ürününü incele">${product.imageUrl ? "" : `<span class="tag">${html(product.category).toUpperCase()}</span>`}${productVisual(product)}<small>İNCELE →</small></button>
             <div class="product-info"><p class="stock-line ${product.inStock ? "" : "out"}"><i></i>${product.inStock ? `${product.stock || "Sınırlı"} adet stokta` : "Stokta yok"}</p>
                 <button class="product-name" data-view-product="${product.id}">${html(product.name)}</button><p class="product-excerpt">${html(product.description)}</p><p class="product-seller">Satıcı: <b>${html(product.sellerName)}</b></p>
                 <div class="product-bottom"><div><small>Bugünün fiyatı</small><strong class="price">${currency(product.price)}</strong></div><button class="add-button" data-add-product="${product.id}" aria-label="${html(product.name)} sepete ekle" ${product.inStock ? "" : "disabled"}><span>+</span><em>Sepete ekle</em></button></div>
@@ -707,10 +727,34 @@ function renderSellerProducts() {
     const labels = {ACTIVE: "Yayında", DRAFT: "Taslak", PASSIVE: "Satışta değil"};
     $("#sellerInventory").innerHTML = state.sellerProducts.map(product => {
         const stock = (product.variants || []).reduce((sum, variant) => sum + Number(variant.stockQuantity || 0), 0), active = product.status === "ACTIVE";
-        return `<article class="inventory-row"><div class="inventory-art">${emojiFor(product.name)}</div><div class="inventory-copy"><div><span class="status-badge status-${product.status.toLowerCase()}">${labels[product.status] || product.status}</span><small>${stock} stok</small></div><b>${html(product.name)}</b><strong>${currency(product.basePrice)}</strong></div><div class="inventory-actions"><button data-toggle-product="${product.id}" data-target-status="${active ? "PASSIVE" : "ACTIVE"}">${active ? "Yayından kaldır" : "Yayınla"}</button><button class="delete-product" data-delete-product="${product.id}">Sil</button></div></article>`;
+        const visual = normaliseProduct(product);
+        const currentPrice = Number(product.basePrice ?? visual.price ?? 0);
+        return `<article class="inventory-row"><div class="inventory-art">${visual.imageUrl ? `<img src="${html(visual.imageUrl)}" alt="${html(product.name)}" loading="lazy">` : emojiFor(product.name)}</div><div class="inventory-copy"><div><span class="status-badge status-${product.status.toLowerCase()}">${labels[product.status] || product.status}</span><small>${stock} stok</small></div><b>${html(product.name)}</b><div class="inventory-price-editor"><label>Fiyat (₺)<input type="number" min="0.01" step="0.01" value="${currentPrice.toFixed(2)}" data-price-input="${product.id}" aria-label="${html(product.name)} fiyatı"></label><button class="price-save-button" data-save-product-price="${product.id}">Kaydet</button></div></div><div class="inventory-actions"><button data-toggle-product="${product.id}" data-target-status="${active ? "PASSIVE" : "ACTIVE"}">${active ? "Yayından kaldır" : "Yayınla"}</button><button class="delete-product" data-delete-product="${product.id}">Sil</button></div></article>`;
     }).join("");
     $$('[data-toggle-product]').forEach(button => button.addEventListener("click", () => changeProductPublication(button.dataset.toggleProduct, button.dataset.targetStatus, button)));
     $$('[data-delete-product]').forEach(button => button.addEventListener("click", () => requestProductDelete(button.dataset.deleteProduct)));
+    $$('[data-save-product-price]').forEach(button => button.addEventListener("click", () => {
+        const input = $(`[data-price-input="${button.dataset.saveProductPrice}"]`);
+        if (input) updateSellerPrice(button.dataset.saveProductPrice, input, button);
+    }));
+}
+async function updateSellerPrice(productId, input, button) {
+    const product = state.sellerProducts.find(item => String(item.id) === String(productId));
+    const price = Number(input.value);
+    if (!product || !Number.isFinite(price) || price <= 0) { toast("Lütfen sıfırdan büyük geçerli bir fiyat gir.", "error"); input.focus(); return; }
+    const variants = product.variants || [];
+    if (!variants.length) { toast("Bu ürünün güncellenecek varyantı bulunamadı.", "error"); return; }
+    setBusy(button, true, "Kaydediliyor");
+    try {
+        const updated = await api(`/api/v1/products/${productId}`, {method: "PATCH", body: JSON.stringify({basePrice: price, variants: variants.map(variant => ({id: variant.id, price}))})});
+        state.sellerProducts = state.sellerProducts.map(item => String(item.id) === String(productId) ? updated : item);
+        const existing = state.catalog.find(item => String(item.id) === String(productId));
+        if (updated.status === "ACTIVE") {
+            const item = normaliseProduct(updated); item.imageUrl = existing?.imageUrl || item.imageUrl;
+            state.catalog = [item, ...state.catalog.filter(item => String(item.id) !== String(productId))];
+        }
+        renderSellerProducts(); renderCatalog(); toast(`${updated.name} fiyatı güncellendi.`, "success");
+    } catch (error) { toast(error.message, "error"); setBusy(button, false); }
 }
 async function changeProductPublication(productId, status, button) {
     setBusy(button, true, status === "ACTIVE" ? "Yayınlanıyor" : "Kaldırılıyor");
@@ -770,7 +814,7 @@ async function pay() {
 }
 
 function clearFilters() {
-    state.activeCategory = "all"; state.favoriteOnly = false; $("#searchInput").value = ""; $("#sortSelect").value = "featured"; state.sort = "featured";
+    state.activeCategory = "all"; state.favoriteOnly = false; $("#sortSelect").value = "featured"; state.sort = "featured";
     $("#globalSearchInput").value = "";
     renderCategoryPills(); updateFavoritesUI(); renderCatalog();
 }
@@ -830,10 +874,9 @@ function initEvents() {
     $("#detailFavoriteButton").addEventListener("click", () => state.selectedProduct && toggleFavorite(state.selectedProduct.id));
     $("#confirmCancelButton").addEventListener("click", () => { state.confirmAction = null; $("#confirmModal").close(); }); $("#confirmActionButton").addEventListener("click", runConfirmedAction);
     $("#applyCouponButton").addEventListener("click", () => { const code = $("#couponInput").value.trim().toUpperCase(); state.coupon = code; $("#couponInput").value = code; $("#couponNote").textContent = code ? `${code} ödeme adımında uygulanacak.` : ""; });
-    $("#emptySeedButton").addEventListener("click", seedCatalog); $("#refreshButton").addEventListener("click", loadProducts); $("#searchInput").addEventListener("input", renderCatalog);
-    $("#globalSearchInput").addEventListener("input", event => { $("#searchInput").value = event.target.value; renderCatalog(); });
+    $("#emptySeedButton").addEventListener("click", seedCatalog); $("#refreshButton").addEventListener("click", loadProducts);
+    $("#globalSearchInput").addEventListener("input", renderCatalog);
     $("#globalSearchInput").addEventListener("keydown", event => { if (event.key === "Enter") $("#discover").scrollIntoView({behavior: "smooth"}); });
-    $("#searchInput").addEventListener("input", event => { $("#globalSearchInput").value = event.target.value; });
     $$('[data-shop-category]').forEach(button => button.addEventListener("click", () => shopCategory(button.dataset.shopCategory)));
     $$('[data-campaign-category]').forEach(button => button.addEventListener("click", () => shopCategory(button.dataset.campaignCategory)));
     $$('[data-open-help]').forEach(button => button.addEventListener("click", () => openHelp(button.dataset.openHelp)));

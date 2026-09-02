@@ -29,6 +29,6 @@ class PostgreSqlMigrationContainerTest {
                 .load()
                 .migrate();
 
-        assertThat(result.migrationsExecuted).isEqualTo(16);
+        assertThat(result.migrationsExecuted).isEqualTo(17);
     }
 }
