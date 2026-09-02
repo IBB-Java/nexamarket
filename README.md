@@ -39,7 +39,7 @@ tıklayabilirsiniz.
 
 Gerçek kullanıcılara e-posta göndermek için `.env.example` dosyasını `.env` olarak
 kopyalayın ve en alttaki `MAIL_*` değerlerini gönderici Gmail hesabınıza göre
-doldurun. Gmail'in normal hesap parolası kullanılmaz: gönderici hesapta iki adımlı
+doldurun. Uygulama bu yerel `.env` dosyasını başlangıçta otomatik okur. Gmail'in normal hesap parolası kullanılmaz: gönderici hesapta iki adımlı
 doğrulama açıldıktan sonra oluşturulan 16 karakterlik **uygulama şifresi**
 `MAIL_PASSWORD` olur. `.env` dosyası `.gitignore` kapsamındadır; şifre GitHub'a
 gönderilmez.

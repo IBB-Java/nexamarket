@@ -43,7 +43,10 @@ public class AuthService {
 
     @Transactional
     public UserResponse registerCustomer(RegisterRequest request) {
-        UserAccount user = createUser(normalizeEmail(request.email()), request.password(), UserRole.CUSTOMER);
+        String email = normalizeEmail(request.email());
+        UserAccount user = userAccountRepository.findByEmailIgnoreCase(email)
+                .filter(existing -> emailVerificationProperties.isRequired() && !existing.isEmailVerified())
+                .orElseGet(() -> createUser(email, request.password(), UserRole.CUSTOMER));
         emailVerificationService.sendVerification(user);
         return UserResponse.from(user);
     }
