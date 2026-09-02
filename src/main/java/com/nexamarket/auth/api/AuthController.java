@@ -10,7 +10,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,12 +41,10 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/verify-email")
-    public ResponseEntity<Void> verifyEmail(@RequestParam String token) {
-        authService.verifyEmail(token);
-        return ResponseEntity.status(HttpStatus.FOUND)
-                .header("Location", "/?verification=success")
-                .build();
+    @PostMapping("/verify-email-code")
+    public ResponseEntity<Void> verifyEmailCode(@Valid @RequestBody VerifyEmailCodeRequest request) {
+        authService.verifyEmailCode(request.email(), request.code());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/resend-verification")

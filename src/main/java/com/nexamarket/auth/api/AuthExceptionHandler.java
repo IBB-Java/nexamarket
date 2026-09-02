@@ -5,7 +5,6 @@ import com.nexamarket.auth.application.AccountLockedException;
 import com.nexamarket.auth.application.DuplicateEmailException;
 import com.nexamarket.auth.application.InvalidCredentialsException;
 import com.nexamarket.auth.application.InvalidTokenException;
-import com.nexamarket.auth.application.EmailVerificationRequiredException;
 import com.nexamarket.auth.application.InvalidEmailVerificationTokenException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -37,14 +36,9 @@ public class AuthExceptionHandler {
         return problem(HttpStatus.FORBIDDEN, "Hesap kullanıma kapalı", exception.getMessage());
     }
 
-    @ExceptionHandler(EmailVerificationRequiredException.class)
-    ProblemDetail emailVerificationRequired(EmailVerificationRequiredException exception) {
-        return problem(HttpStatus.FORBIDDEN, "E-posta doğrulaması gerekli", exception.getMessage());
-    }
-
     @ExceptionHandler(InvalidEmailVerificationTokenException.class)
     ProblemDetail invalidVerificationToken(InvalidEmailVerificationTokenException exception) {
-        return problem(HttpStatus.BAD_REQUEST, "Doğrulama bağlantısı geçersiz", exception.getMessage());
+        return problem(HttpStatus.BAD_REQUEST, "Doğrulama kodu geçersiz", exception.getMessage());
     }
 
     private ProblemDetail problem(HttpStatus status, String title, String message) {

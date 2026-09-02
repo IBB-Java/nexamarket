@@ -505,6 +505,37 @@ select:focus-visible {
 .verification-panel > p strong { color: var(--ink); }
 .verification-panel .primary-button { margin: 0; }
 .verification-panel .secondary-button { margin-top: 9px; }
+.verification-code-form {
+    display: grid;
+    gap: 9px;
+    margin: 0;
+    text-align: left;
+}
+.verification-code-form label {
+    display: grid;
+    gap: 6px;
+    color: var(--ink);
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+}
+.verification-code-form input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px 15px;
+    border: 1px solid rgba(22, 44, 53, .18);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--ink);
+    font: 800 1.15rem/1.1 "DM Sans", sans-serif;
+    letter-spacing: .34em;
+    text-align: center;
+}
+.verification-code-form input::placeholder { color: #bcb2c8; letter-spacing: .3em; }
+.verification-reminder-modal { max-width: 420px; }
+.verification-reminder-modal::backdrop { background: rgba(17, 44, 53, .52); backdrop-filter: blur(5px); }
+.verification-reminder-modal .verification-panel { padding: 8px 2px 2px; }
+.verification-reminder-modal .eyebrow { margin: 0 0 7px; color: var(--coral-dark); }
 .verification-login-link {
     margin: 16px auto 8px;
     padding: 0;

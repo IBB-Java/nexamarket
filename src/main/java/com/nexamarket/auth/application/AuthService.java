@@ -64,8 +64,6 @@ public class AuthService {
                 .orElseThrow(InvalidCredentialsException::new);
         unlockIfExpired(user);
         rejectUnavailableAccount(user);
-        rejectUnverifiedEmail(user);
-
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             recordFailedLogin(user);
             throw new InvalidCredentialsException();
@@ -92,8 +90,6 @@ public class AuthService {
         }
         unlockIfExpired(user);
         rejectUnavailableAccount(user);
-        rejectUnverifiedEmail(user);
-
         current.setRevokedAt(Instant.now());
         TokenResponse replacement = issueTokenPair(user);
         JwtPayload replacementPayload = jwtService.parseRefreshToken(replacement.refreshToken());
@@ -128,8 +124,8 @@ public class AuthService {
     }
 
     @Transactional
-    public void verifyEmail(String rawToken) {
-        emailVerificationService.verify(rawToken);
+    public void verifyEmailCode(String email, String verificationCode) {
+        emailVerificationService.verifyCode(normalizeEmail(email), verificationCode);
     }
 
     @Transactional
@@ -195,12 +191,6 @@ public class AuthService {
         }
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new AccountDisabledException();
-        }
-    }
-
-    private void rejectUnverifiedEmail(UserAccount user) {
-        if (emailVerificationProperties.isRequired() && !user.isEmailVerified()) {
-            throw new EmailVerificationRequiredException();
         }
     }
 

@@ -32,10 +32,10 @@ MinIO konsolu `http://localhost:9001`, RabbitMQ yönetim paneli ise
 `http://localhost:15672` adresindedir. Her ikisinin varsayılan kullanıcı adı ve
 parolası `nexamarket` / `nexamarket` (MinIO için `minioadmin` / `minioadmin`) olur.
 Kayıt doğrulama e-postaları varsayılan yerel geliştirmede Mailpit'e gönderilir;
-gelen kutusunu `http://localhost:8025` adresinden açıp doğrulama bağlantısına
-tıklayabilirsiniz.
+gelen kutusunu `http://localhost:8025` adresinden açıp altı haneli kodu mağaza
+arayüzündeki doğrulama alanına girebilirsiniz.
 
-### Gerçek Gmail doğrulama e-postası
+### Gerçek Gmail doğrulama kodu e-postası
 
 Gerçek kullanıcılara e-posta göndermek için `.env.example` dosyasını `.env` olarak
 kopyalayın ve en alttaki `MAIL_*` değerlerini gönderici Gmail hesabınıza göre
@@ -47,8 +47,11 @@ gönderilmez.
 Ayarları değiştirdikten sonra uygulamayı yeniden başlatın. Docker ile çalışıyorsanız
 `docker compose up -d --force-recreate app`; IntelliJ/Maven ile çalışıyorsanız
 çalışma yapılandırmasına aynı `MAIL_*` ortam değişkenlerini ekleyip uygulamayı
-yeniden başlatın. Doğrulama e-postası kayıt olan kişinin gerçek e-posta gelen
+yeniden başlatın. Doğrulama kodu kayıt olan kişinin gerçek e-posta gelen
 kutusuna gider; telefonda e-posta uygulaması varsa bildirim olarak görünür.
+Kod aynı tarayıcıdaki mağaza ekranına girildiği için, yerel `localhost` adresine
+dışarıdan bağlantı açılması gerekmez. Kullanıcı kodu girmeden de giriş yapabilir;
+uygulama her yeni oturumda doğrulama penceresini yeniden gösterir.
 
 ## Mağaza arayüzü
 

@@ -66,7 +66,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/internal/**").hasAuthority("INTERNAL")
                         .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout",
-                                "/api/v1/auth/verify-email", "/api/v1/auth/resend-verification").permitAll()
+                                "/api/v1/auth/verify-email-code", "/api/v1/auth/resend-verification").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/courier/**").hasRole("COURIER")
                         .requestMatchers("/api/v1/auth/me", "/api/v1/users/me/**").authenticated()

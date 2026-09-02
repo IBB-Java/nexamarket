@@ -43,12 +43,11 @@ class EmailVerificationServiceTest {
         properties.setRequired(true);
         properties.setTokenTtl(Duration.ofHours(24));
         service = new EmailVerificationService(tokenRepository, mailSender, properties);
-        ReflectionTestUtils.setField(service, "publicBaseUrl", "http://localhost:8080/");
         ReflectionTestUtils.setField(service, "fromAddress", "noreply@nexamarket.local");
     }
 
     @Test
-    void sendsVerificationLinkAndStoresOnlyTheTokenHash() {
+    void sendsSixDigitVerificationCodeAndStoresOnlyItsHash() {
         UserAccount user = unverifiedUser();
         when(tokenRepository.save(any(EmailVerificationToken.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -62,24 +61,26 @@ class EmailVerificationServiceTest {
         ArgumentCaptor<SimpleMailMessage> mailCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(mailCaptor.capture());
         SimpleMailMessage message = mailCaptor.getValue();
-        String rawToken = message.getText().split("token=")[1].split("\\n")[0];
+        String rawCode = message.getText().split("\\n\\n")[1];
 
         assertThat(message.getTo()).containsExactly(user.getEmail());
-        assertThat(message.getSubject()).contains("doğrulaması");
-        assertThat(tokenCaptor.getValue().getTokenHash()).isEqualTo(sha256(rawToken));
-        assertThat(tokenCaptor.getValue().getTokenHash()).doesNotContain(rawToken);
+        assertThat(message.getSubject()).contains("doğrulama kodun");
+        assertThat(rawCode).matches("\\d{6}");
+        assertThat(tokenCaptor.getValue().getTokenHash()).isEqualTo(sha256(rawCode));
+        assertThat(tokenCaptor.getValue().getTokenHash()).doesNotContain(rawCode);
         assertThat(tokenCaptor.getValue().getExpiresAt()).isAfter(Instant.now().plus(Duration.ofHours(23)));
     }
 
     @Test
-    void verifiesAUsableTokenAndActivatesTheAccount() {
-        String rawToken = "known-verification-token";
+    void verifiesAUsableCodeAndActivatesTheAccount() {
+        String rawCode = "482901";
         UserAccount user = unverifiedUser();
         EmailVerificationToken token = EmailVerificationToken.issue(
-                user, sha256(rawToken), Instant.now().plus(Duration.ofHours(1)));
-        when(tokenRepository.findByTokenHashForUpdate(sha256(rawToken))).thenReturn(Optional.of(token));
+                user, sha256(rawCode), Instant.now().plus(Duration.ofHours(1)));
+        when(tokenRepository.findByUserEmailAndTokenHashForUpdate(user.getEmail(), sha256(rawCode)))
+                .thenReturn(Optional.of(token));
 
-        service.verify(rawToken);
+        service.verifyCode(user.getEmail(), rawCode);
 
         assertThat(user.isEmailVerified()).isTrue();
         assertThat(token.getVerifiedAt()).isNotNull();

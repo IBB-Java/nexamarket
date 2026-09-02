@@ -30,6 +30,15 @@ const demoProducts = [
     {name: "Terra Günlük Çanta", category: "Yaşam", price: 1199.90, stock: 7, sku: "NEXA-TERRA-004", description: "Şehir hayatına uyumlu, hafif ve dayanıklı."}
 ];
 
+const seededProductImages = Object.freeze({
+    "1": "/images/products/nova-kablosuz-kulaklik.png",
+    "2": "/images/products/kum-seramik-fincan.png",
+    "3": "/images/products/luma-masa-lambasi.png",
+    "4": "/images/products/terra-gunluk-canta.png",
+    "5": "/images/products/melike-mali.png",
+    "6": "/images/products/telefon.png"
+});
+
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const currency = value => new Intl.NumberFormat("tr-TR", {style: "currency", currency: "TRY"}).format(Number(value || 0));
@@ -86,6 +95,10 @@ function emojiFor(name = "") {
     return "✦";
 }
 
+function curatedProductImage(product) {
+    return seededProductImages[String(product.id)] || null;
+}
+
 function normaliseProduct(product) {
     const category = product.categoryNames?.[0] || product.categories?.[0]?.name || "Seçki";
     const variant = product.variants?.[0] || null;
@@ -94,7 +107,7 @@ function normaliseProduct(product) {
         price: Number(product.minPrice ?? product.basePrice ?? variant?.price ?? 0),
         inStock: product.inStock ?? Number(product.totalStock ?? variant?.stockQuantity ?? 0) > 0,
         stock: Number(product.totalStock ?? variant?.stockQuantity ?? 0), variantId: variant?.id || null,
-        status: product.status || "ACTIVE", imageUrl: product.imageUrl || product.primaryImageUrl || null,
+        status: product.status || "ACTIVE", imageUrl: product.imageUrl || product.primaryImageUrl || curatedProductImage(product),
         emoji: emojiFor(`${product.name} ${category}`)};
 }
 
@@ -410,24 +423,65 @@ function hideVerificationPanel() {
 function showVerificationPanel(email) {
     state.pendingVerificationEmail = email;
     $("#verificationEmail").textContent = email;
+    $("#verificationCode").value = "";
     $("#authTabs").hidden = true;
     $("#authForm").hidden = true;
     $("#verificationPanel").hidden = false;
-    $("#authTitle").textContent = "Son bir adım kaldı";
-    $("#authSubtitle").textContent = "E-posta adresini doğruladığında hesabın alışverişe hazır olacak.";
+    $("#authTitle").textContent = "Kodunu gir, hesabını tamamla";
+    $("#authSubtitle").textContent = "E-posta bağlantısı yerine, aynı ekranda kullanacağın güvenli bir kod gönderiyoruz.";
     setAuthMessage("");
+    setTimeout(() => $("#verificationCode").focus(), 50);
 }
 
-async function resendVerification() {
-    const button = $("#resendVerificationButton");
-    if (!state.pendingVerificationEmail) return;
+function showVerificationReminder() {
+    if (!state.user || state.user.emailVerified) return;
+    state.pendingVerificationEmail = state.user.email;
+    $("#verificationReminderEmail").textContent = state.user.email;
+    $("#verificationReminderCode").value = "";
+    openModal("verificationReminderModal");
+    setTimeout(() => $("#verificationReminderCode").focus(), 50);
+}
+
+async function resendVerification(email, button) {
+    if (!email) return;
     setBusy(button, true, "Gönderiliyor");
     try {
-        await api("/api/v1/auth/resend-verification", {method: "POST", body: JSON.stringify({email: state.pendingVerificationEmail})});
-        toast("Doğrulama e-postası yeniden gönderildi.", "success");
+        await api("/api/v1/auth/resend-verification", {method: "POST", body: JSON.stringify({email})});
+        toast("Yeni doğrulama kodu e-posta adresine gönderildi.", "success");
     } catch (error) { toast(error.message, "error"); }
     finally { setBusy(button, false); }
 }
+
+async function submitVerificationCode(event, source) {
+    event.preventDefault();
+    const isReminder = source === "reminder";
+    const email = isReminder ? state.user?.email : state.pendingVerificationEmail;
+    const input = $(isReminder ? "#verificationReminderCode" : "#verificationCode");
+    const button = $(isReminder ? "#verifyReminderCodeButton" : "#verifyCodeButton");
+    const code = input.value.replace(/\D/g, "").slice(0, 6);
+    if (!email) return toast("Doğrulanacak e-posta adresi bulunamadı.", "error");
+    if (code.length !== 6) return toast("Lütfen e-postadaki 6 haneli kodu gir.", "error");
+    setBusy(button, true, "Doğrulanıyor");
+    try {
+        await api("/api/v1/auth/verify-email-code", {method: "POST", body: JSON.stringify({email, code})});
+        if (state.user?.email?.toLocaleLowerCase("tr") === email.toLocaleLowerCase("tr")) {
+            state.user.emailVerified = true;
+            saveSession();
+            updateAuthUI();
+        }
+        input.value = "";
+        if ($("#verificationReminderModal").open) $("#verificationReminderModal").close();
+        if ($("#authModal").open) {
+            setAuthMode("login");
+            $("#authEmail").value = email;
+            $("#authPassword").value = "";
+            setAuthMessage("E-posta adresin doğrulandı. İstersen şimdi giriş yapabilirsin.", true);
+        }
+        toast("E-posta adresin başarıyla doğrulandı.", "success");
+    } catch (error) { toast(error.message, "error"); }
+    finally { setBusy(button, false); }
+}
+
 async function submitAuth(event) {
     event.preventDefault(); const email = $("#authEmail").value.trim(), password = $("#authPassword").value, submit = $("#authSubmit");
     $("#authMessage").textContent = ""; setBusy(submit, true, state.authMode === "login" ? "Giriş yapılıyor" : "Hesap oluşturuluyor");
@@ -439,7 +493,9 @@ async function submitAuth(event) {
         }
         const login = await api("/api/v1/auth/login", {method: "POST", body: JSON.stringify({email, password})});
         state.token = login.accessToken; state.refreshToken = login.refreshToken || ""; state.user = await api("/api/v1/auth/me");
-        saveSession(); loadFavoritesForCurrentUser(); updateAuthUI(); closeModals(); await syncCart(); toast("Hoş geldin! Alışverişe devam edebilirsin.", "success");
+        saveSession(); loadFavoritesForCurrentUser(); updateAuthUI(); closeModals(); await syncCart();
+        toast("Hoş geldin! Alışverişe devam edebilirsin.", "success");
+        if (!state.user.emailVerified) showVerificationReminder();
     } catch (error) { setAuthMessage(error.message); } finally { setBusy(submit, false); }
 }
 
@@ -763,7 +819,10 @@ function initEvents() {
     $("#logoutButton").addEventListener("click", logout); $("#headerLogoutButton").addEventListener("click", logout);
     $("#favoritesButton").addEventListener("click", () => { state.favoriteOnly = !state.favoriteOnly; updateFavoritesUI(); renderCatalog(); $("#discover").scrollIntoView({behavior: "smooth"}); });
     $$("[data-auth-tab]").forEach(button => button.addEventListener("click", () => setAuthMode(button.dataset.authTab)));
-    $("#resendVerificationButton").addEventListener("click", resendVerification);
+    $("#resendVerificationButton").addEventListener("click", () => resendVerification(state.pendingVerificationEmail, $("#resendVerificationButton")));
+    $("#resendReminderButton").addEventListener("click", () => resendVerification(state.user?.email, $("#resendReminderButton")));
+    $("#verificationCodeForm").addEventListener("submit", event => submitVerificationCode(event, "registration"));
+    $("#verificationReminderForm").addEventListener("submit", event => submitVerificationCode(event, "reminder"));
     $("#verificationLoginButton").addEventListener("click", () => { setAuthMode("login"); $("#authEmail").value = state.pendingVerificationEmail; });
     $("#authForm").addEventListener("submit", submitAuth); $("#sellerForm").addEventListener("submit", submitSeller); $("#sellerImage").addEventListener("change", updateSellerImagePreview); $("#refreshSellerButton").addEventListener("click", loadSellerProducts);
     $("#checkoutButton").addEventListener("click", checkout); $("#payButton").addEventListener("click", pay);
@@ -785,13 +844,7 @@ function initEvents() {
 
 async function boot() {
     initEvents(); renderCart(); updateAuthUI(); updateFavoritesUI(); renderCatalog();
-    if (new URLSearchParams(window.location.search).get("verification") === "success") {
-        window.history.replaceState({}, document.title, window.location.pathname);
-        setAuthMode("login");
-        openModal("authModal");
-        setAuthMessage("E-posta adresin doğrulandı. Artık güvenle giriş yapabilirsin.", true);
-        setTimeout(() => toast("E-posta adresin başarıyla doğrulandı.", "success"), 200);
-    }
     await hydrateUser(); await loadProducts(); await syncCart();
+    if (state.user && !state.user.emailVerified) showVerificationReminder();
 }
 boot();

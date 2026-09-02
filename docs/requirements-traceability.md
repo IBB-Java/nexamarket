@@ -78,9 +78,9 @@ harita `docs/architecture.md` dosyasındadır.
 6. Performans: `ApiPerformanceAcceptanceTest`, katalog aramasının p95 yanıt süresini 300 ms altında doğrular.
 7. Servis sınırı: `ServiceBoundaryArchitectureTest`, dört mantıksal servis arasındaki yasak doğrudan Java bağımlılıklarını tarar.
 8. İç API güvenliği: `InternalEndpointSecurityIntegrationTest`, anahtarsız isteğin reddedildiğini ve geçerli iç anahtarın kabul edildiğini doğrular.
-9. E-posta doğrulama güvenliği: `EmailVerificationServiceTest`, doğrulama bağlantısının gönderildiğini, açık token yerine SHA-256 özetinin saklandığını ve geçerli token'ın hesabı etkinleştirdiğini doğrular.
+9. E-posta doğrulama güvenliği: `EmailVerificationServiceTest`, altı haneli doğrulama kodunun gönderildiğini, açık kod yerine SHA-256 özetinin saklandığını ve geçerli kodun hesabı doğruladığını doğrular.
 
-Son doğrulama: Docker açıkken `./mvnw verify` ile **95 test, 0 hata, 0
+Son doğrulama: Docker açıkken `./mvnw verify` ile **98 test, 0 hata, 0
 başarısız, 0 atlandı**. PostgreSQL Testcontainers testi 16 migration'ın tamamını
 gerçek PostgreSQL 16 örneğine uyguladı.
 

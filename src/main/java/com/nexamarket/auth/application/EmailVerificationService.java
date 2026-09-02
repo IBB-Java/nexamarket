@@ -5,7 +5,6 @@ import com.nexamarket.auth.entity.EmailVerificationToken;
 import com.nexamarket.auth.entity.UserAccount;
 import com.nexamarket.auth.repository.EmailVerificationTokenRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -15,7 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.HexFormat;
 
 @Service
@@ -26,10 +24,7 @@ public class EmailVerificationService {
     private final JavaMailSender mailSender;
     private final EmailVerificationProperties properties;
 
-    @Value("${app.public-base-url}")
-    private String publicBaseUrl;
-
-    @Value("${mail.from}")
+    @org.springframework.beans.factory.annotation.Value("${mail.from}")
     private String fromAddress;
 
     @Transactional
@@ -38,18 +33,18 @@ public class EmailVerificationService {
             return;
         }
         tokenRepository.deleteByUserId(user.getId());
-        String rawToken = createRawToken();
-        tokenRepository.save(EmailVerificationToken.issue(user, hash(rawToken),
+        String verificationCode = createVerificationCode();
+        tokenRepository.save(EmailVerificationToken.issue(user, hash(verificationCode),
                 Instant.now().plus(properties.getTokenTtl())));
-        sendEmail(user.getEmail(), rawToken);
+        sendEmail(user.getEmail(), verificationCode);
     }
 
     @Transactional
-    public void verify(String rawToken) {
+    public void verifyCode(String email, String verificationCode) {
         if (!properties.isRequired()) {
             return;
         }
-        EmailVerificationToken token = tokenRepository.findByTokenHashForUpdate(hash(rawToken))
+        EmailVerificationToken token = tokenRepository.findByUserEmailAndTokenHashForUpdate(email.trim(), hash(verificationCode))
                 .orElseThrow(InvalidEmailVerificationTokenException::new);
         if (!token.isUsableAt(Instant.now())) {
             throw new InvalidEmailVerificationTokenException();
@@ -58,21 +53,18 @@ public class EmailVerificationService {
         token.markVerified(Instant.now());
     }
 
-    private void sendEmail(String recipient, String rawToken) {
-        String link = publicBaseUrl.replaceAll("/$", "") + "/api/v1/auth/verify-email?token=" + rawToken;
+    private void sendEmail(String recipient, String verificationCode) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromAddress);
         message.setTo(recipient);
-        message.setSubject("NexaMarket e-posta doğrulaması");
-        message.setText("NexaMarket hesabını etkinleştirmek için aşağıdaki bağlantıyı aç:\n\n" + link
-                + "\n\nBu bağlantı 24 saat boyunca geçerlidir.");
+        message.setSubject("NexaMarket doğrulama kodun");
+        message.setText("NexaMarket hesabını doğrulamak için bu kodu uygulamadaki doğrulama alanına gir:\n\n"
+                + verificationCode + "\n\nKod 24 saat boyunca geçerlidir. Bu isteği sen yapmadıysan bu e-postayı yok sayabilirsin.");
         mailSender.send(message);
     }
 
-    private String createRawToken() {
-        byte[] bytes = new byte[32];
-        new SecureRandom().nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    private String createVerificationCode() {
+        return String.format("%06d", new SecureRandom().nextInt(1_000_000));
     }
 
     private String hash(String value) {

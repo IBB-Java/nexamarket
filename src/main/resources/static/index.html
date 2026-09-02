@@ -143,13 +143,31 @@
     <p class="form-message" id="authMessage"></p>
     <section class="verification-panel" id="verificationPanel" hidden>
         <div class="verification-icon" aria-hidden="true">✉</div>
-        <h3>Gelen kutunu kontrol et</h3>
-        <p><strong id="verificationEmail"></strong> adresine hesabını etkinleştirecek güvenli bir bağlantı gönderdik.</p>
-        <a class="primary-button full" href="http://localhost:8025" target="_blank" rel="noopener">Yerel gelen kutusunu aç <span>→</span></a>
-        <button class="secondary-button full" type="button" id="resendVerificationButton">E-postayı yeniden gönder</button>
-        <button class="verification-login-link" type="button" id="verificationLoginButton">Doğruladım, giriş ekranına dön</button>
-        <small>Bağlantı 24 saat geçerlidir. E-posta görünmüyorsa birkaç saniye sonra yeniden gönderebilirsin.</small>
+        <h3>Doğrulama kodun yolda</h3>
+        <p><strong id="verificationEmail"></strong> adresine gönderilen altı haneli kodu buraya gir. Bağlantı açmana gerek yok.</p>
+        <form class="verification-code-form" id="verificationCodeForm">
+            <label>Doğrulama kodu<input id="verificationCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required></label>
+            <button class="primary-button full" type="submit" id="verifyCodeButton">Kodu doğrula <span>→</span></button>
+        </form>
+        <button class="secondary-button full" type="button" id="resendVerificationButton">Yeni kod gönder</button>
+        <button class="verification-login-link" type="button" id="verificationLoginButton">Şimdi giriş yap</button>
+        <small>Kod 24 saat geçerlidir. Doğrulama yapmadan da giriş yapabilir; her girişinde bunu hatırlatırız.</small>
     </section>
+</dialog>
+
+<dialog class="modal verification-reminder-modal" id="verificationReminderModal">
+    <div class="verification-panel">
+        <div class="verification-icon" aria-hidden="true">✦</div>
+        <p class="eyebrow">HESABINI GÜVENDE TUT</p>
+        <h3>E-postanı doğrulayalım</h3>
+        <p><strong id="verificationReminderEmail"></strong> adresine gönderdiğimiz altı haneli kodu gir. Alışverişe devam edebilirsin; bunu sonraki girişinde yeniden hatırlatırız.</p>
+        <form class="verification-code-form" id="verificationReminderForm">
+            <label>Doğrulama kodu<input id="verificationReminderCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required></label>
+            <button class="primary-button full" type="submit" id="verifyReminderCodeButton">Hesabımı doğrula <span>→</span></button>
+        </form>
+        <button class="secondary-button full" type="button" id="resendReminderButton">Yeni kod gönder</button>
+        <button class="verification-login-link" type="button" data-close-modal>Şimdi değil, alışverişe devam et</button>
+    </div>
 </dialog>
 
 <dialog class="modal account-center-modal" id="accountModal">

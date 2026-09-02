@@ -12,8 +12,13 @@ import java.util.Optional;
 public interface EmailVerificationTokenRepository extends JpaRepository<EmailVerificationToken, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select token from EmailVerificationToken token join fetch token.user where token.tokenHash = :tokenHash")
-    Optional<EmailVerificationToken> findByTokenHashForUpdate(@Param("tokenHash") String tokenHash);
+    @Query("""
+            select token from EmailVerificationToken token
+            join fetch token.user
+            where lower(token.user.email) = lower(:email) and token.tokenHash = :tokenHash
+            """)
+    Optional<EmailVerificationToken> findByUserEmailAndTokenHashForUpdate(
+            @Param("email") String email, @Param("tokenHash") String tokenHash);
 
     void deleteByUserId(Long userId);
 }
