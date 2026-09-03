@@ -1048,6 +1048,7 @@ footer { display: grid; grid-template-columns: 1.2fr 1fr auto; gap: 60px; align-
 
 body {
     min-height: 100vh;
+    overflow-x: clip;
     background:
         radial-gradient(circle at 2% 9%, rgba(222, 217, 241, .58), transparent 24rem),
         radial-gradient(circle at 98% 34%, rgba(217, 235, 225, .7), transparent 27rem),
