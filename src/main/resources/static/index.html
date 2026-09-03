@@ -18,15 +18,14 @@
     <a class="brand" href="#home" aria-label="NexaMarket ana sayfa">
         <span class="brand-mark">N</span><span>Nexa<span>Market</span></span>
     </a>
-    <label class="header-search"><span>⌕</span><input id="globalSearchInput" type="search" placeholder="Ürün, kategori veya satıcı ara"><kbd>⌘ K</kbd></label>
+    <div class="header-search"><span>⌕</span><input id="globalSearchInput" type="search" placeholder="Ürün, kategori veya satıcı ara" autocomplete="off" aria-autocomplete="list" aria-controls="searchSuggestions" aria-expanded="false"><kbd>⌘ K</kbd><div class="search-suggestions" id="searchSuggestions" role="listbox" hidden></div></div>
     <div class="header-actions">
         <button class="favorite-header-button" id="favoritesButton" aria-label="Favorileri göster" aria-pressed="false">♡ <b id="favoriteCount">0</b></button>
         <div class="account-shell">
-            <button class="account-button" id="authButton" aria-expanded="false"><span class="account-avatar">◦</span><span id="authButtonLabel">Giriş yap</span><span class="chevron">⌄</span></button>
+            <button class="account-button" id="authButton" aria-expanded="false"><span class="account-avatar">◦</span><span class="account-identity"><span id="authButtonLabel">Giriş yap</span><small id="authButtonRole" hidden></small></span><span class="chevron">⌄</span></button>
             <div class="account-menu" id="accountMenu" hidden>
-                <div class="account-menu-user"><span class="account-avatar">◦</span><div><b id="menuUserName">NexaMarketli</b><small id="menuUserEmail">Hesabına giriş yap</small></div></div>
+                <div class="account-menu-user"><span class="account-avatar">◦</span><div><b id="menuUserName">NexaMarketli</b><small id="menuUserRole" hidden></small><small id="menuUserEmail">Hesabına giriş yap</small></div></div>
                 <button id="accountOverviewButton"><span>◎</span> Hesabım</button>
-                <button id="ordersReturnsButton"><span>↺</span> Siparişlerim & iadeler</button>
                 <button data-open-seller><span>◇</span> Satıcı alanı</button>
                 <button id="returnManagementButton" hidden><span>✓</span> İade yönetimi</button>
                 <button id="courierAreaButton" hidden><span>▣</span> Kurye alanı</button>
@@ -138,7 +137,7 @@
     <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
     <div class="modal-header"><p class="eyebrow">NEXAMARKET'E HOŞ GELDİN</p><h2 id="authTitle">Alışverişe başla</h2><p id="authSubtitle">Sepete eklemek ve sipariş vermek için giriş yap.</p></div>
     <div class="tab-row" id="authTabs"><button class="tab active" data-auth-tab="login">Giriş yap</button><button class="tab" data-auth-tab="register">Hesap oluştur</button></div>
-    <form id="authForm"><label>E-posta<input id="authEmail" type="email" placeholder="ornek@mail.com" required></label><label>Parola<input id="authPassword" type="password" placeholder="En az 12 karakter" minlength="12" required></label><button class="primary-button full" type="submit" id="authSubmit">Giriş yap <span>→</span></button></form>
+    <form id="authForm"><label>E-posta<input id="authEmail" type="email" placeholder="ornek@mail.com" required></label><label>Parola<span class="password-field"><input id="authPassword" type="password" placeholder="En az 12 karakter" minlength="12" required><button type="button" class="password-toggle" data-password-toggle="authPassword" aria-label="Parolayı göster" title="Parolayı göster"><span aria-hidden="true">◉</span></button></span></label><button class="primary-button full" type="submit" id="authSubmit">Giriş yap <span>→</span></button></form>
     <p class="form-message" id="authMessage"></p>
     <section class="verification-panel" id="verificationPanel" hidden>
         <div class="verification-icon" aria-hidden="true">✉</div>
@@ -191,7 +190,7 @@
             </section>
             <section class="account-panel" data-account-panel="returns">
                 <div class="account-panel-heading"><div><p class="eyebrow">İADE MERKEZİ</p><h2>İade taleplerin</h2></div><button id="refreshReturnsButton">↻ Yenile</button></div>
-                <div class="return-help"><span>i</span><p><b>İade nasıl yapılır?</b>Teslim edilen veya gönderim sürecindeki siparişinden “İade talebi oluştur” seçeneğini kullan. Talebin satıcı tarafından değerlendirildiğinde durum burada güncellenir.</p></div>
+                <div class="return-help"><span>i</span><p><b>İade nasıl yapılır?</b>Teslim edilen veya gönderim sürecindeki siparişinden “İade talebi oluştur” seçeneğini kullan. Talebin ilgili satıcı veya platform yöneticisi tarafından değerlendirildiğinde durum burada güncellenir.</p></div>
                 <div class="return-list" id="customerReturnList"><div class="inventory-loading"><span class="button-spinner"></span>İadelerin hazırlanıyor…</div></div>
             </section>
         </div>
@@ -231,7 +230,7 @@
             <div class="panel-title"><span>01</span><div><b>Yeni kullanıcı</b><small>Platform için yeni hesap oluştur</small></div></div>
             <form id="adminUserForm" class="seller-form">
                 <label>E-posta<input id="adminUserEmail" type="email" required maxlength="320" placeholder="ornek@nexamarket.com"></label>
-                <label>Parola<input id="adminUserPassword" type="password" required minlength="12" maxlength="72" placeholder="En az 12 karakter"></label>
+                <label>Parola<span class="password-field"><input id="adminUserPassword" type="password" required minlength="12" maxlength="72" placeholder="En az 12 karakter"><button type="button" class="password-toggle" data-password-toggle="adminUserPassword" aria-label="Parolayı göster" title="Parolayı göster"><span aria-hidden="true">◉</span></button></span></label>
                 <label>Rol<select id="adminUserRole"><option value="CUSTOMER">CUSTOMER · Alıcı</option><option value="SELLER">SELLER · Satıcı</option><option value="COURIER">COURIER · Kurye</option></select></label>
                 <button class="primary-button full" type="submit" id="adminUserSubmitButton">Kullanıcı ekle <span>→</span></button>
             </form>

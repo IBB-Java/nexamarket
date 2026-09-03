@@ -62,6 +62,7 @@ const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const currency = value => new Intl.NumberFormat("tr-TR", {style: "currency", currency: "TRY"}).format(Number(value || 0));
 const html = value => String(value ?? "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[char]));
+const roleLabel = role => ({ADMIN: "ADMIN · Yönetici", SELLER: "SELLER · Satıcı", COURIER: "COURIER · Kurye", CUSTOMER: "CUSTOMER · Alıcı"}[role] || "");
 
 async function api(path, options = {}) {
     const headers = new Headers(options.headers || {});
@@ -149,13 +150,60 @@ function productsForView() {
     const products = state.catalog.filter(product => {
         const matchesCategory = state.activeCategory === "all" || product.category.toLocaleLowerCase("tr") === state.activeCategory.toLocaleLowerCase("tr");
         const matchesFavorite = !state.favoriteOnly || state.favorites.has(String(product.id));
-        const haystack = `${product.name} ${product.category} ${product.sellerName} ${product.description}`.toLocaleLowerCase("tr");
+        const haystack = `${product.name} ${product.category} ${product.sellerName}`.toLocaleLowerCase("tr");
         return matchesCategory && matchesFavorite && (!query || haystack.includes(query));
     });
     if (state.sort === "price-asc") products.sort((a, b) => a.price - b.price);
     if (state.sort === "price-desc") products.sort((a, b) => b.price - a.price);
     if (state.sort === "name") products.sort((a, b) => a.name.localeCompare(b.name, "tr"));
     return products;
+}
+
+function hideSearchSuggestions() {
+    const suggestions = $("#searchSuggestions");
+    suggestions.hidden = true;
+    suggestions.innerHTML = "";
+    $("#globalSearchInput").setAttribute("aria-expanded", "false");
+}
+
+function renderSearchSuggestions() {
+    const input = $("#globalSearchInput"), suggestions = $("#searchSuggestions");
+    const query = input.value.trim().toLocaleLowerCase("tr");
+    if (!query || state.catalogLoading) return hideSearchSuggestions();
+
+    const includesQuery = value => String(value || "").toLocaleLowerCase("tr").includes(query);
+    const unique = values => [...new Map(values.map(value => [String(value).toLocaleLowerCase("tr"), value])).values()];
+    const categories = unique(state.catalog.map(product => product.category)).filter(includesQuery).slice(0, 3);
+    const sellers = unique(state.catalog.map(product => product.sellerName)).filter(includesQuery).slice(0, 3);
+    const products = state.catalog.filter(product => includesQuery(`${product.name} ${product.category} ${product.sellerName}`)).slice(0, 6);
+    const sections = [];
+    if (products.length) sections.push(`<div class="suggestion-group"><small>ÜRÜNLER</small>${products.map(product => `<button type="button" class="search-suggestion" role="option" data-search-suggestion="product" data-product-id="${product.id}"><span class="suggestion-icon">${product.imageUrl ? "▣" : product.emoji}</span><span><b>${html(product.name)}</b><em>${html(product.sellerName)} · ${currency(product.price)}</em></span><i>Ürün</i></button>`).join("")}</div>`);
+    if (categories.length) sections.push(`<div class="suggestion-group"><small>KATEGORİLER</small>${categories.map(category => `<button type="button" class="search-suggestion" role="option" data-search-suggestion="category" data-category="${html(category)}"><span class="suggestion-icon">◇</span><span><b>${html(category)}</b><em>Bu kategorideki ürünleri gör</em></span><i>Kategori</i></button>`).join("")}</div>`);
+    if (sellers.length) sections.push(`<div class="suggestion-group"><small>SATICILAR</small>${sellers.map(seller => `<button type="button" class="search-suggestion" role="option" data-search-suggestion="seller" data-seller-name="${html(seller)}"><span class="suggestion-icon">◦</span><span><b>${html(seller)}</b><em>Bu satıcının ürünlerini gör</em></span><i>Satıcı</i></button>`).join("")}</div>`);
+    suggestions.innerHTML = sections.length ? sections.join("") : `<div class="search-suggestion-empty">“${html(input.value.trim())}” için öneri bulunamadı.</div>`;
+    suggestions.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+    $$('[data-search-suggestion]').forEach(button => button.addEventListener("click", () => {
+        const type = button.dataset.searchSuggestion;
+        if (type === "product") {
+            hideSearchSuggestions();
+            return openProductDetail(button.dataset.productId);
+        }
+        if (type === "category") {
+            state.activeCategory = button.dataset.category;
+            input.value = "";
+            renderCategoryPills();
+        } else {
+            state.activeCategory = "all";
+            input.value = button.dataset.sellerName;
+            renderCategoryPills();
+        }
+        state.favoriteOnly = false;
+        updateFavoritesUI();
+        renderCatalog();
+        hideSearchSuggestions();
+        $("#discover").scrollIntoView({behavior: "smooth"});
+    }));
 }
 
 function renderCatalogSkeleton() {
@@ -296,7 +344,10 @@ function toggleAccountMenu() {
 
 function updateAuthUI() {
     const name = state.user?.email?.split("@")[0] || "Hesabım";
+    const role = state.token ? roleLabel(state.user?.role) : "";
     $("#authButtonLabel").textContent = state.token ? name : "Giriş yap"; $("#menuUserName").textContent = state.token ? name : "NexaMarketli";
+    $("#authButtonRole").textContent = role; $("#authButtonRole").hidden = !role;
+    $("#menuUserRole").textContent = role; $("#menuUserRole").hidden = !role;
     $("#menuUserEmail").textContent = state.user?.email || "Hesabına giriş yap"; $("#authButton").classList.toggle("signed-in", Boolean(state.token)); closeAccountMenu();
     $("#courierAreaButton").hidden = state.user?.role !== "COURIER";
     $("#adminPanelButton").hidden = state.user?.role !== "ADMIN";
@@ -861,7 +912,7 @@ function initEvents() {
     $("#cartButton").addEventListener("click", openCart); $$('[data-close-cart]').forEach(button => button.addEventListener("click", closeCart)); $("#overlay").addEventListener("click", closeCart);
     $$('[data-open-seller]').forEach(button => button.addEventListener("click", openSellerArea)); $$('[data-close-modal]').forEach(button => button.addEventListener("click", closeModals));
     $("#authButton").addEventListener("click", event => { event.stopPropagation(); toggleAccountMenu(); }); $("#accountOverviewButton").addEventListener("click", () => openAccount("overview"));
-    $("#ordersReturnsButton").addEventListener("click", () => openAccount("orders")); $("#footerReturnsButton").addEventListener("click", () => openAccount("returns"));
+    $("#footerReturnsButton").addEventListener("click", () => openAccount("returns"));
     $("#footerHowItWorksButton").addEventListener("click", () => openHelp("discover")); $("#footerDeliveryButton").addEventListener("click", () => openHelp("delivery"));
     $$("[data-account-tab]").forEach(button => button.addEventListener("click", () => switchAccountTab(button.dataset.accountTab)));
     $$("[data-account-target]").forEach(button => button.addEventListener("click", () => switchAccountTab(button.dataset.accountTarget)));
@@ -878,20 +929,29 @@ function initEvents() {
     $("#verificationReminderForm").addEventListener("submit", event => submitVerificationCode(event, "reminder"));
     $("#verificationLoginButton").addEventListener("click", () => { setAuthMode("login"); $("#authEmail").value = state.pendingVerificationEmail; });
     $("#authForm").addEventListener("submit", submitAuth); $("#sellerForm").addEventListener("submit", submitSeller); $("#sellerImage").addEventListener("change", updateSellerImagePreview); $("#refreshSellerButton").addEventListener("click", loadSellerProducts);
+    $$('[data-password-toggle]').forEach(button => button.addEventListener("click", () => {
+        const input = document.getElementById(button.dataset.passwordToggle);
+        const isVisible = input.type === "text";
+        input.type = isVisible ? "password" : "text";
+        button.classList.toggle("is-visible", !isVisible);
+        button.querySelector("span").textContent = isVisible ? "◉" : "◌";
+        const label = isVisible ? "Parolayı göster" : "Parolayı gizle";
+        button.setAttribute("aria-label", label); button.setAttribute("title", label);
+    }));
     $("#checkoutButton").addEventListener("click", checkout); $("#payButton").addEventListener("click", pay);
     $("#detailAddButton").addEventListener("click", () => state.selectedProduct && addToCart(state.selectedProduct.id, $("#detailAddButton")));
     $("#detailFavoriteButton").addEventListener("click", () => state.selectedProduct && toggleFavorite(state.selectedProduct.id));
     $("#confirmCancelButton").addEventListener("click", () => { state.confirmAction = null; $("#confirmModal").close(); }); $("#confirmActionButton").addEventListener("click", runConfirmedAction);
     $("#applyCouponButton").addEventListener("click", () => { const code = $("#couponInput").value.trim().toUpperCase(); state.coupon = code; $("#couponInput").value = code; $("#couponNote").textContent = code ? `${code} ödeme adımında uygulanacak.` : ""; });
     $("#emptySeedButton").addEventListener("click", seedCatalog); $("#refreshButton").addEventListener("click", loadProducts);
-    $("#globalSearchInput").addEventListener("input", renderCatalog);
-    $("#globalSearchInput").addEventListener("keydown", event => { if (event.key === "Enter") $("#discover").scrollIntoView({behavior: "smooth"}); });
+    $("#globalSearchInput").addEventListener("input", () => { renderCatalog(); renderSearchSuggestions(); });
+    $("#globalSearchInput").addEventListener("keydown", event => { if (event.key === "Enter") { hideSearchSuggestions(); $("#discover").scrollIntoView({behavior: "smooth"}); } if (event.key === "Escape") hideSearchSuggestions(); });
     $$('[data-shop-category]').forEach(button => button.addEventListener("click", () => shopCategory(button.dataset.shopCategory)));
     $$('[data-campaign-category]').forEach(button => button.addEventListener("click", () => shopCategory(button.dataset.campaignCategory)));
     $$('[data-open-help]').forEach(button => button.addEventListener("click", () => openHelp(button.dataset.openHelp)));
     document.addEventListener("keydown", event => { if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase("tr") === "k") { event.preventDefault(); $("#globalSearchInput").focus(); } });
     $("#sortSelect").addEventListener("change", event => { state.sort = event.target.value; renderCatalog(); }); $("#clearFiltersButton").addEventListener("click", clearFilters);
-    document.addEventListener("click", event => { if (!event.target.closest(".account-shell")) closeAccountMenu(); });
+    document.addEventListener("click", event => { if (!event.target.closest(".account-shell")) closeAccountMenu(); if (!event.target.closest(".header-search")) hideSearchSuggestions(); });
 }
 
 async function boot() {
