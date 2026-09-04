@@ -55,4 +55,7 @@ public class UserAccount extends BaseEntity {
     private boolean emailVerified = true;
 
     private Instant lockedUntil;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 }

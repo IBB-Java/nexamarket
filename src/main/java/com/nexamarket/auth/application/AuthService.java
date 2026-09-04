@@ -26,12 +26,17 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final Set<UserRole> SELF_REGISTRATION_ROLES =
+            EnumSet.of(UserRole.CUSTOMER, UserRole.SELLER, UserRole.COURIER);
 
     private final UserAccountRepository userAccountRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -42,11 +47,22 @@ public class AuthService {
     private final EmailVerificationService emailVerificationService;
 
     @Transactional
-    public UserResponse registerCustomer(RegisterRequest request) {
+    public UserResponse register(RegisterRequest request) {
         String email = normalizeEmail(request.email());
+        UserRole requestedRole = request.role() == null ? UserRole.CUSTOMER : request.role();
+        if (!SELF_REGISTRATION_ROLES.contains(requestedRole)) {
+            throw new InvalidRegistrationRoleException(
+                    "ADMIN rolü normal kayıt ekranından seçilemez; yalnızca bir yönetici tarafından atanabilir.");
+        }
         UserAccount user = userAccountRepository.findByEmailIgnoreCase(email)
                 .filter(existing -> emailVerificationProperties.isRequired() && !existing.isEmailVerified())
-                .orElseGet(() -> createUser(email, request.password(), UserRole.CUSTOMER));
+                .map(existing -> {
+                    if (existing.getRole() != requestedRole) {
+                        throw new DuplicateEmailException("Bu e-posta adresi zaten farklı bir rolle kayıtlı");
+                    }
+                    return existing;
+                })
+                .orElseGet(() -> createUser(email, request.password(), requestedRole));
         emailVerificationService.sendVerification(user);
         return UserResponse.from(user);
     }
@@ -131,7 +147,7 @@ public class AuthService {
     @Transactional
     public void resendVerification(String email) {
         userAccountRepository.findByEmailIgnoreCase(normalizeEmail(email))
-                .filter(user -> !user.isEmailVerified())
+                .filter(user -> user.getStatus() == UserStatus.ACTIVE && !user.isEmailVerified())
                 .ifPresent(emailVerificationService::sendVerification);
     }
 

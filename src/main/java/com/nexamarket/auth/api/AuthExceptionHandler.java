@@ -6,6 +6,7 @@ import com.nexamarket.auth.application.DuplicateEmailException;
 import com.nexamarket.auth.application.InvalidCredentialsException;
 import com.nexamarket.auth.application.InvalidTokenException;
 import com.nexamarket.auth.application.InvalidEmailVerificationTokenException;
+import com.nexamarket.auth.application.InvalidRegistrationRoleException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -39,6 +40,11 @@ public class AuthExceptionHandler {
     @ExceptionHandler(InvalidEmailVerificationTokenException.class)
     ProblemDetail invalidVerificationToken(InvalidEmailVerificationTokenException exception) {
         return problem(HttpStatus.BAD_REQUEST, "Doğrulama kodu geçersiz", exception.getMessage());
+    }
+
+    @ExceptionHandler(InvalidRegistrationRoleException.class)
+    ProblemDetail invalidRegistrationRole(InvalidRegistrationRoleException exception) {
+        return problem(HttpStatus.FORBIDDEN, "Kayıt rolüne izin verilmiyor", exception.getMessage());
     }
 
     private ProblemDetail problem(HttpStatus status, String title, String message) {

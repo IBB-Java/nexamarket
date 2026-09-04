@@ -47,20 +47,16 @@ class OrderStatusServiceTest {
     }
 
     @Test
-    void assignedCourierCanMarkProcessingOrderAsShipped() {
+    void directCourierStatusUpdateCannotBypassDeliveryWorkflow() {
         SubOrder subOrder = paymentPendingSubOrder();
         subOrder.assignCourier(600L);
         UUID subOrderId = subOrder.getId();
         OrderStatusService service = new OrderStatusService(subOrderRepository, orderStatusEventPublisher);
         when(subOrderRepository.findByIdForUpdate(subOrderId)).thenReturn(Optional.of(subOrder));
-        when(subOrderRepository.save(any(SubOrder.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        service.updateSubOrderStatus(subOrderId, OrderStatus.PAID);
-        service.updateSubOrderStatus(subOrderId, OrderStatus.PROCESSING);
-        OrderStatus response = service.updateSubOrderStatus(
-                subOrderId, OrderStatus.SHIPPED, 600L, UserRole.COURIER);
-
-        assertThat(response).isEqualTo(OrderStatus.SHIPPED);
+        assertThatThrownBy(() -> service.updateSubOrderStatus(
+                subOrderId, OrderStatus.SHIPPED, 600L, UserRole.COURIER))
+                .isInstanceOf(OrderAccessDeniedException.class)
+                .hasMessageContaining("teslimat adımları");
     }
 
     @Test
@@ -74,7 +70,7 @@ class OrderStatusServiceTest {
         assertThatThrownBy(() -> service.updateSubOrderStatus(
                 subOrderId, OrderStatus.SHIPPED, 601L, UserRole.COURIER))
                 .isInstanceOf(OrderAccessDeniedException.class)
-                .hasMessageContaining("kendisine atanan");
+                .hasMessageContaining("teslimat adımları");
     }
 
     private SubOrder paymentPendingSubOrder() {

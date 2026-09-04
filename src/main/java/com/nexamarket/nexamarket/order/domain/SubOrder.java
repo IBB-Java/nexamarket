@@ -94,6 +94,12 @@ public class SubOrder {
         this.courierId = Objects.requireNonNull(courierId, "Courier id is required.");
     }
 
+    public void clearCourier(Long courierId) {
+        if (Objects.equals(this.courierId, courierId)) {
+            this.courierId = null;
+        }
+    }
+
     public UUID getId() {
         return id;
     }

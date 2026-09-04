@@ -4,7 +4,7 @@
 
 | Yöntem | Yol | Açıklama |
 | --- | --- | --- |
-| `POST` | `/api/v1/auth/register` | Yalnızca `CUSTOMER` rolünde kullanıcı kaydı |
+| `POST` | `/api/v1/auth/register` | `CUSTOMER`, `SELLER` veya `COURIER` kaydı; rol verilmezse `CUSTOMER` |
 | `POST` | `/api/v1/auth/login` | Kısa ömürlü access ve uzun ömürlü refresh JWT üretir |
 | `POST` | `/api/v1/auth/refresh` | Refresh token rotasyonu yapar; eski token geçersizleşir |
 | `POST` | `/api/v1/auth/logout` | Verilen refresh token'ı iptal eder |
@@ -19,6 +19,8 @@ Access token, `Authorization: Bearer <accessToken>` başlığıyla gönderilir.
 ## Güvenlik kararları
 
 - Parolalar BCrypt ile hashlenir; hiçbir API yanıtı parola hashini içermez.
+- Normal kayıt `ADMIN` rolünü reddeder. ADMIN yalnızca yönetici uç noktasıyla
+  oluşturulabilir veya mevcut bir kullanıcıya yönetici tarafından atanabilir.
 - JWT'ler HS tabanlı imzalanır. Üretimde `AUTH_JWT_SECRET` mutlaka benzersiz,
   Base64 kodlu ve en az 32 baytlık gizli anahtarla verilmelidir.
 - Her refresh token için veritabanında yalnızca SHA-256 özeti saklanır.
@@ -31,6 +33,19 @@ Access token, `Authorization: Bearer <accessToken>` başlığıyla gönderilir.
 - E-posta doğrulamasında açık kod veritabanına yazılmaz; altı haneli kodun
   yalnızca SHA-256 özeti ve geçerlilik süresi saklanır. Doğrulanmamış kullanıcı
   giriş yapabilir, ancak mağaza her oturum başlangıcında kod penceresini açar.
+- Her access token isteğinde kullanıcının güncel veritabanı durumu ve rolü
+  doğrulanır. Devre dışı/silinmiş hesapların ve rolü değişmiş eski tokenların
+  erişimi token süresi beklenmeden kesilir.
+
+## Örnek kayıt isteği
+
+```json
+{
+  "email": "seller@example.com",
+  "password": "GucluParola!2026",
+  "role": "SELLER"
+}
+```
 
 ## Örnek giriş isteği
 

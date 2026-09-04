@@ -1,6 +1,8 @@
 package com.nexamarket.auth.security;
 
 import com.nexamarket.auth.application.InvalidTokenException;
+import com.nexamarket.auth.entity.UserStatus;
+import com.nexamarket.auth.repository.UserAccountRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +20,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UserAccountRepository userAccountRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -27,11 +30,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 JwtPayload payload = jwtService.parseAccessToken(authorization.substring(7));
-                AuthPrincipal principal = new AuthPrincipal(payload.userId(), payload.email(), payload.role());
+                var user = userAccountRepository.findById(payload.userId())
+                        .filter(candidate -> candidate.getStatus() == UserStatus.ACTIVE)
+                        .filter(candidate -> candidate.getEmail().equalsIgnoreCase(payload.email()))
+                        .filter(candidate -> candidate.getRole() == payload.role())
+                        .orElseThrow(InvalidTokenException::new);
+                AuthPrincipal principal = new AuthPrincipal(user.getId(), user.getEmail(), user.getRole());
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         principal,
                         null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + payload.role().name())));
+                        List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (InvalidTokenException exception) {
                 SecurityContextHolder.clearContext();

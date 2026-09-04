@@ -2,6 +2,7 @@ package com.nexamarket.nexamarket.order.api;
 
 import com.nexamarket.nexamarket.order.application.OrderStatusService;
 import com.nexamarket.nexamarket.order.application.CustomerOrderHistoryService;
+import com.nexamarket.nexamarket.order.application.RoleBasedOrderQueryService;
 import com.nexamarket.common.audit.AuditLogRepository;
 import com.nexamarket.nexamarket.order.domain.InvalidOrderStateTransitionException;
 import com.nexamarket.nexamarket.order.domain.OrderStatus;
@@ -34,6 +35,9 @@ class OrderControllerTest {
 
     @MockBean
     private CustomerOrderHistoryService customerOrderHistoryService;
+
+    @MockBean
+    private RoleBasedOrderQueryService roleBasedOrderQueryService;
 
     @MockBean
     private AuditLogRepository auditLogRepository;

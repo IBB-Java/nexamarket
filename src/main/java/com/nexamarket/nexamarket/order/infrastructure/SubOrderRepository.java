@@ -18,11 +18,27 @@ public interface SubOrderRepository extends JpaRepository<SubOrder, UUID> {
     @Query("select subOrder from SubOrder subOrder where subOrder.id = :id")
     Optional<SubOrder> findByIdForUpdate(@Param("id") UUID id);
 
-    @Query("select subOrder from SubOrder subOrder join fetch subOrder.order where subOrder.sellerId = :sellerId")
+    @Query("select distinct subOrder from SubOrder subOrder join fetch subOrder.order "
+            + "left join fetch subOrder.items where subOrder.sellerId = :sellerId order by subOrder.createdAt desc")
     List<SubOrder> findBySellerIdWithOrder(@Param("sellerId") Long sellerId);
 
-    @Query("select subOrder from SubOrder subOrder join fetch subOrder.order where subOrder.courierId = :courierId")
+    @Query("select distinct subOrder from SubOrder subOrder join fetch subOrder.order "
+            + "left join fetch subOrder.items where subOrder.courierId = :courierId order by subOrder.createdAt desc")
     List<SubOrder> findByCourierIdWithOrder(@Param("courierId") Long courierId);
+
+    @Query("select distinct subOrder from SubOrder subOrder join fetch subOrder.order "
+            + "left join fetch subOrder.items order by subOrder.createdAt desc")
+    List<SubOrder> findAllWithOrderOrderByCreatedAtDesc();
+
+    @Query("select distinct subOrder from SubOrder subOrder join fetch subOrder.order customerOrder "
+            + "left join fetch subOrder.items "
+            + "where customerOrder.customerId = :customerId order by subOrder.createdAt desc")
+    List<SubOrder> findByCustomerIdWithOrder(@Param("customerId") Long customerId);
+
+    @Query("select distinct subOrder from SubOrder subOrder join fetch subOrder.order customerOrder "
+            + "left join fetch subOrder.items "
+            + "where customerOrder.id = :orderId order by subOrder.createdAt desc")
+    List<SubOrder> findByOrderIdWithOrder(@Param("orderId") UUID orderId);
 
     long countByCourierIdAndStatusIn(Long courierId,
             java.util.Collection<com.nexamarket.nexamarket.order.domain.OrderStatus> statuses);

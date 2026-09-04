@@ -28,7 +28,11 @@ public class JwtService {
 
     public JwtService(AuthProperties properties) {
         this.properties = properties;
-        this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(properties.getJwt().getSecret()));
+        String encodedSecret = properties.getJwt().getSecret();
+        byte[] keyBytes = encodedSecret.indexOf('-') >= 0 || encodedSecret.indexOf('_') >= 0
+                ? Decoders.BASE64URL.decode(encodedSecret)
+                : Decoders.BASE64.decode(encodedSecret);
+        this.signingKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
     public IssuedJwt createAccessToken(UserAccount user) {

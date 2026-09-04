@@ -2,6 +2,7 @@ package com.nexamarket.auth.config;
 
 import com.nexamarket.auth.security.JwtAuthenticationFilter;
 import com.nexamarket.auth.security.JwtService;
+import com.nexamarket.auth.repository.UserAccountRepository;
 import com.nexamarket.common.integration.InternalApiKeyFilter;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -41,8 +42,9 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService) {
-        return new JwtAuthenticationFilter(jwtService);
+    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService,
+                                                             UserAccountRepository userAccountRepository) {
+        return new JwtAuthenticationFilter(jwtService, userAccountRepository);
     }
 
     @Bean

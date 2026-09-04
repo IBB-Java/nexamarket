@@ -26,7 +26,7 @@
             <div class="account-menu" id="accountMenu" hidden>
                 <div class="account-menu-user"><span class="account-avatar">◦</span><div><b id="menuUserName">NexaMarketli</b><small id="menuUserRole" hidden></small><small id="menuUserEmail">Hesabına giriş yap</small></div></div>
                 <button id="accountOverviewButton"><span>◎</span> Hesabım</button>
-                <button data-open-seller><span>◇</span> Satıcı alanı</button>
+                <button id="sellerAreaButton" data-open-seller hidden><span>◇</span> Satıcı alanı</button>
                 <button id="returnManagementButton" hidden><span>✓</span> İade yönetimi</button>
                 <button id="courierAreaButton" hidden><span>▣</span> Kurye alanı</button>
                 <button id="adminPanelButton" hidden><span>◫</span> Yönetim paneli</button>
@@ -48,6 +48,19 @@
     <a href="#how-it-works">Neden NexaMarket?</a>
     <button class="commerce-sell" data-open-seller>Mağazanı aç</button>
 </nav>
+
+<section class="role-portal" id="rolePortal" hidden>
+    <aside class="portal-sidebar">
+        <a class="brand portal-brand" href="/" aria-label="NexaMarket"><span class="brand-mark">N</span><span>Nexa<span>Market</span></span></a>
+        <div class="portal-role-badge"><span id="portalRoleIcon">◇</span><div><small>Çalışma alanı</small><b id="portalRoleLabel">Panel</b></div></div>
+        <nav id="portalNavigation" aria-label="Rol menüsü"></nav>
+        <button class="portal-logout" id="portalLogoutButton"><span>↗</span> Güvenli çıkış</button>
+    </aside>
+    <main class="portal-main">
+        <header class="portal-header"><div><p class="eyebrow" id="portalEyebrow">NEXAMARKET</p><h1 id="portalTitle">Dashboard</h1><p id="portalSubtitle"></p></div><button class="portal-profile" id="portalProfileButton"><span class="account-avatar">◦</span><span><b id="portalUserName">Hesabım</b><small id="portalUserEmail"></small></span></button></header>
+        <div id="portalContent" class="portal-content"></div>
+    </main>
+</section>
 
 <main id="home">
     <section class="hero">
@@ -137,7 +150,7 @@
     <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
     <div class="modal-header"><p class="eyebrow">NEXAMARKET'E HOŞ GELDİN</p><h2 id="authTitle">Alışverişe başla</h2><p id="authSubtitle">Sepete eklemek ve sipariş vermek için giriş yap.</p></div>
     <div class="tab-row" id="authTabs"><button class="tab active" data-auth-tab="login">Giriş yap</button><button class="tab" data-auth-tab="register">Hesap oluştur</button></div>
-    <form id="authForm"><label>E-posta<input id="authEmail" type="email" placeholder="ornek@mail.com" required></label><label>Parola<span class="password-field"><input id="authPassword" type="password" placeholder="En az 12 karakter" minlength="12" required><button type="button" class="password-toggle" data-password-toggle="authPassword" aria-label="Parolayı göster" title="Parolayı göster"><span aria-hidden="true">◉</span></button></span></label><button class="primary-button full" type="submit" id="authSubmit">Giriş yap <span>→</span></button></form>
+    <form id="authForm"><label>E-posta<input id="authEmail" type="email" placeholder="ornek@mail.com" required></label><label>Parola<span class="password-field"><input id="authPassword" type="password" placeholder="En az 12 karakter" minlength="12" required><button type="button" class="password-toggle" data-password-toggle="authPassword" aria-label="Parolayı göster" title="Parolayı göster"><span aria-hidden="true">◉</span></button></span></label><label id="authRoleField" hidden>Hesap türü<select id="authRole"><option value="CUSTOMER">Alıcı · Ürün satın al</option><option value="SELLER">Satıcı · Mağaza ve ürün yönet</option><option value="COURIER">Kurye · Teslimat yönet</option></select></label><button class="primary-button full" type="submit" id="authSubmit">Giriş yap <span>→</span></button></form>
     <p class="form-message" id="authMessage"></p>
     <section class="verification-panel" id="verificationPanel" hidden>
         <div class="verification-icon" aria-hidden="true">✉</div>
@@ -217,14 +230,15 @@
 
 <dialog class="modal courier-modal" id="courierModal">
     <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
-    <div class="modal-header"><p class="eyebrow">KURYE ALANI</p><h2>Teslimatların</h2><p>Sana atanan siparişleri takip et ve kargo durumlarını güncelle.</p></div>
-    <div class="courier-toolbar"><span id="courierOrderCount">Siparişler yükleniyor…</span><button id="refreshCourierButton" aria-label="Siparişleri yenile">↻ Yenile</button></div>
+    <div class="modal-header"><p class="eyebrow">KURYE ALANI</p><h2>Teslimatların</h2><p>Atamayı kabul et veya reddet; teslimatı adım adım ve güvenli sırayla ilerlet.</p></div>
+    <div class="courier-toolbar"><span id="courierOrderCount">Teslimatlar yükleniyor…</span><button id="refreshCourierButton" aria-label="Teslimatları yenile">↻ Yenile</button></div>
+    <div class="courier-filters" id="courierFilters" aria-label="Teslimat filtreleri"><button class="active" data-courier-filter="all">Tümü</button><button data-courier-filter="assigned">Yeni atanan</button><button data-courier-filter="active">Devam eden</button><button data-courier-filter="history">Geçmiş</button></div>
     <div class="courier-orders" id="courierOrders"><div class="inventory-loading"><span class="button-spinner"></span>Siparişlerin hazırlanıyor…</div></div>
 </dialog>
 
 <dialog class="modal admin-modal" id="adminModal">
     <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
-    <div class="modal-header"><p class="eyebrow">YÖNETİM PANELİ</p><h2>Kullanıcı yönetimi</h2><p>Alıcı, satıcı ve kurye hesaplarını tek ekrandan yönet.</p></div>
+    <div class="modal-header"><p class="eyebrow">YÖNETİM PANELİ</p><h2>Platform yönetimi</h2><p>Kullanıcıları, rolleri ve teslimat atamalarını tek ekrandan yönet.</p></div>
     <div class="admin-workspace">
         <section class="admin-create-panel">
             <div class="panel-title"><span>01</span><div><b>Yeni kullanıcı</b><small>Platform için yeni hesap oluştur</small></div></div>
@@ -239,6 +253,14 @@
         <section class="admin-users-panel">
             <div class="panel-title inventory-title"><span>02</span><div><b>Platform kullanıcıları</b><small id="adminUserCount">Kullanıcılar yükleniyor…</small></div><button id="refreshAdminUsersButton" aria-label="Kullanıcıları yenile">↻</button></div>
             <div class="admin-users" id="adminUsers"><div class="inventory-loading"><span class="button-spinner"></span>Kullanıcılar hazırlanıyor…</div></div>
+        </section>
+        <section class="admin-orders-panel">
+            <div class="panel-title inventory-title"><span>03</span><div><b>Tüm alt siparişler</b><small id="adminOrderCount">Siparişler yükleniyor…</small></div><button id="refreshAdminOrdersButton" aria-label="Siparişleri yenile">↻</button></div>
+            <div class="role-order-list" id="adminOrders"><div class="inventory-loading"><span class="button-spinner"></span>Siparişler hazırlanıyor…</div></div>
+        </section>
+        <section class="admin-orders-panel admin-deliveries-panel">
+            <div class="panel-title inventory-title"><span>04</span><div><b>Teslimat geçmişi</b><small id="adminDeliveryCount">Atamalar yükleniyor…</small></div><button id="refreshAdminDeliveriesButton" aria-label="Teslimatları yenile">↻</button></div>
+            <div class="role-order-list" id="adminDeliveries"><div class="inventory-loading"><span class="button-spinner"></span>Atamalar hazırlanıyor…</div></div>
         </section>
     </div>
 </dialog>
@@ -263,6 +285,10 @@
         <section class="seller-inventory-panel">
             <div class="panel-title inventory-title"><span>02</span><div><b>Ürünlerin</b><small>Yayın durumunu ve ürünlerini yönet</small></div><button id="refreshSellerButton" aria-label="Ürünleri yenile">↻</button></div>
             <div class="seller-inventory" id="sellerInventory"><div class="inventory-loading">Ürünlerin hazırlanıyor…</div></div>
+        </section>
+        <section class="seller-orders-panel">
+            <div class="panel-title inventory-title"><span>03</span><div><b>Mağaza siparişleri</b><small id="sellerOrderCount">Siparişler yükleniyor…</small></div><button id="refreshSellerOrdersButton" aria-label="Siparişleri yenile">↻</button></div>
+            <div class="role-order-list" id="sellerOrders"><div class="inventory-loading"><span class="button-spinner"></span>Siparişler hazırlanıyor…</div></div>
         </section>
     </div>
 </dialog>

@@ -2,6 +2,7 @@ package com.nexamarket.nexamarket.order.api;
 
 import com.nexamarket.nexamarket.order.application.CustomerOrderHistoryService;
 import com.nexamarket.nexamarket.order.application.OrderStatusService;
+import com.nexamarket.nexamarket.order.application.RoleBasedOrderQueryService;
 import com.nexamarket.nexamarket.order.domain.OrderStatus;
 import com.nexamarket.auth.security.AuthPrincipal;
 import jakarta.validation.Valid;
@@ -23,10 +24,27 @@ public class OrderController {
 
     private final OrderStatusService orderStatusService;
     private final CustomerOrderHistoryService customerOrderHistoryService;
+    private final RoleBasedOrderQueryService roleBasedOrderQueryService;
 
-    public OrderController(OrderStatusService orderStatusService, CustomerOrderHistoryService customerOrderHistoryService) {
+    public OrderController(OrderStatusService orderStatusService,
+                           CustomerOrderHistoryService customerOrderHistoryService,
+                           RoleBasedOrderQueryService roleBasedOrderQueryService) {
         this.orderStatusService = orderStatusService;
         this.customerOrderHistoryService = customerOrderHistoryService;
+        this.roleBasedOrderQueryService = roleBasedOrderQueryService;
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'SELLER', 'ADMIN')")
+    public List<RoleOrderResponse> listVisibleOrders(@AuthenticationPrincipal AuthPrincipal principal) {
+        return roleBasedOrderQueryService.listVisibleOrders(principal);
+    }
+
+    @GetMapping("/{orderId}")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'SELLER', 'ADMIN')")
+    public List<RoleOrderResponse> getVisibleOrder(@PathVariable UUID orderId,
+                                                   @AuthenticationPrincipal AuthPrincipal principal) {
+        return roleBasedOrderQueryService.getVisibleOrder(orderId, principal);
     }
 
     @GetMapping("/me")

@@ -16,8 +16,6 @@ import java.util.Set;
 @Service
 public class OrderStatusService {
 
-    private static final Set<OrderStatus> COURIER_STATUSES = Set.of(OrderStatus.SHIPPED, OrderStatus.DELIVERED);
-
     private final SubOrderRepository subOrderRepository;
     private final OrderStateMachine orderStateMachine;
     private final OrderStatusEventPublisher orderStatusEventPublisher;
@@ -46,6 +44,27 @@ public class OrderStatusService {
         SubOrder subOrder = subOrderRepository.findByIdForUpdate(subOrderId)
                 .orElseThrow(() -> new IllegalArgumentException("Sub-order was not found."));
         validateActor(subOrder, targetStatus, actorId, actorRole);
+        return transitionAndPublish(subOrder, targetStatus);
+    }
+
+    /** Only the delivery workflow may advance order state on behalf of a courier. */
+    @Transactional
+    OrderStatus updateSubOrderStatusFromDelivery(UUID subOrderId, OrderStatus targetStatus, Long courierId) {
+        if (!Set.of(OrderStatus.SHIPPED, OrderStatus.DELIVERED).contains(targetStatus)) {
+            throw new OrderAccessDeniedException("Teslimat akışı yalnızca SHIPPED veya DELIVERED durumunu üretebilir.");
+        }
+        SubOrder subOrder = subOrderRepository.findByIdForUpdate(subOrderId)
+                .orElseThrow(() -> new OrderNotFoundException("Alt sipariş bulunamadı: " + subOrderId));
+        if (!courierId.equals(subOrder.getCourierId())) {
+            throw new OrderAccessDeniedException("Bu alt sipariş ilgili kuryeye atanmış değil.");
+        }
+        if (targetStatus == OrderStatus.SHIPPED && subOrder.getStatus() == OrderStatus.SHIPPED) {
+            return OrderStatus.SHIPPED;
+        }
+        return transitionAndPublish(subOrder, targetStatus);
+    }
+
+    private OrderStatus transitionAndPublish(SubOrder subOrder, OrderStatus targetStatus) {
         orderStateMachine.transition(subOrder, targetStatus);
         OrderStatus status = subOrderRepository.save(subOrder).getStatus();
         if (status == OrderStatus.DELIVERED && loyaltyService != null) {
@@ -67,14 +86,8 @@ public class OrderStatusService {
         if (actorRole == UserRole.SELLER && subOrder.getSellerId().equals(actorId)) {
             return;
         }
-        if (actorRole == UserRole.COURIER
-                && actorId.equals(subOrder.getCourierId())
-                && COURIER_STATUSES.contains(targetStatus)) {
-            return;
-        }
         if (actorRole == UserRole.COURIER) {
-            throw new OrderAccessDeniedException(
-                    "Kurye yalnızca kendisine atanan siparişi SHIPPED veya DELIVERED durumuna taşıyabilir.");
+            throw new OrderAccessDeniedException("Kurye sipariş durumunu yalnızca teslimat adımları üzerinden ilerletebilir.");
         }
         throw new OrderAccessDeniedException("Yalnızca siparişin satıcısı, atanmış kuryesi veya yönetici durum güncelleyebilir.");
     }

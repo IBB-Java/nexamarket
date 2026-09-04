@@ -59,8 +59,8 @@ Ana sayfa artık yalnızca Swagger ekranı değildir. `http://localhost:8080` ad
 NexaMarket Store bulunur. Buradan:
 
 - demo mağazayı tek tıkla gerçek katalog API'si üzerinden doldurabilir,
-- müşteri hesabı oluşturup giriş yapabilir ve görünür hesap menüsünden güvenle
-  çıkış yapabilir,
+- kayıt sırasında alıcı, satıcı veya kurye hesabı seçebilir; giriş yapabilir ve
+  görünür hesap menüsünden güvenle çıkış yapabilir (ADMIN normal kayıttan seçilemez),
 - ürünleri arayabilir, kategoriye göre filtreleyebilir, sıralayabilir, detaylarını
   inceleyebilir ve favorilerine kaydedebilir,
 - üst arama alanı, kategori menüsü ve kampanya kartlarıyla güncel mağaza
@@ -74,7 +74,16 @@ NexaMarket Store bulunur. Buradan:
   ya da reddedebilir,
 - “Satıcı alanı” ile otomatik stok kodlu yeni ürün ve varyant ekleyebilir, ürünü
   hemen vitrinde yayınlayabilir veya taslak olarak saklayabilir; mevcut ürünleri
-  yayınlayabilir, satıştan kaldırabilir ve geçmiş siparişleri bozmadan silebilirsiniz.
+  yayınlayabilir, satıştan kaldırabilir, fiyat/stok/görselini güncelleyebilir ve
+  yalnızca kendi alt siparişlerini yönetebilirsiniz,
+- girişten sonra `SELLER`, `COURIER` ve `ADMIN` rollerine özel, birbirinden
+  ayrılmış dashboard ve sidebar kullanabilirsiniz,
+- kurye hesabıyla yalnızca yönetici tarafından kendisine atanmış teslimatları
+  kabul/reddedebilir; teslim alma, dağıtıma çıkma, teslim ve gerekçeli
+  başarısızlık adımlarını ayrı teslimat durum makinesiyle ilerletebilirsiniz,
+- yönetici hesabıyla bütün kullanıcıları, siparişleri, rolleri, hesap
+  durumlarını, manuel kurye atamalarını ve silinmeyen teslimat geçmişini
+  yönetebilirsiniz.
 
 Katalogda yalnızca `ACTIVE` durumundaki ürünler müşteriye gösterilir. Uygulama
 açılırken katalog verisi arama indeksine yeniden yazılır; bu nedenle yerel
@@ -98,15 +107,19 @@ yüzdelik yanıt süresinin 300 ms altında kaldığı kabul testi de bu komuta 
 
 ## Ana kullanıcı akışı
 
-1. Müşteri kayıt olur ve JWT alır.
+1. Kullanıcı rolünü seçerek kayıt olur; girişte access ve refresh JWT alır.
 2. Varyantı sepete ekler; stok hemen rezerve edilir.
 3. Checkout, kalemleri satıcılara göre alt siparişlere böler.
 4. Cüzdan/kart bölüşümlü ödeme tamamlanır; rezervasyon `CONFIRMED` olur.
-5. Satıcı kargo durumunu günceller; outbox üzerinden e-posta, SMS, uygulama içi
-   bildirim ve yönetici WebSocket olayı üretilir.
+5. Satıcı siparişi hazırlamaya alır; ADMIN aktif kuryeyi manuel atar. Kurye
+   atamayı kabul edip `PICKED_UP → IN_TRANSIT → DELIVERED` adımlarını ilerletir.
+   Ret veya başarısızlıkta tarihçe korunur ve ADMIN yeni atama yapabilir.
+   Teslimat olayları da outbox üzerinden RabbitMQ bildirimlerine dönüşür.
 6. Teslim edilen sipariş puan kazandırır; onaylanan iade ters puan kaydı açar.
 
 Detaylı DOCX gereksinim eşlemesi için
 [gereksinim takip kaydına](docs/requirements-traceability.md), modül ve sunum
 notları için [handoff belgesine](docs/nexamarket-handoff.md), dört mantıksal
-servisin iletişim kuralları için [mimari belgesine](docs/architecture.md) bakın.
+servisin iletişim kuralları için [mimari belgesine](docs/architecture.md), kurye
+atama ve rol ekranlarının teknik açıklaması için
+[teslimat raporuna](docs/delivery-assignment.md) bakın.

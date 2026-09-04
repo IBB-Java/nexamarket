@@ -29,6 +29,7 @@ public class CategoryController {
     }
 
     @GetMapping
+    @PreAuthorize("isAnonymous() or hasAnyRole('CUSTOMER', 'SELLER', 'ADMIN')")
     public List<CategoryResponse> list() {
         return catalogService.listCategories();
     }

@@ -3,6 +3,7 @@ package com.nexamarket.auth.application;
 import com.nexamarket.auth.config.EmailVerificationProperties;
 import com.nexamarket.auth.entity.EmailVerificationToken;
 import com.nexamarket.auth.entity.UserAccount;
+import com.nexamarket.auth.entity.UserStatus;
 import com.nexamarket.auth.repository.EmailVerificationTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
@@ -29,7 +30,7 @@ public class EmailVerificationService {
 
     @Transactional
     public void sendVerification(UserAccount user) {
-        if (!properties.isRequired() || user.isEmailVerified()) {
+        if (!properties.isRequired() || user.isEmailVerified() || user.getStatus() != UserStatus.ACTIVE) {
             return;
         }
         tokenRepository.deleteByUserId(user.getId());
@@ -46,7 +47,7 @@ public class EmailVerificationService {
         }
         EmailVerificationToken token = tokenRepository.findByUserEmailAndTokenHashForUpdate(email.trim(), hash(verificationCode))
                 .orElseThrow(InvalidEmailVerificationTokenException::new);
-        if (!token.isUsableAt(Instant.now())) {
+        if (!token.isUsableAt(Instant.now()) || token.getUser().getStatus() != UserStatus.ACTIVE) {
             throw new InvalidEmailVerificationTokenException();
         }
         token.getUser().setEmailVerified(true);

@@ -2,6 +2,8 @@ package com.nexamarket.users.application;
 
 public class InvalidUserRoleChangeException extends RuntimeException {
     public InvalidUserRoleChangeException() {
-        super("Yalnızca CUSTOMER, SELLER ve COURIER rolleri birbirine dönüştürülebilir");
+        super("Bu kullanıcı için rol ataması yapılamaz");
     }
+
+    public InvalidUserRoleChangeException(String message) { super(message); }
 }

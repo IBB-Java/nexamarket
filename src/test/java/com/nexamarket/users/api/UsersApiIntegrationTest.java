@@ -144,7 +144,7 @@ class UsersApiIntegrationTest {
 
         mockMvc.perform(get("/api/v1/users/me")
                         .header("Authorization", "Bearer " + customerAccess))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -213,7 +213,7 @@ class UsersApiIntegrationTest {
     }
 
     @Test
-    void adminCanSwitchSellerAndCourierBackToCustomerOrAnotherOperationalRole() throws Exception {
+    void adminCanAssignEverySupportedRoleToAnotherUser() throws Exception {
         UserAccount managedUser = userAccountRepository.save(UserAccount.builder()
                 .email("role-switch@nexamarket.test")
                 .passwordHash(passwordEncoder.encode("StrongPass!2026"))
@@ -246,14 +246,14 @@ class UsersApiIntegrationTest {
                         .header("Authorization", "Bearer " + adminAccess)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"role\":\"ADMIN\"}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title").value("Geçersiz kullanıcı rolü"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("ADMIN"));
     }
 
     @Test
-    void adminCanDeleteManagedCustomerButCannotDeleteAnAdminAccount() throws Exception {
+    void adminSoftDeletesManagedCustomerButCannotDeleteAnAdminAccount() throws Exception {
         String customerEmail = "delete-customer@nexamarket.test";
-        registerAndLogin(customerEmail, "StrongPass!2026");
+        String customerAccess = registerAndLogin(customerEmail, "StrongPass!2026");
         UserAccount customer = userAccountRepository.findByEmailIgnoreCase(customerEmail).orElseThrow();
         UserAccount admin = userAccountRepository.save(UserAccount.builder()
                 .email("admin-delete-user@nexamarket.test")
@@ -266,7 +266,17 @@ class UsersApiIntegrationTest {
         mockMvc.perform(delete("/api/v1/admin/users/{userId}", customer.getId())
                         .header("Authorization", "Bearer " + adminAccess))
                 .andExpect(status().isNoContent());
-        org.assertj.core.api.Assertions.assertThat(userAccountRepository.findById(customer.getId())).isEmpty();
+        UserAccount deleted = userAccountRepository.findById(customer.getId()).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(deleted.getStatus()).isEqualTo(UserStatus.DELETED);
+        org.assertj.core.api.Assertions.assertThat(deleted.getDeletedAt()).isNotNull();
+
+        mockMvc.perform(get("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + customerAccess))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + customerEmail + "\",\"password\":\"StrongPass!2026\"}"))
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(delete("/api/v1/admin/users/{userId}", admin.getId())
                         .header("Authorization", "Bearer " + adminAccess))

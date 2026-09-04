@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -134,28 +135,37 @@ public class UsersService {
     }
 
     @Transactional
-    public MyProfileResponse updateUserStatus(Long userId, UpdateUserStatusRequest request) {
+    public MyProfileResponse updateUserStatus(Long userId, Long administratorId, UpdateUserStatusRequest request) {
         if (request.status() != UserStatus.ACTIVE && request.status() != UserStatus.DISABLED) {
             throw new InvalidUserStatusChangeException();
         }
+        if (userId.equals(administratorId)) {
+            throw new InvalidUserStatusChangeException("Yönetici kendi hesabını devre dışı bırakamaz");
+        }
         UserAccount user = userAccountRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
+        if (user.getStatus() == UserStatus.DELETED) {
+            throw new InvalidUserStatusChangeException("Silinmiş bir hesap yeniden etkinleştirilemez");
+        }
         user.setStatus(request.status());
         if (request.status() == UserStatus.ACTIVE) {
             user.setFailedLoginAttempts(0);
             user.setLockedUntil(null);
+        } else {
+            refreshTokenRepository.deleteByUserId(userId);
         }
         return MyProfileResponse.from(user, userProfileRepository.findByUserId(userId).orElse(null));
     }
 
     @Transactional
-    public MyProfileResponse assignOperationalRole(Long userId, UpdateUserRoleRequest request) {
+    public MyProfileResponse assignRole(Long userId, Long administratorId, UpdateUserRoleRequest request) {
+        if (userId.equals(administratorId)) {
+            throw new InvalidUserRoleChangeException("Yönetici kendi rolünü değiştiremez");
+        }
         UserAccount user = userAccountRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
-        boolean managedRole = isManagedRole(user.getRole());
-        boolean supportedTargetRole = isManagedRole(request.role());
-        if (!managedRole || !supportedTargetRole) {
-            throw new InvalidUserRoleChangeException();
+        if (user.getStatus() == UserStatus.DELETED) {
+            throw new InvalidUserRoleChangeException("Silinmiş bir hesaba rol atanamaz");
         }
         user.setRole(request.role());
         refreshTokenRepository.deleteByUserId(userId);
@@ -173,9 +183,10 @@ public class UsersService {
             throw new UserDeletionNotAllowedException("ADMIN rolündeki kullanıcı silinemez");
         }
         refreshTokenRepository.deleteByUserId(userId);
-        sellerProfileRepository.deleteByUserId(userId);
-        userProfileRepository.deleteByUserId(userId);
-        userAccountRepository.delete(user);
+        user.setStatus(UserStatus.DELETED);
+        user.setDeletedAt(Instant.now());
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
     }
 
     private UserAccount currentUser(Long userId) {
@@ -193,10 +204,6 @@ public class UsersService {
             throw new SellerAccessDeniedException();
         }
         return user;
-    }
-
-    private boolean isManagedRole(UserRole role) {
-        return role == UserRole.CUSTOMER || role == UserRole.SELLER || role == UserRole.COURIER;
     }
 
     private String trimToNull(String value) {

@@ -7,7 +7,6 @@ import com.nexamarket.nexamarket.order.domain.SubOrder;
 import com.nexamarket.nexamarket.order.infrastructure.CustomerOrderRepository;
 import com.nexamarket.nexamarket.order.application.OrderStatusChangedEvent;
 import com.nexamarket.nexamarket.order.application.OrderStatusEventPublisher;
-import com.nexamarket.nexamarket.order.application.AutomaticCourierAssignmentService;
 import com.nexamarket.nexamarket.payment.domain.PaymentStatus;
 import com.nexamarket.nexamarket.payment.domain.PaymentTransaction;
 import com.nexamarket.nexamarket.payment.domain.ProcessedPaymentWebhook;
@@ -31,7 +30,6 @@ public class PaymentWebhookService {
     private final OrderStateMachine orderStateMachine;
     private final StockReservationCommitGateway stockReservationCommitGateway;
     private final OrderStatusEventPublisher orderStatusEventPublisher;
-    private final AutomaticCourierAssignmentService automaticCourierAssignmentService;
 
     @Autowired
     public PaymentWebhookService(PaymentTransactionRepository paymentTransactionRepository,
@@ -39,8 +37,7 @@ public class PaymentWebhookService {
                                  CustomerOrderRepository customerOrderRepository,
                                  WalletAccountRepository walletAccountRepository,
                                  StockReservationCommitGateway stockReservationCommitGateway,
-                                 OrderStatusEventPublisher orderStatusEventPublisher,
-                                 AutomaticCourierAssignmentService automaticCourierAssignmentService) {
+                                 OrderStatusEventPublisher orderStatusEventPublisher) {
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.processedPaymentWebhookRepository = processedPaymentWebhookRepository;
         this.customerOrderRepository = customerOrderRepository;
@@ -48,7 +45,6 @@ public class PaymentWebhookService {
         this.orderStateMachine = new OrderStateMachine();
         this.stockReservationCommitGateway = stockReservationCommitGateway;
         this.orderStatusEventPublisher = orderStatusEventPublisher;
-        this.automaticCourierAssignmentService = automaticCourierAssignmentService;
     }
 
     PaymentWebhookService(PaymentTransactionRepository paymentTransactionRepository,
@@ -56,7 +52,7 @@ public class PaymentWebhookService {
                           CustomerOrderRepository customerOrderRepository,
                           WalletAccountRepository walletAccountRepository) {
         this(paymentTransactionRepository, processedPaymentWebhookRepository, customerOrderRepository,
-                walletAccountRepository, null, null, null);
+                walletAccountRepository, null, null);
     }
 
     /** A provider event id is recorded first, so duplicated callbacks are harmless. */
@@ -102,9 +98,6 @@ public class PaymentWebhookService {
                 orderStatusEventPublisher.enqueue(new OrderStatusChangedEvent(java.util.UUID.randomUUID(),
                         order.getCustomerId(), subOrder.getId(), subOrder.getSellerId(), subOrder.getStatus()));
             }
-        }
-        if (automaticCourierAssignmentService != null) {
-            automaticCourierAssignmentService.assignAfterPayment(order);
         }
         orderStateMachine.transition(order, OrderStatus.PAID);
     }

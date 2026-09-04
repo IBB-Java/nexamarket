@@ -66,6 +66,26 @@ class AuthApiIntegrationTest {
     }
 
     @Test
+    void letsAUserChooseCustomerSellerOrCourierButNeverAdminDuringRegistration() throws Exception {
+        for (String role : java.util.List.of("CUSTOMER", "SELLER", "COURIER")) {
+            String email = role.toLowerCase() + "-self@nexamarket.test";
+            mockMvc.perform(post("/api/v1/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"email\":\"" + email + "\",\"password\":\"StrongPass!2026\",\"role\":\"" + role + "\"}"))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.role").value(role));
+        }
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"admin-self@nexamarket.test\",\"password\":\"StrongPass!2026\",\"role\":\"ADMIN\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value("Kayıt rolüne izin verilmiyor"));
+        org.assertj.core.api.Assertions.assertThat(
+                userAccountRepository.findByEmailIgnoreCase("admin-self@nexamarket.test")).isEmpty();
+    }
+
+    @Test
     void rejectsUnauthenticatedProfileRequestAndDuplicateRegistration() throws Exception {
         mockMvc.perform(get("/api/v1/auth/me"))
                 .andExpect(status().isUnauthorized());

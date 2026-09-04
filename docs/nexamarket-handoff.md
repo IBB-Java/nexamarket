@@ -31,7 +31,9 @@ Hilal’ın branch’leri:
 | `feature/payment-hilal` | Mock ödeme, webhook, cüzdan/kart | `07af2c6` |
 | `feature/notification-hilal` | RabbitMQ, outbox, bildirim, retry | `dc4ac24` |
 
-Mevcut branch `feature/notification-hilal`’dır ve önceki üç Hilal branch’ini içerir.
+Güncel entegre çalışma branch’i `integration/full-project`’tir. Aşağıdaki feature
+branch’leri tarihsel geliştirme kollarıdır; sunum ve doğrulama güncel entegre dal
+üzerinden yapılmalıdır.
 
 Arkadaşlara ait görünen `feature/auth-eyup`, `feature/catalog-eyup`, `feature/users-eyup` ve `feature/stok-eyup` branch’leri kontrol edildiğinde başlangıç commit’i dışında uygulama kodu bulunmuyordu. Sahibinin izni olmadan bu branch’ler değiştirilmemelidir.
 
@@ -65,8 +67,12 @@ git push origin <branch-adı>
 | PostgreSQL 16 | Geliştirme veritabanı |
 | Flyway | Migration yönetimi |
 | H2 | Test veritabanı |
-| Spring AMQP/RabbitMQ | Asenkron olaylar |
-| Docker Compose | PostgreSQL ve RabbitMQ çalıştırma |
+| Spring Security / JWT | Kimlik doğrulama ve role göre yetki |
+| Spring AMQP/RabbitMQ | Transactional outbox sonrası asenkron olaylar |
+| Redis / Redisson | Cache ve dağıtık stok kilidi |
+| Elasticsearch | Katalog arama görünümü |
+| MinIO | Ürün görselleri ve rapor dosyaları |
+| Docker Compose | Uygulama ve tüm altyapıyı çalıştırma |
 | JUnit 5/Mockito | Testler |
 
 Hibernate tablo oluşturmaz; `spring.jpa.hibernate.ddl-auto=validate` ile yalnızca entity-migration uyumunu doğrular. Tablolar Flyway ile oluşturulur.
@@ -167,9 +173,7 @@ POST /api/v1/cart/items
 
 ```json
 {
-  "customerId": "UUID",
-  "productVariantId": "UUID",
-  "sellerId": "UUID",
+  "productVariantId": 42,
   "quantity": 2
 }
 ```
@@ -182,9 +186,13 @@ POST /api/v1/cart/items/checkout
 
 ```json
 {
-  "customerId": "UUID"
+  "promotionCodes": ["YAZ10"]
 }
 ```
+
+`customerId` request body'den alınmaz; access JWT içindeki authenticated
+principal üzerinden belirlenir. Satıcı bilgisi de seçilen ürün varyantından
+Catalog/Stock servisi üzerinden çözülür.
 
 ## Cart’ı sunarken
 
@@ -232,6 +240,50 @@ DELIVERED → RETURN_REQUESTED → RETURN_APPROVED
 `OrderStateMachine` izin verilmeyen geçişleri reddeder. API tarafında bu hata `409 Conflict` ve `ProblemDetail` olarak döner.
 
 ## API’ler
+
+Role göre sipariş listesi:
+
+```http
+GET /api/v1/orders
+GET /api/v1/orders/{orderId}
+```
+
+`CUSTOMER` kendi ana siparişindeki parçaları, `SELLER` yalnızca kendi
+`SubOrder` kayıtlarını, `ADMIN` ise tüm kayıtları görür. `COURIER` finansal
+Order DTO'suna erişmez; yalnız kendi teslimat atamalarını aşağıdaki gizlilik
+kapsamlı endpoint'ten alır. Başka kullanıcıya ait bilinen bir sipariş kimliği
+kaynak sahipliği kontrolünü aşamaz ve `403 Forbidden` döner.
+
+Yönetici kurye ataması:
+
+```http
+POST /api/v1/admin/deliveries/assign
+
+{"subOrderId": "UUID", "courierId": 33}
+```
+
+Yalnızca `ACTIVE` durumundaki `COURIER` kullanıcısı atanabilir. Ödeme başarılı
+olunca otomatik atama yapılmaz; ADMIN ataması zorunludur. Her atama ayrı
+`DeliveryAssignment` satırıdır ve ret/başarısızlık sonrasında yeni satırla
+yeniden atama yapılır.
+
+Kurye akışı:
+
+```http
+GET   /api/v1/courier/deliveries
+PATCH /api/v1/courier/deliveries/{assignmentId}/accept
+PATCH /api/v1/courier/deliveries/{assignmentId}/reject
+PATCH /api/v1/courier/deliveries/{assignmentId}/pickup
+PATCH /api/v1/courier/deliveries/{assignmentId}/start
+PATCH /api/v1/courier/deliveries/{assignmentId}/deliver
+PATCH /api/v1/courier/deliveries/{assignmentId}/fail
+```
+
+Teslimat state machine'i `ASSIGNED → ACCEPTED → PICKED_UP → IN_TRANSIT →
+DELIVERED` ana yolunu ve gerekçeli `REJECTED`/`DELIVERY_FAILED` terminal
+yollarını yönetir. Pickup ve deliver, `OrderStateMachine` kurallarını bypass
+etmeden alt siparişi sırasıyla `SHIPPED` ve `DELIVERED` yapar. Ayrıntılı anlatım
+`docs/delivery-assignment.md` dosyasındadır.
 
 Cart’tan sipariş oluşturma:
 
@@ -292,7 +344,9 @@ SubOrder → RETURN_REQUESTED
 ReturnRequest → REQUESTED
 ```
 
-Onay veya ret yalnızca `REQUESTED` talep için yapılır. Auth modülü hazır olmadığı için resolver kimliği şu an request’ten gelir; production’da JWT ve rol kontrolünden gelmelidir.
+Onay veya ret yalnızca `REQUESTED` talep için yapılır. Müşteri, satıcı ve
+yönetici kimlikleri request body'den değil JWT ile oluşturulan authenticated
+principal'dan alınır; satıcı yalnızca kendi alt siparişindeki talebi çözebilir.
 
 ## Order’ı sunarken
 
@@ -463,11 +517,17 @@ event-id:IN_APP
 Exchange: nexamarket.events
 Routing key: order.status.changed
 Queue: nexamarket.notification.order-status
+
+Delivery routing key: delivery.status.changed
+Delivery queue: nexamarket.notification.delivery-status
 ```
 
 `NotificationOutboxRelay` zamanlanmış görevdir. Gönderilmemiş kayıtları bulur, RabbitMQ’ya gönderir, başarılıysa `published_at` doldurur; hata varsa sonraki deneme zamanını ayarlar.
 
-`OrderStatusNotificationConsumer` kuyruktan event alır ve e-posta, SMS, uygulama içi olmak üzere üç mesaj oluşturur.
+`OrderStatusNotificationConsumer` sipariş; `DeliveryStatusNotificationConsumer`
+ise kurye atama ve teslimat olaylarını kuyruktan alır. İkisi de e-posta, SMS ve
+uygulama içi olmak üzere üç mesaj oluşturur. Teslimat olayları önce ayrı
+`delivery_notification_outbox_events` tablosuna yazılır.
 
 ## Bildirim durumları
 
@@ -500,6 +560,9 @@ V3__create_order_tables.sql
 V4__create_return_requests.sql
 V5__create_payment_tables.sql
 V6__create_notification_tables.sql
+...
+V19__add_user_soft_delete.sql
+V20__create_delivery_assignments.sql
 ```
 
 Production’da çalışmış migration dosyaları değiştirilmez; yeni değişiklik için yeni migration açılır:
@@ -508,7 +571,10 @@ Production’da çalışmış migration dosyaları değiştirilmez; yeni değiş
 V7__meaningful_description.sql
 ```
 
-V1-V2 Cart, V3 Order, V4 iade, V5 Payment, V6 Notification tablolarını oluşturur. Migration sırası foreign key bağımlılıkları nedeniyle önemlidir.
+V1-V2 Cart, V3 Order, V4 iade, V5 Payment, V6 Notification tablolarını
+oluşturur. V19 kullanıcı soft delete'ini, V20 ise DeliveryAssignment ve teslimat
+outbox tablolarını ekler. Migration sırası foreign key bağımlılıkları nedeniyle
+önemlidir.
 
 ---
 
@@ -530,6 +596,9 @@ Order testleri:
 - `OrderControllerTest`
 - `OrderPaymentTimeoutServiceTest`
 - `ReturnRequestServiceTest`
+- `DeliveryAssignmentStateMachineTest`
+- `RoleBasedOrderQueryServiceTest`
+- `RoleBasedOrderAccessApiIntegrationTest`
 
 Payment testleri:
 
@@ -541,7 +610,12 @@ Payment testleri:
 Notification testleri:
 
 - `OrderStatusNotificationConsumerTest`
+- `DeliveryStatusNotificationConsumerTest`
 - `NotificationMessageTest`
+
+Frontend rol/route regresyonu:
+
+- `FrontendRoleWorkspaceTest`
 
 Test yaklaşımı:
 
@@ -558,22 +632,29 @@ Test yaklaşımı:
 
 ---
 
-# 12. Bilinen eksikler
+# 12. Güncel kapsam ve production sınırları
 
-Bu alanların temeli, domain kuralları, persistence, API ve kritik testler hazırdır. Ancak aşağıdaki noktalar henüz sonraki fazlara bağlıdır:
+- Spring Security/JWT ve `CUSTOMER`, `SELLER`, `COURIER`, `ADMIN` rolleri aktiftir.
+- `GET /api/v1/orders` müşteri/satıcı/yönetici için rol bazında filtrelenir.
+  Kurye ayrı privacy DTO ile yalnız kendi atamalarını görür. Yönetici bütün alt
+  siparişleri ve teslimat geçmişini görür, aktif kuryeye manuel atama yapabilir.
+- Seller, courier ve admin girişten sonra ortak mağaza navbar'ı yerine kendine
+  ait dashboard/sidebar kullanır. Müşteri alışveriş mağazasında kalır.
+- Kullanıcı silme soft delete'tir; `DELETED` hesabın tokenları geçersiz olur,
+  fakat `CustomerOrder → SubOrder → OrderItem` geçmişi korunur.
+- Catalog/Stock, Redis/Redisson, Elasticsearch, MinIO, raporlama, WebSocket,
+  audit, rate limit ve outbox/RabbitMQ entegrasyonları tamamlanmıştır.
+- Payment sağlayıcısı kontrollü mock'tur; gerçek banka/PSP bağlantısı değildir.
+- SMS kanalı mock'tur. E-posta, yerel Mailpit ile veya ortam değişkenleri
+  verilirse gerçek SMTP üzerinden çalışır.
+- Wallet credit endpoint'i yalnızca yerel/demo amaçlıdır.
 
-- Auth/JWT/rol yetkisi yok; customerId ve resolverId şu an request’ten gelir.
-- Catalog ve Stock gerçek servisleri henüz tamamlanmadı.
-- Cart ile gerçek stok arasında uçtan uca ortam henüz yok.
-- Payment mock provider’dır; gerçek banka/PSP yoktur.
-- Wallet credit endpoint’i yalnızca local/demo amaçlıdır.
-- E-posta/SMS sender’ları mock’tur.
-- Payment, timeout ve iade akışlarının tümünün notification outbox olaylarına bağlanması sonraki entegrasyon işidir.
-- Redis/Redisson, Elasticsearch/OpenSearch, MinIO, PDF/XLSX, WebSocket, Resilience4j, OpenAPI, JSON log, correlation id, rate limit, audit ve Testcontainers henüz tamamlanmadı.
+Sunumda uygun ifade:
 
-Sunumda “production’a hazır” demek yerine şu ifadeyi kullan:
-
-> Bu modülün domain, application, persistence, API ve kritik test temelini oluşturdum. Dış servislerin gerçek implementasyonları ve production hardening sonraki entegrasyon fazındadır.
+> Gereksinimlerdeki e-ticaret akışı ve altyapı entegrasyonları çalışan bir ders
+> projesi olarak tamamlandı. Gerçek banka/PSP ve SMS sağlayıcısı kontrollü mock
+> bırakıldı; production dağıtımı için gizli anahtar, gözlemlenebilirlik, yedekleme
+> ve ölçek testleri ayrıca ele alınmalıdır.
 
 ---
 
@@ -595,13 +676,17 @@ Webhook hızlıdır ama kaybolabilir veya gecikebilir. Polling güvenlik ağıd�
 
 Olay outbox tablosunda kalır; relay daha sonra tekrar dener. Bildirim sorunu sipariş transaction’ını bozmaz.
 
-### Auth yokken customerId güvenli mi?
+### customerId, sellerId ve courierId nasıl güvenli tutuluyor?
 
-Hayır. Bu yalnızca geliştirme varsayımıdır. Production’da kimlik JWT’den alınmalıdır.
+Kullanıcı kimliği ve rolü access JWT doğrulandıktan sonra `AuthPrincipal` içinden
+alınır. Sipariş sorguları repository seviyesinde bu kimliklerle filtrelenir;
+kritik kimlikler istemcinin request body değerine bırakılmaz.
 
 ### Gerçek e-posta gönderiliyor mu?
 
-Hayır. Şu an sender mock’tur.
+Varsayılan Docker ortamında Mailpit'e gönderilir. `MAIL_HOST`, `MAIL_PORT`,
+`MAIL_USERNAME`, `MAIL_PASSWORD` ve `MAIL_FROM` ayarlanırsa gerçek SMTP
+üzerinden altı haneli doğrulama kodu ve bildirim gönderilebilir.
 
 ---
 
@@ -643,7 +728,7 @@ Gerçek servis ile mock servisi birbirine karıştırma.
 14. Outbox Pattern
 15. Notification consumer/retry
 16. Testleri okuma ve yazma
-17. Eksik servislerle entegrasyon
+17. Role dayalı güvenlik ve production hardening
 
 İlk sorulabilecek örnekler:
 

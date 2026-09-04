@@ -25,17 +25,19 @@ public class AdminUsersController {
     @PatchMapping("/{userId}/status")
     public MyProfileResponse updateStatus(
             @PathVariable Long userId,
-            @Valid @RequestBody UpdateUserStatusRequest request
+            @Valid @RequestBody UpdateUserStatusRequest request,
+            @AuthenticationPrincipal AuthPrincipal principal
     ) {
-        return usersService.updateUserStatus(userId, request);
+        return usersService.updateUserStatus(userId, principal.userId(), request);
     }
 
     @PatchMapping("/{userId}/role")
     public MyProfileResponse updateRole(
             @PathVariable Long userId,
-            @Valid @RequestBody UpdateUserRoleRequest request
+            @Valid @RequestBody UpdateUserRoleRequest request,
+            @AuthenticationPrincipal AuthPrincipal principal
     ) {
-        return usersService.assignOperationalRole(userId, request);
+        return usersService.assignRole(userId, principal.userId(), request);
     }
 
     @DeleteMapping("/{userId}")

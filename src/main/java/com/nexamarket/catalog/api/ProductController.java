@@ -39,6 +39,7 @@ public class ProductController {
     private final ProductSearchService productSearchService;
 
     @GetMapping("/search")
+    @PreAuthorize("isAnonymous() or hasAnyRole('CUSTOMER', 'SELLER', 'ADMIN')")
     public ProductSearchResponse search(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) @Positive Long categoryId,
@@ -63,6 +64,7 @@ public class ProductController {
     }
 
     @GetMapping("/{productId}")
+    @PreAuthorize("isAnonymous() or hasAnyRole('CUSTOMER', 'SELLER', 'ADMIN')")
     public ProductResponse get(@PathVariable @Positive Long productId) {
         return catalogService.getProduct(productId);
     }
