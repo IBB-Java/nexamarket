@@ -44,7 +44,7 @@ public class AuthExceptionHandler {
 
     @ExceptionHandler(InvalidRegistrationRoleException.class)
     ProblemDetail invalidRegistrationRole(InvalidRegistrationRoleException exception) {
-        return problem(HttpStatus.FORBIDDEN, "Kayıt rolüne izin verilmiyor", exception.getMessage());
+        return problem(HttpStatus.BAD_REQUEST, "Geçersiz hesap rolü", exception.getMessage());
     }
 
     private ProblemDetail problem(HttpStatus status, String title, String message) {

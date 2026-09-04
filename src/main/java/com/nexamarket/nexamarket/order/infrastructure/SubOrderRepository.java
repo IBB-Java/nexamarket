@@ -18,12 +18,12 @@ public interface SubOrderRepository extends JpaRepository<SubOrder, UUID> {
     @Query("select subOrder from SubOrder subOrder where subOrder.id = :id")
     Optional<SubOrder> findByIdForUpdate(@Param("id") UUID id);
 
-    @Query("select distinct subOrder from SubOrder subOrder join fetch subOrder.order "
-            + "left join fetch subOrder.items where subOrder.sellerId = :sellerId order by subOrder.createdAt desc")
+    @Query("select subOrder from SubOrder subOrder join fetch subOrder.order where subOrder.sellerId = :sellerId "
+            + "order by subOrder.order.createdAt desc")
     List<SubOrder> findBySellerIdWithOrder(@Param("sellerId") Long sellerId);
 
-    @Query("select distinct subOrder from SubOrder subOrder join fetch subOrder.order "
-            + "left join fetch subOrder.items where subOrder.courierId = :courierId order by subOrder.createdAt desc")
+    @Query("select subOrder from SubOrder subOrder join fetch subOrder.order where subOrder.courierId = :courierId "
+            + "order by subOrder.order.createdAt desc")
     List<SubOrder> findByCourierIdWithOrder(@Param("courierId") Long courierId);
 
     @Query("select distinct subOrder from SubOrder subOrder join fetch subOrder.order "

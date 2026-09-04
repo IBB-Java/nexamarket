@@ -26,17 +26,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
-
-    private static final Set<UserRole> SELF_REGISTRATION_ROLES =
-            EnumSet.of(UserRole.CUSTOMER, UserRole.SELLER, UserRole.COURIER);
 
     private final UserAccountRepository userAccountRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -49,20 +44,10 @@ public class AuthService {
     @Transactional
     public UserResponse register(RegisterRequest request) {
         String email = normalizeEmail(request.email());
-        UserRole requestedRole = request.role() == null ? UserRole.CUSTOMER : request.role();
-        if (!SELF_REGISTRATION_ROLES.contains(requestedRole)) {
-            throw new InvalidRegistrationRoleException(
-                    "ADMIN rolü normal kayıt ekranından seçilemez; yalnızca bir yönetici tarafından atanabilir.");
-        }
+        UserRole selectedRole = requireSelfRegistrationRole(request.role());
         UserAccount user = userAccountRepository.findByEmailIgnoreCase(email)
                 .filter(existing -> emailVerificationProperties.isRequired() && !existing.isEmailVerified())
-                .map(existing -> {
-                    if (existing.getRole() != requestedRole) {
-                        throw new DuplicateEmailException("Bu e-posta adresi zaten farklı bir rolle kayıtlı");
-                    }
-                    return existing;
-                })
-                .orElseGet(() -> createUser(email, request.password(), requestedRole));
+                .orElseGet(() -> createUser(email, request.password(), selectedRole));
         emailVerificationService.sendVerification(user);
         return UserResponse.from(user);
     }
@@ -147,7 +132,7 @@ public class AuthService {
     @Transactional
     public void resendVerification(String email) {
         userAccountRepository.findByEmailIgnoreCase(normalizeEmail(email))
-                .filter(user -> user.getStatus() == UserStatus.ACTIVE && !user.isEmailVerified())
+                .filter(user -> !user.isEmailVerified())
                 .ifPresent(emailVerificationService::sendVerification);
     }
 
@@ -163,6 +148,16 @@ public class AuthService {
                 .emailVerified(false)
                 .build();
         return userAccountRepository.save(user);
+    }
+
+    private UserRole requireSelfRegistrationRole(UserRole role) {
+        if (role == null) {
+            return UserRole.CUSTOMER;
+        }
+        if (role != UserRole.CUSTOMER && role != UserRole.SELLER && role != UserRole.COURIER) {
+            throw new InvalidRegistrationRoleException("ADMIN rolü normal kayıt ekranından seçilemez; yalnızca bir yönetici tarafından atanabilir.");
+        }
+        return role;
     }
 
     private TokenResponse issueTokenPair(UserAccount user) {

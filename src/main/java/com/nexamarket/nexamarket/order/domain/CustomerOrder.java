@@ -34,6 +34,9 @@ public class CustomerOrder {
     @Column(name = "customer_id", nullable = false, updatable = false)
     private Long customerId;
 
+    @Column(name = "customer_email", nullable = false, length = 320, updatable = false)
+    private String customerEmail;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private OrderStatus status;
@@ -68,10 +71,11 @@ public class CustomerOrder {
     protected CustomerOrder() {
     }
 
-    private CustomerOrder(UUID sourceCartId, Long customerId) {
+    private CustomerOrder(UUID sourceCartId, Long customerId, String customerEmail) {
         this.id = UUID.randomUUID();
         this.sourceCartId = Objects.requireNonNull(sourceCartId, "Source cart id is required.");
         this.customerId = Objects.requireNonNull(customerId, "Customer id is required.");
+        this.customerEmail = Objects.requireNonNull(customerEmail, "Customer email is required.");
         this.status = OrderStatus.PAYMENT_PENDING;
         this.subtotalAmount = BigDecimal.ZERO;
         this.discountAmount = BigDecimal.ZERO;
@@ -80,11 +84,19 @@ public class CustomerOrder {
 
     public static CustomerOrder from(CheckoutOrderRequest request) {
         Objects.requireNonNull(request, "Checkout request is required.");
+        String customerEmail = request.customerEmail() == null || request.customerEmail().isBlank()
+                ? "Silinmiş kullanıcı #" + request.customerId()
+                : request.customerEmail();
+        return from(request, customerEmail);
+    }
+
+    public static CustomerOrder from(CheckoutOrderRequest request, String customerEmail) {
+        Objects.requireNonNull(request, "Checkout request is required.");
         if (request.sellerOrders() == null || request.sellerOrders().isEmpty()) {
             throw new IllegalArgumentException("At least one seller order is required.");
         }
 
-        CustomerOrder order = new CustomerOrder(request.sourceCartId(), request.customerId());
+        CustomerOrder order = new CustomerOrder(request.sourceCartId(), request.customerId(), customerEmail);
         for (CheckoutOrderRequest.SellerOrderRequest sellerOrderRequest : request.sellerOrders()) {
             SubOrder subOrder = SubOrder.from(order, sellerOrderRequest);
             order.subOrders.add(subOrder);
@@ -109,6 +121,10 @@ public class CustomerOrder {
 
     public Long getCustomerId() {
         return customerId;
+    }
+
+    public String getCustomerEmail() {
+        return customerEmail;
     }
 
     public OrderStatus getStatus() {

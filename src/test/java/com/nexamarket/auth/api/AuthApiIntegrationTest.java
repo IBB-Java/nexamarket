@@ -66,23 +66,30 @@ class AuthApiIntegrationTest {
     }
 
     @Test
-    void letsAUserChooseCustomerSellerOrCourierButNeverAdminDuringRegistration() throws Exception {
-        for (String role : java.util.List.of("CUSTOMER", "SELLER", "COURIER")) {
-            String email = role.toLowerCase() + "-self@nexamarket.test";
-            mockMvc.perform(post("/api/v1/auth/register")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"email\":\"" + email + "\",\"password\":\"StrongPass!2026\",\"role\":\"" + role + "\"}"))
-                    .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.role").value(role));
-        }
+    void allowsPublicRolesDuringRegistrationButNeverAdmin() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"self-seller@nexamarket.test","password":"StrongPass!2026","role":"SELLER"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.role").value("SELLER"));
 
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"admin-self@nexamarket.test\",\"password\":\"StrongPass!2026\",\"role\":\"ADMIN\"}"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.title").value("Kayıt rolüne izin verilmiyor"));
-        org.assertj.core.api.Assertions.assertThat(
-                userAccountRepository.findByEmailIgnoreCase("admin-self@nexamarket.test")).isEmpty();
+                        .content("""
+                                {"email":"self-courier@nexamarket.test","password":"StrongPass!2026","role":"COURIER"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.role").value("COURIER"));
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"self-admin@nexamarket.test","password":"StrongPass!2026","role":"ADMIN"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Geçersiz hesap rolü"));
     }
 
     @Test

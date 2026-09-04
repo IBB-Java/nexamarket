@@ -35,9 +35,9 @@ public class OrderController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'SELLER', 'ADMIN')")
-    public List<RoleOrderResponse> listVisibleOrders(@AuthenticationPrincipal AuthPrincipal principal) {
-        return roleBasedOrderQueryService.listVisibleOrders(principal);
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'SELLER', 'COURIER', 'ADMIN')")
+    public List<CustomerOrderSummaryResponse> listVisibleOrders(@AuthenticationPrincipal AuthPrincipal principal) {
+        return customerOrderHistoryService.listVisibleFor(principal.userId(), principal.role());
     }
 
     @GetMapping("/{orderId}")

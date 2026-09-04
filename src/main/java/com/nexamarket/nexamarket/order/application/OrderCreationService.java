@@ -14,7 +14,6 @@ import java.util.Objects;
 public class OrderCreationService implements OrderCreationGateway {
 
     private final CustomerOrderRepository customerOrderRepository;
-
     public OrderCreationService(CustomerOrderRepository customerOrderRepository) {
         this.customerOrderRepository = customerOrderRepository;
     }
@@ -31,7 +30,10 @@ public class OrderCreationService implements OrderCreationGateway {
         return customerOrderRepository.findBySourceCartId(request.sourceCartId())
                 .map(existing -> new OrderCreation(existing.getId()))
                 .orElseGet(() -> {
-                    CustomerOrder order = CustomerOrder.from(request);
+                    String customerEmail = request.customerEmail() == null || request.customerEmail().isBlank()
+                            ? "Silinmiş kullanıcı #" + request.customerId()
+                            : request.customerEmail().trim().toLowerCase(java.util.Locale.ROOT);
+                    CustomerOrder order = CustomerOrder.from(request, customerEmail);
                     CustomerOrder savedOrder = customerOrderRepository.save(order);
                     return new OrderCreation(savedOrder.getId());
                 });

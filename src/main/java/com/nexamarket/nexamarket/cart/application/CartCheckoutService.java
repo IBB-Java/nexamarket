@@ -57,7 +57,8 @@ public class CartCheckoutService {
         PromotionQuote promotionQuote = promotionService == null
                 ? PromotionQuote.none()
                 : promotionService.quote(command.promotionCodes(), subtotal);
-        OrderCreation orderCreation = orderCreationGateway.createOrder(CheckoutOrderRequest.from(cart, promotionQuote));
+        OrderCreation orderCreation = orderCreationGateway.createOrder(
+                CheckoutOrderRequest.from(cart, promotionQuote, command.customerEmail()));
         if (orderCreation == null || orderCreation.orderId() == null) {
             throw new IllegalStateException("Order service did not return an order id.");
         }

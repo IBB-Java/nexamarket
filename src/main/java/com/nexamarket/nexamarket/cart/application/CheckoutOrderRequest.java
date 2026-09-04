@@ -12,15 +12,15 @@ import java.util.stream.Collectors;
 import com.nexamarket.promotion.application.PromotionQuote;
 
 public record CheckoutOrderRequest(UUID sourceCartId, Long customerId, List<SellerOrderRequest> sellerOrders,
-                                   BigDecimal discountAmount, List<String> promotionCodes) {
+                                   BigDecimal discountAmount, List<String> promotionCodes, String customerEmail) {
 
     public CheckoutOrderRequest(UUID sourceCartId, Long customerId, List<SellerOrderRequest> sellerOrders) {
-        this(sourceCartId, customerId, sellerOrders, BigDecimal.ZERO, List.of());
+        this(sourceCartId, customerId, sellerOrders, BigDecimal.ZERO, List.of(), null);
     }
 
     /** Backward-compatible constructor kept for the original module tests. */
     public CheckoutOrderRequest(Long customerId, UUID sourceCartId, List<SellerOrderRequest> sellerOrders) {
-        this(sourceCartId, customerId, sellerOrders, BigDecimal.ZERO, List.of());
+        this(sourceCartId, customerId, sellerOrders, BigDecimal.ZERO, List.of(), null);
     }
 
     public CheckoutOrderRequest {
@@ -33,6 +33,10 @@ public record CheckoutOrderRequest(UUID sourceCartId, Long customerId, List<Sell
     }
 
     public static CheckoutOrderRequest from(Cart cart, PromotionQuote promotionQuote) {
+        return from(cart, promotionQuote, null);
+    }
+
+    public static CheckoutOrderRequest from(Cart cart, PromotionQuote promotionQuote, String customerEmail) {
         Map<Long, List<OrderItemRequest>> itemsBySeller = cart.getItems().stream()
                 .collect(Collectors.groupingBy(
                         CartItem::getSellerId,
@@ -42,7 +46,7 @@ public record CheckoutOrderRequest(UUID sourceCartId, Long customerId, List<Sell
                 .map(entry -> new SellerOrderRequest(entry.getKey(), entry.getValue()))
                 .toList();
         return new CheckoutOrderRequest(cart.getId(), cart.getCustomerId(), sellerOrders,
-                promotionQuote.discountAmount(), promotionQuote.appliedCodes());
+                promotionQuote.discountAmount(), promotionQuote.appliedCodes(), customerEmail);
     }
 
     public record SellerOrderRequest(Long sellerId, List<OrderItemRequest> items) {
