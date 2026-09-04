@@ -3,6 +3,7 @@ package com.nexamarket.stock.application;
 import com.nexamarket.auth.entity.UserRole;
 import com.nexamarket.auth.security.AuthPrincipal;
 import com.nexamarket.catalog.entity.ProductVariant;
+import com.nexamarket.catalog.application.ProductCatalogChangedEvent;
 import com.nexamarket.catalog.repository.ProductVariantRepository;
 import com.nexamarket.stock.api.CreateStockReservationRequest;
 import com.nexamarket.stock.api.StockLevelResponse;
@@ -15,6 +16,7 @@ import com.nexamarket.stock.repository.StockReservationRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -32,6 +34,7 @@ public class StockService {
     private final Clock stockClock;
     private final EntityManager entityManager;
     private final StockMutationLock stockMutationLock;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public StockLevelResponse getStockLevel(Long variantId) {
@@ -47,6 +50,7 @@ public class StockService {
         ProductVariant variant = findVariant(variantId);
         ensureCanManageVariant(variant, principal);
         variant.setStockQuantity(request.stockQuantity());
+        publishStockChanged(variant);
         return new StockLevelResponse(variant.getId(), variant.getSku(), variant.getStockQuantity());
     }
 
@@ -73,6 +77,7 @@ public class StockService {
                 .expiresAt(now.plus(reservationProperties.getDuration()))
                 .build();
         stockReservationRepository.save(reservation);
+        publishStockChanged(variant);
         return toResponse(reservation, variant.getStockQuantity());
     }
 
@@ -104,6 +109,7 @@ public class StockService {
         entityManager.refresh(variant);
         reservation.setQuantity(reservation.getQuantity() + additionalQuantity);
         reservation.setExpiresAt(now().plus(reservationProperties.getDuration()));
+        publishStockChanged(variant);
         return toResponse(reservation, variant.getStockQuantity());
     }
 
@@ -133,6 +139,7 @@ public class StockService {
         entityManager.refresh(variant);
         reservation.setQuantity(reservation.getQuantity() - quantity);
         reservation.setExpiresAt(now().plus(reservationProperties.getDuration()));
+        publishStockChanged(variant);
         return toResponse(reservation, variant.getStockQuantity());
     }
 
@@ -211,6 +218,7 @@ public class StockService {
         entityManager.refresh(reservation.getVariant());
         reservation.setStatus(targetStatus);
         reservation.setReleasedAt(now);
+        publishStockChanged(reservation.getVariant());
     }
 
     private int availableStock(ProductVariant variant) {
@@ -256,5 +264,9 @@ public class StockService {
 
     private LocalDateTime now() {
         return LocalDateTime.now(stockClock);
+    }
+
+    private void publishStockChanged(ProductVariant variant) {
+        eventPublisher.publishEvent(ProductCatalogChangedEvent.now(variant.getProduct().getId()));
     }
 }

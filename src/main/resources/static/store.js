@@ -18,8 +18,8 @@ const state = {
     catalog: [], cart: JSON.parse(localStorage.getItem("nexa_cart") || "[]"),
     orders: [], returns: [], manageableReturns: [], selectedReturnSubOrder: null,
     favorites: readFavorites(initialUser),
-    sellerProducts: [], sellerCategories: [], sellerImagePreviewUrl: "", courierOrders: [], adminUsers: [], authMode: "login", activeCategory: "all", sort: "featured",
-    favoriteOnly: false, coupon: "", lastOrder: null, selectedProduct: null,
+    sellerProducts: [], sellerCategories: [], sellerImagePreviewUrl: "", sellerOrders: [], courierOrders: [], adminUsers: [], adminOrders: [], adminDeliveries: [], authMode: "login", activeCategory: "all", sort: "featured",
+    favoriteOnly: false, coupon: "", lastOrder: null, selectedProduct: null, courierFilter: "all",
     catalogLoading: true, confirmAction: null, pendingVerificationEmail: ""
 };
 
@@ -249,6 +249,29 @@ async function resolveProduct(product) {
     return product;
 }
 
+async function refreshCatalogProducts(productIds) {
+    const ids = [...new Set((productIds || []).filter(Boolean).map(String))];
+    if (!ids.length) return;
+    const results = await Promise.allSettled(ids.map(id => api(`/api/v1/products/${id}`, {headers: {Authorization: ""}})));
+    results.forEach((result, index) => {
+        if (result.status !== "fulfilled") return;
+        const id = ids[index], current = state.catalog.find(item => String(item.id) === id);
+        if (!current) return;
+        const fresh = normaliseProduct(result.value);
+        fresh.sellerName = current.sellerName || fresh.sellerName;
+        fresh.imageUrl = current.imageUrl || fresh.imageUrl;
+        Object.assign(current, fresh);
+        if (state.selectedProduct && String(state.selectedProduct.id) === id) state.selectedProduct = current;
+    });
+    renderCategoryPills(); renderCatalog();
+    if (state.selectedProduct && $("#productModal").open) updateProductDetailStock(state.selectedProduct);
+}
+
+function updateProductDetailStock(product) {
+    $("#detailStock").innerHTML = product.inStock ? `<i></i><b>Stokta</b><span>${product.stock || "Sınırlı"} adet, gönderime hazır</span>` : `<i class="out"></i><b>Stokta yok</b><span>Bu ürün şu an siparişe kapalı</span>`;
+    $("#detailAddButton").disabled = !product.inStock;
+}
+
 async function openProductDetail(productId) {
     const product = state.catalog.find(item => String(item.id) === String(productId));
     if (!product) return;
@@ -260,8 +283,7 @@ async function openProductDetail(productId) {
         : `<span id="detailEmoji">${product.emoji}</span><small id="detailCategory">${html(product.category).toUpperCase()}</small>`;
     $("#detailName").textContent = product.name; $("#detailDescription").textContent = product.description;
     $("#detailPrice").textContent = currency(product.price);
-    $("#detailStock").innerHTML = product.inStock ? `<i></i><b>Stokta</b><span>${product.stock || "Sınırlı"} adet, gönderime hazır</span>` : `<i class="out"></i><b>Stokta yok</b><span>Bu ürün şu an siparişe kapalı</span>`;
-    $("#detailAddButton").disabled = !product.inStock; updateDetailFavorite(); openModal("productModal");
+    updateProductDetailStock(product); updateDetailFavorite(); openModal("productModal");
 }
 
 function toggleFavorite(productId) {
@@ -294,7 +316,10 @@ function applyCartResponse(cart) {
 async function syncCart(cart = null) {
     if (!state.token) return;
     if (state.user?.role !== "CUSTOMER") { state.cart = []; saveCart(); renderCart(); return; }
-    try { applyCartResponse(cart || await api("/api/v1/cart/items")); } catch { toast("Sepetin şu an güncellenemedi.", "error"); }
+    try {
+        applyCartResponse(cart || await api("/api/v1/cart/items"));
+        await refreshCatalogProducts(state.cart.map(item => item.id));
+    } catch { toast("Sepetin şu an güncellenemedi.", "error"); }
 }
 
 async function addToCart(productId, button = null) {
@@ -307,6 +332,7 @@ async function addToCart(productId, button = null) {
         await resolveProduct(product);
         if (!product.variantId) throw new Error("Bu ürünün sipariş edilebilir bir seçeneği bulunamadı.");
         applyCartResponse(await api("/api/v1/cart/items", {method: "POST", body: JSON.stringify({productVariantId: product.variantId, quantity: 1})}));
+        await refreshCatalogProducts([product.id]);
         toast(`${product.name} sepete eklendi.`, "success"); if ($("#productModal").open) $("#productModal").close();
     } catch (error) { toast(error.message, "error"); } finally { setBusy(button, false); }
 }
@@ -314,22 +340,35 @@ async function addToCart(productId, button = null) {
 function renderCart() {
     const total = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
     $("#cartCount").textContent = state.cart.reduce((sum, item) => sum + item.quantity, 0);
-    $("#cartItems").innerHTML = state.cart.map(item => `<div class="cart-row"><div class="cart-row-art">${productVisual(item)}</div><div><small>${html(item.category)}</small><h3>${html(item.name)}</h3><p>${item.quantity} adet · ${currency(item.price)}</p></div><div><strong>${currency(item.price * item.quantity)}</strong><button class="remove-item" data-remove-cart="${item.cartItemId || item.id}" aria-label="${html(item.name)} ürününden bir adet çıkar">${item.quantity > 1 ? "1 adet azalt" : "Sil"}</button></div></div>`).join("");
+    $("#cartItems").innerHTML = state.cart.map(item => `<div class="cart-row"><div class="cart-row-art">${productVisual(item)}</div><div class="cart-row-copy"><small>${html(item.category)}</small><h3>${html(item.name)}</h3><p>${currency(item.price)} / adet</p></div><div class="cart-row-controls"><strong>${currency(item.price * item.quantity)}</strong><div class="cart-quantity" role="group" aria-label="${html(item.name)} adedi"><button type="button" data-decrease-cart="${item.cartItemId || item.id}" aria-label="${html(item.name)} ürününü bir adet azalt" title="${item.quantity === 1 ? "Sepetten çıkar" : "Bir adet azalt"}">−</button><output aria-live="polite"><b>${item.quantity}</b><span>adet</span></output><button type="button" data-increase-cart="${item.cartItemId || item.id}" aria-label="${html(item.name)} ürününü bir adet artır" title="Bir adet artır">+</button></div></div></div>`).join("");
     $("#cartTotal").textContent = currency(total); $("#cartEmpty").hidden = state.cart.length > 0; $("#cartSummary").hidden = state.cart.length === 0;
-    $$('[data-remove-cart]').forEach(button => button.addEventListener("click", () => requestCartRemoval(button.dataset.removeCart)));
+    $$('[data-decrease-cart]').forEach(button => button.addEventListener("click", () => requestCartDecrease(button.dataset.decreaseCart, button)));
+    $$('[data-increase-cart]').forEach(button => button.addEventListener("click", () => increaseCartItem(button.dataset.increaseCart, button)));
 }
-function requestCartRemoval(itemKey) {
+function requestCartDecrease(itemKey, button) {
     const item = state.cart.find(candidate => String(candidate.cartItemId || candidate.id) === String(itemKey));
     if (!item) return;
-    const removingLastUnit = item.quantity === 1;
-    askConfirmation(removingLastUnit ? "Sepetten çıkarılsın mı?" : "Bir adet azaltılsın mı?",
-        removingLastUnit ? `${item.name} sepetinden kaldırılacak ve ayrılan stok geri bırakılacak.` : `${item.name} ürününden yalnızca bir adet sepetten çıkarılacak.`,
-        removingLastUnit ? "Sepetten çıkar" : "1 adet azalt", () => removeFromCart(item));
+    if (item.quantity > 1) return removeFromCart(item, button);
+    askConfirmation("Sepetten çıkarılsın mı?", `${item.name} sepetinden kaldırılacak ve ayrılan stok geri bırakılacak.`,
+        "Sepetten çıkar", () => removeFromCart(item));
 }
-async function removeFromCart(item) {
+async function increaseCartItem(itemKey, button) {
+    const item = state.cart.find(candidate => String(candidate.cartItemId || candidate.id) === String(itemKey));
+    if (!item?.variantId) return;
+    setBusy(button, true, "");
+    try {
+        applyCartResponse(await api("/api/v1/cart/items", {method: "POST", body: JSON.stringify({productVariantId: item.variantId, quantity: 1})}));
+        await refreshCatalogProducts([item.id]);
+    } catch (error) { toast(error.message, "error"); } finally { setBusy(button, false); }
+}
+async function removeFromCart(item, button = null) {
     if (!state.token || !item.cartItemId) { state.cart = state.cart.filter(candidate => candidate !== item); saveCart(); renderCart(); return; }
-    applyCartResponse(await api(`/api/v1/cart/items/${item.cartItemId}`, {method: "DELETE"}));
-    toast(item.quantity > 1 ? `${item.name} ürününden bir adet çıkarıldı.` : `${item.name} sepetten çıkarıldı.`, "success");
+    setBusy(button, true, "");
+    try {
+        applyCartResponse(await api(`/api/v1/cart/items/${item.cartItemId}`, {method: "DELETE"}));
+        await refreshCatalogProducts([item.id]);
+        toast(item.quantity > 1 ? `${item.name} ürününden bir adet çıkarıldı.` : `${item.name} sepetten çıkarıldı.`, "success");
+    } catch (error) { toast(error.message, "error"); } finally { setBusy(button, false); }
 }
 
 function openCart() { closeAccountMenu(); $("#cartDrawer").classList.add("open"); $("#cartDrawer").setAttribute("aria-hidden", "false"); $("#overlay").hidden = false; }
@@ -350,12 +389,103 @@ function updateAuthUI() {
     $("#menuUserRole").textContent = role; $("#menuUserRole").hidden = !role;
     $("#menuUserEmail").textContent = state.user?.email || "Hesabına giriş yap"; $("#authButton").classList.toggle("signed-in", Boolean(state.token)); closeAccountMenu();
     $("#courierAreaButton").hidden = state.user?.role !== "COURIER";
+    $("#sellerAreaButton").hidden = state.user?.role !== "SELLER";
     $("#adminPanelButton").hidden = state.user?.role !== "ADMIN";
     $("#returnManagementButton").hidden = !["SELLER", "ADMIN"].includes(state.user?.role);
-    $$('[data-open-seller]').forEach(button => button.hidden = state.user?.role !== "SELLER");
+    $$('[data-open-seller]').forEach(button => {
+        if (button.id !== "sellerAreaButton") button.hidden = Boolean(state.token);
+    });
+    renderRolePortal();
+}
+
+const rolePortalSettings = {
+    SELLER: {
+        route: "/seller/dashboard", icon: "◇", label: "Satıcı paneli", title: "Mağaza merkezi",
+        subtitle: "Ürünlerini, siparişlerini ve iadelerini tek çalışma alanından yönet.",
+        navigation: [["overview", "⌂", "Genel bakış"], ["products", "◇", "Ürün yönetimi"], ["orders", "▤", "Mağaza siparişleri"], ["returns", "↺", "İade talepleri"], ["profile", "◎", "Profil"]]
+    },
+    COURIER: {
+        route: "/courier/deliveries", icon: "▣", label: "Kurye paneli", title: "Teslimat merkezi",
+        subtitle: "Sadece sana atanan teslimatları güvenli durum adımlarıyla yönet.",
+        navigation: [["overview", "⌂", "Genel bakış"], ["assigned", "◌", "Yeni atananlar"], ["active", "▣", "Devam edenler"], ["history", "✓", "Teslimat geçmişi"], ["profile", "◎", "Profil"]]
+    },
+    ADMIN: {
+        route: "/admin/dashboard", icon: "◫", label: "Yönetim paneli", title: "Platform merkezi",
+        subtitle: "Kullanıcıları, siparişleri ve teslimat geçmişini denetle.",
+        navigation: [["overview", "⌂", "Genel bakış"], ["users", "◎", "Kullanıcılar"], ["orders", "▤", "Siparişler"], ["deliveries", "▣", "Teslimat atamaları"], ["returns", "↺", "İade yönetimi"], ["profile", "◦", "Profil"]]
+    }
+};
+
+function protectedRoleForPath(path = location.pathname) {
+    if (path.startsWith("/customer")) return "CUSTOMER";
+    if (path.startsWith("/seller")) return "SELLER";
+    if (path.startsWith("/courier")) return "COURIER";
+    if (path.startsWith("/admin")) return "ADMIN";
+    return null;
+}
+
+function applyRoleRoute(replace = true) {
+    const expected = rolePortalSettings[state.user?.role];
+    const requestedRole = protectedRoleForPath();
+    let destination = location.pathname;
+    if (!state.token && requestedRole) destination = "/";
+    else if (state.token && expected && requestedRole !== state.user.role) destination = expected.route;
+    else if (state.token && !expected && requestedRole) destination = "/";
+    if (destination !== location.pathname) history[replace ? "replaceState" : "pushState"]({}, "", destination);
+}
+
+function portalMetric(value, label, icon) {
+    return `<article class="portal-metric"><span>${icon}</span><strong>${value}</strong><small>${label}</small></article>`;
+}
+
+function renderRolePortal() {
+    applyRoleRoute();
+    const config = state.token ? rolePortalSettings[state.user?.role] : null;
+    const portal = $("#rolePortal");
+    portal.hidden = !config;
+    document.body.classList.toggle("role-portal-active", Boolean(config));
+    if (!config) return;
+    const displayName = state.user.email.split("@")[0];
+    $("#portalRoleIcon").textContent = config.icon; $("#portalRoleLabel").textContent = config.label;
+    $("#portalTitle").textContent = config.title; $("#portalSubtitle").textContent = config.subtitle;
+    $("#portalUserName").textContent = displayName; $("#portalUserEmail").textContent = state.user.email;
+    $("#portalNavigation").innerHTML = config.navigation.map(([action, icon, label], index) => `<button class="${index === 0 ? "active" : ""}" data-portal-action="${action}"><span>${icon}</span>${label}<i>›</i></button>`).join("");
+    updatePortalOverview();
+}
+
+function updatePortalOverview() {
+    if (!state.token || !rolePortalSettings[state.user?.role]) return;
+    let metrics = "", quickActions = "", recentTitle = "", recent = "";
+    if (state.user.role === "SELLER") {
+        metrics = portalMetric(state.sellerProducts.length, "Toplam ürün", "◇") + portalMetric(state.sellerProducts.filter(item => item.status === "ACTIVE").length, "Yayındaki ürün", "✦") + portalMetric(state.sellerOrders.length, "Mağaza siparişi", "▤");
+        quickActions = `<button data-portal-action="products"><span>＋</span><b>Ürün ekle veya düzenle</b><small>Fiyat, stok, görsel ve yayın durumunu yönet</small></button><button data-portal-action="orders"><span>▤</span><b>Siparişleri hazırla</b><small>Sadece kendi mağazana ait siparişleri gör</small></button><button data-portal-action="returns"><span>↺</span><b>İadeleri değerlendir</b><small>Bekleyen talepleri incele</small></button>`;
+        recentTitle = "Son mağaza siparişleri";
+        recent = state.sellerOrders.slice(0, 4).map(order => `<div><span class="status-badge status-${String(order.status).toLowerCase()}">${html(orderStatusLabels[order.status] || order.status)}</span><b>#${html(String(order.subOrderId).slice(0, 8).toUpperCase())}</b><small>${Number(order.itemCount || 0)} ürün · ${html(formatOrderDate(order.createdAt))}</small></div>`).join("");
+    } else if (state.user.role === "COURIER") {
+        const active = state.courierOrders.filter(item => !["REJECTED", "DELIVERED", "DELIVERY_FAILED"].includes(item.status));
+        metrics = portalMetric(active.length, "Aktif teslimat", "▣") + portalMetric(state.courierOrders.filter(item => item.status === "ASSIGNED").length, "Onay bekleyen", "◌") + portalMetric(state.courierOrders.filter(item => item.status === "DELIVERED").length, "Teslim edilen", "✓");
+        quickActions = `<button data-portal-action="deliveries"><span>▣</span><b>Teslimatları yönet</b><small>Kabul, teslim alma ve teslim adımlarını ilerlet</small></button>`;
+        recentTitle = "Son teslimat atamaları";
+        recent = state.courierOrders.slice(0, 5).map(item => `<div><span class="status-badge delivery-${String(item.status).toLowerCase()}">${html(deliveryStatusLabels[item.status] || item.status)}</span><b>#${html(String(item.subOrderId).slice(0, 8).toUpperCase())}</b><small>${item.packageCount} paket · ${html(formatOrderDate(item.assignedAt))}</small></div>`).join("");
+    } else {
+        const active = state.adminDeliveries.filter(item => item.active);
+        metrics = portalMetric(state.adminUsers.length, "Platform kullanıcısı", "◎") + portalMetric(state.adminOrders.length, "Alt sipariş", "▤") + portalMetric(active.length, "Aktif teslimat", "▣");
+        quickActions = `<button data-portal-action="users"><span>◎</span><b>Kullanıcı ve rolleri yönet</b><small>Hesapları etkinleştir, rol ata veya sil</small></button><button data-portal-action="orders"><span>▤</span><b>Kurye ata</b><small>Uygun siparişe aktif kurye ata</small></button><button data-portal-action="deliveries"><span>▣</span><b>Teslimat geçmişini denetle</b><small>Aktif ve tamamlanmış atamaları gör</small></button>`;
+        recentTitle = "Son teslimat hareketleri";
+        recent = state.adminDeliveries.slice(0, 5).map(item => `<div><span class="status-badge delivery-${String(item.status).toLowerCase()}">${html(deliveryStatusLabels[item.status] || item.status)}</span><b>#${html(String(item.subOrderId).slice(0, 8).toUpperCase())}</b><small>Kurye #${item.courierId} · ${html(formatOrderDate(item.assignedAt))}</small></div>`).join("");
+    }
+    $("#portalContent").innerHTML = `<section class="portal-welcome"><div><p class="eyebrow">BUGÜNÜN ÖZETİ</p><h2>Merhaba, ${html(state.user.email.split("@")[0])}</h2><p>Rolüne ait bütün işlemler burada; diğer çalışma alanları hesabından tamamen ayrıdır.</p></div><span>${rolePortalSettings[state.user.role].icon}</span></section><section class="portal-metrics">${metrics}</section><section class="portal-grid"><article class="portal-panel"><header><div><p class="eyebrow">HIZLI İŞLEMLER</p><h3>Ne yapmak istersin?</h3></div></header><div class="portal-quick-actions">${quickActions}</div></article><article class="portal-panel"><header><div><p class="eyebrow">GÜNCEL DURUM</p><h3>${recentTitle}</h3></div><button data-portal-action="overview">↻</button></header><div class="portal-recent">${recent || `<div class="portal-empty"><span>◌</span><small>Henüz gösterilecek kayıt yok.</small></div>`}</div></article></section>`;
+}
+
+async function loadRolePortalData() {
+    if (state.user?.role === "SELLER") await Promise.all([loadSellerProducts(), loadSellerOrders()]);
+    else if (state.user?.role === "COURIER") await loadCourierOrders();
+    else if (state.user?.role === "ADMIN") await Promise.all([loadAdminUsers(), loadAdminOrders(), loadAdminDeliveries()]);
+    updatePortalOverview();
 }
 const orderStatusLabels = {PAYMENT_PENDING: "Ödeme bekleniyor", PAID: "Ödeme alındı", PROCESSING: "Hazırlanıyor", SHIPPED: "Kargoda", DELIVERED: "Teslim edildi", CANCELLED: "İptal edildi", RETURN_REQUESTED: "İade inceleniyor", RETURN_APPROVED: "İade onaylandı", RETURN_REJECTED: "İade reddedildi"};
 const returnStatusLabels = {REQUESTED: "İnceleniyor", APPROVED: "Onaylandı", REJECTED: "Reddedildi"};
+const deliveryStatusLabels = {ASSIGNED: "Atandı", ACCEPTED: "Kabul edildi", REJECTED: "Reddedildi", PICKED_UP: "Teslim alındı", IN_TRANSIT: "Dağıtımda", DELIVERED: "Teslim edildi", DELIVERY_FAILED: "Teslim edilemedi"};
 
 function switchAccountTab(tab) {
     $$("[data-account-tab]").forEach(button => button.classList.toggle("active", button.dataset.accountTab === tab));
@@ -366,28 +496,12 @@ async function openAccount(initialTab = "overview") {
     if (!state.token) return openModal("authModal");
     const displayName = state.user?.email?.split("@")[0] || "NexaMarketli";
     $("#accountName").textContent = `Merhaba, ${displayName}`; $("#accountNavName").textContent = displayName; $("#accountNavEmail").textContent = state.user?.email || "";
-    const isCustomer = state.user?.role === "CUSTOMER";
-    $("[data-account-tab='orders']").hidden = false;
-    $("[data-account-tab='returns']").hidden = !isCustomer;
-    $$("[data-account-target='returns']").forEach(button => button.hidden = !isCustomer);
-    $$("[data-account-target='orders']").forEach(button => button.hidden = false);
-    const orderHeadings = {
-        CUSTOMER: ["SİPARİŞLERİM", "Tüm siparişlerin"],
-        SELLER: ["SATICI SİPARİŞLERİ", "Ürünlerinin bulunduğu siparişler"],
-        COURIER: ["TESLİMATLARIM", "Sana atanan siparişler"],
-        ADMIN: ["TÜM SİPARİŞLER", "Platformdaki bütün siparişler"]
-    }[state.user?.role] || ["SİPARİŞLER", "Görebildiğin siparişler"];
-    $("#accountOrdersEyebrow").textContent = orderHeadings[0];
-    $("#accountOrdersTitle").textContent = orderHeadings[1];
-    if (!isCustomer && initialTab === "returns") initialTab = "orders";
-    if (!isCustomer) {
+    $$("[data-account-tab='orders'], [data-account-tab='returns']").forEach(button => button.hidden = state.user?.role !== "CUSTOMER");
+    $$("[data-account-target]").forEach(button => button.hidden = state.user?.role !== "CUSTOMER");
+    if (state.user?.role !== "CUSTOMER") {
         $("#loyaltyPoints").textContent = "—"; $("#loyaltyUnit").textContent = ""; $("#loyaltyLabel").textContent = "Sadakat programı CUSTOMER hesapları içindir";
-        $("#orderUnit").textContent = "sipariş"; $("#orderLabel").textContent = "Rolüne göre erişebildiğin siparişler";
-        $("#returnCount").textContent = "—";
-        openModal("accountModal"); switchAccountTab(initialTab);
-        await loadOrders();
-        $("#orderCount").textContent = state.orders.length;
-        return;
+        $("#orderCount").textContent = "—"; $("#orderUnit").textContent = ""; $("#orderLabel").textContent = "Alışveriş yalnızca CUSTOMER hesapları içindir";
+        $("#returnCount").textContent = "—"; switchAccountTab("overview"); return openModal("accountModal");
     }
     $("#loyaltyUnit").textContent = "puan"; $("#loyaltyLabel").textContent = "Sadakat bakiyen";
     $("#orderUnit").textContent = "sipariş"; $("#orderLabel").textContent = "Toplam alışverişin";
@@ -400,17 +514,13 @@ async function openAccount(initialTab = "overview") {
 
 async function loadOrders() {
     $("#accountOrderList").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>Siparişlerin hazırlanıyor…</div>`;
-    try { state.orders = await api("/api/v1/orders"); renderAccountOrders(); }
+    try { state.orders = await api("/api/v1/orders/me"); renderAccountOrders(); }
     catch (error) { state.orders = []; $("#accountOrderList").innerHTML = `<div class="inventory-empty"><b>Siparişler yüklenemedi</b><small>${html(error.message)}</small></div>`; }
 }
 
 function renderAccountOrders() {
     if (!state.orders.length) {
-        const emptyMessage = state.user?.role === "CUSTOMER"
-            ? "Yeni favorilerini keşfettiğinde siparişlerini buradan takip edebilirsin."
-            : "Rolünle eşleşen bir sipariş olduğunda burada görüntülenecek.";
-        const shopButton = state.user?.role === "CUSTOMER" ? `<button class="primary-button small" data-close-modal onclick="document.querySelector('#discover').scrollIntoView({behavior:'smooth'})">Alışverişe başla</button>` : "";
-        $("#accountOrderList").innerHTML = `<div class="inventory-empty"><span>▤</span><b>Henüz görüntülenecek sipariş yok</b><small>${emptyMessage}</small>${shopButton}</div>`;
+        $("#accountOrderList").innerHTML = `<div class="inventory-empty"><span>▤</span><b>Henüz siparişin yok</b><small>Yeni favorilerini keşfettiğinde siparişlerini buradan takip edebilirsin.</small><button class="primary-button small" data-close-modal onclick="document.querySelector('#discover').scrollIntoView({behavior:'smooth'})">Alışverişe başla</button></div>`;
         return;
     }
     $("#accountOrderList").innerHTML = state.orders.map(order => {
@@ -418,30 +528,13 @@ function renderAccountOrders() {
         const latestStatus = subOrders[0]?.status || order.status;
         const progress = {PAYMENT_PENDING: 1, PAID: 2, PROCESSING: 2, SHIPPED: 3, DELIVERED: 4, RETURN_REQUESTED: 4, RETURN_APPROVED: 4, RETURN_REJECTED: 4}[latestStatus] || 1;
         const parts = subOrders.map(subOrder => {
-            const canReturn = state.user?.role === "CUSTOMER" && ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"].includes(subOrder.status);
+            const canReturn = ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"].includes(subOrder.status);
             const returnAction = canReturn ? `<button class="order-return-button" data-return-sub-order="${subOrder.subOrderId}" data-return-order="${order.orderId}">↺ İade talebi oluştur</button>` : `<span class="suborder-status">${html(orderStatusLabels[subOrder.status] || subOrder.status)}</span>`;
-            const courier = subOrder.courierId ? ` · Kurye #${subOrder.courierId}` : " · Kurye bekleniyor";
-            const courierAction = state.user?.role === "COURIER" && subOrder.status === "PROCESSING"
-                ? `<button class="order-return-button" data-panel-courier-status="SHIPPED" data-sub-order-id="${subOrder.subOrderId}">Kargoya ver</button>`
-                : state.user?.role === "COURIER" && subOrder.status === "SHIPPED"
-                    ? `<button class="order-return-button" data-panel-courier-status="DELIVERED" data-sub-order-id="${subOrder.subOrderId}">Teslim edildi</button>`
-                    : returnAction;
-            return `<div class="suborder-row"><div><span>${subOrder.itemCount} ürün · Satıcı #${subOrder.sellerId}${courier}</span><b>${currency(subOrder.subtotal)}</b></div>${courierAction}</div>`;
+            return `<div class="suborder-row"><div><span>${subOrder.itemCount} ürün · Satıcı #${subOrder.sellerId}</span><b>${currency(subOrder.subtotal)}</b></div>${returnAction}</div>`;
         }).join("");
-        const customer = state.user?.role === "CUSTOMER" ? "" : `<small class="order-customer">Alıcı: ${html(order.customerName || order.customerEmail || "Silinmiş kullanıcı")}</small>`;
-        return `<article class="account-order-card"><header><div><span>Sipariş #${html(String(order.orderId).slice(0, 8).toUpperCase())}</span><small>${html(formatOrderDate(order.createdAt))}</small>${customer}</div><strong>${currency(order.totalAmount)}</strong></header><div class="order-progress progress-${progress}"><i></i><i></i><i></i><i></i></div><div class="order-progress-labels"><span>Alındı</span><span>Hazırlanıyor</span><span>Kargoda</span><span>Teslim</span></div><div class="suborder-list">${parts || `<span>${html(orderStatusLabels[order.status] || order.status)}</span>`}</div></article>`;
+        return `<article class="account-order-card"><header><div><span>Sipariş #${html(String(order.orderId).slice(0, 8).toUpperCase())}</span><small>${html(formatOrderDate(order.createdAt))}</small></div><strong>${currency(order.totalAmount)}</strong></header><div class="order-progress progress-${progress}"><i></i><i></i><i></i><i></i></div><div class="order-progress-labels"><span>Alındı</span><span>Hazırlanıyor</span><span>Kargoda</span><span>Teslim</span></div><div class="suborder-list">${parts || `<span>${html(orderStatusLabels[order.status] || order.status)}</span>`}</div></article>`;
     }).join("");
     $$('[data-return-sub-order]').forEach(button => button.addEventListener("click", () => openReturnRequest(button.dataset.returnSubOrder, button.dataset.returnOrder)));
-    $$('[data-panel-courier-status]').forEach(button => button.addEventListener("click", () => updatePanelCourierStatus(button.dataset.subOrderId, button.dataset.panelCourierStatus, button)));
-}
-
-async function updatePanelCourierStatus(subOrderId, status, button) {
-    setBusy(button, true, status === "SHIPPED" ? "Kargoya veriliyor" : "Güncelleniyor");
-    try {
-        await api(`/api/v1/courier/orders/${subOrderId}/status`, {method: "PATCH", body: JSON.stringify({status})});
-        toast(status === "SHIPPED" ? "Sipariş kargoya verildi." : "Sipariş teslim edildi.", "success");
-        await loadOrders();
-    } catch (error) { toast(error.message, "error"); setBusy(button, false); }
 }
 
 async function loadCustomerReturns() {
@@ -497,14 +590,15 @@ async function resolveReturn(returnId, status, button) {
     catch (error) { toast(error.message, "error"); setBusy(button, false); }
 }
 function clearLocalSession() {
-    state.token = ""; state.refreshToken = ""; state.user = null; state.cart = []; state.orders = []; state.returns = []; state.manageableReturns = []; state.favorites = readFavorites(null);
+    state.token = ""; state.refreshToken = ""; state.user = null; state.cart = []; state.orders = []; state.returns = []; state.manageableReturns = []; state.sellerOrders = []; state.courierOrders = []; state.adminOrders = []; state.adminDeliveries = []; state.adminUsers = []; state.favorites = readFavorites(null);
     saveSession(); saveCart(); renderCart(); updateFavoritesUI(); renderCatalog(); updateAuthUI(); closeModals();
+    applyRoleRoute();
 }
 async function logout() {
     const refreshToken = state.refreshToken;
     try { if (refreshToken) await api("/api/v1/auth/logout", {method: "POST", body: JSON.stringify({refreshToken})}); }
     catch { /* The local session is still cleared if the server token has expired. */ }
-    finally { clearLocalSession(); toast("Hesabından güvenle çıkış yaptın.", "success"); }
+    finally { clearLocalSession(); await loadProducts(); toast("Hesabından güvenle çıkış yaptın.", "success"); }
 }
 async function hydrateUser() {
     if (!state.token) return;
@@ -518,6 +612,7 @@ function setAuthMode(mode) {
     $("#authTitle").textContent = mode === "login" ? "Alışverişe başla" : "Hesabını oluştur";
     $("#authSubtitle").textContent = mode === "login" ? "Sepete eklemek ve sipariş vermek için giriş yap." : "NexaMarket deneyimine birkaç saniyede katıl.";
     $("#authRoleField").hidden = mode !== "register";
+    $("#authRole").disabled = mode !== "register";
     $("#authSubmit").innerHTML = mode === "login" ? "Giriş yap <span>→</span>" : "Hesap oluştur <span>→</span>"; setAuthMessage("");
 }
 
@@ -600,23 +695,23 @@ async function submitAuth(event) {
     $("#authMessage").textContent = ""; setBusy(submit, true, state.authMode === "login" ? "Giriş yapılıyor" : "Hesap oluşturuluyor");
     try {
         if (state.authMode === "register") {
-            const role = $("#authRole").value;
-            await api("/api/v1/auth/register", {method: "POST", body: JSON.stringify({email, password, role})});
+            await api("/api/v1/auth/register", {method: "POST", body: JSON.stringify({email, password, role: $("#authRole").value})});
             showVerificationPanel(email);
             return;
         }
         const login = await api("/api/v1/auth/login", {method: "POST", body: JSON.stringify({email, password})});
         state.token = login.accessToken; state.refreshToken = login.refreshToken || ""; state.user = await api("/api/v1/auth/me");
-        saveSession(); loadFavoritesForCurrentUser(); updateAuthUI(); closeModals(); await syncCart();
-        toast("Hoş geldin! Alışverişe devam edebilirsin.", "success");
+        saveSession(); loadFavoritesForCurrentUser(); applyRoleRoute(false); updateAuthUI(); closeModals();
+        if (state.user.role === "CUSTOMER") await syncCart(); else await loadRolePortalData();
+        toast(state.user.role === "CUSTOMER" ? "Hoş geldin! Alışverişe devam edebilirsin." : "Çalışma alanın hazır.", "success");
         if (!state.user.emailVerified) showVerificationReminder();
     } catch (error) { setAuthMessage(error.message); } finally { setBusy(submit, false); }
 }
 
 async function openSellerArea() {
-    if (!state.token) { openModal("authModal"); $("#authMessage").textContent = "Ürün eklemek için önce giriş yapmalısın."; return; }
-    if (state.user?.role !== "SELLER") { toast("Ürün eklemek için ADMIN tarafından SELLER rolüne yükseltilmelisin.", "error"); return; }
-    openModal("sellerModal"); await Promise.all([loadSellerProducts(), loadSellerCategories()]);
+    if (!state.token) { setAuthMode("register"); $("#authRole").value = "SELLER"; openModal("authModal"); $("#authMessage").textContent = "Mağazan için SELLER hesabı oluşturabilirsin."; return; }
+    if (state.user?.role !== "SELLER") { toast("Bu çalışma alanı yalnızca SELLER hesapları içindir.", "error"); return; }
+    openModal("sellerModal"); await Promise.all([loadSellerProducts(), loadSellerCategories(), loadSellerOrders()]);
 }
 async function openCourierArea() {
     if (!state.token) { openModal("authModal"); $("#authMessage").textContent = "Kurye alanı için önce giriş yapmalısın."; return; }
@@ -626,26 +721,31 @@ async function openCourierArea() {
 async function openAdminPanel() {
     if (!state.token) { openModal("authModal"); $("#authMessage").textContent = "Yönetim paneli için önce giriş yapmalısın."; return; }
     if (state.user?.role !== "ADMIN") { toast("Bu alan yalnızca ADMIN hesapları içindir.", "error"); return; }
-    openModal("adminModal"); await loadAdminUsers();
+    openModal("adminModal"); await Promise.all([loadAdminUsers(), loadAdminOrders(), loadAdminDeliveries()]);
 }
 async function loadAdminUsers() {
     $("#adminUsers").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>Kullanıcılar hazırlanıyor…</div>`;
     try {
         const users = await api("/api/v1/admin/auth/users");
-        state.adminUsers = users.filter(user => ["CUSTOMER", "SELLER", "COURIER"].includes(user.role));
+        state.adminUsers = users;
         renderAdminUsers();
+        if (state.adminOrders.length) renderAdminOrders();
     } catch (error) { $("#adminUsers").innerHTML = `<div class="inventory-empty"><b>Kullanıcılar yüklenemedi</b><small>${html(error.message)}</small></div>`; }
 }
 function renderAdminUsers() {
     const users = state.adminUsers || [];
-    $("#adminUserCount").textContent = `${users.length} yönetilebilir kullanıcı`;
+    $("#adminUserCount").textContent = `${users.length} kullanıcı`;
     if (!users.length) { $("#adminUsers").innerHTML = `<div class="inventory-empty"><span>◫</span><b>Yönetilecek kullanıcı yok</b><small>Soldaki formdan ilk kullanıcıyı ekleyebilirsin.</small></div>`; return; }
-    const roleLabels = {CUSTOMER: "Alıcı", SELLER: "Satıcı", COURIER: "Kurye"};
+    const roleLabels = {CUSTOMER: "Alıcı", SELLER: "Satıcı", COURIER: "Kurye", ADMIN: "Yönetici"};
     $("#adminUsers").innerHTML = users.map(user => {
+        const isDeleted = user.status === "DELETED", isSelf = String(user.id) === String(state.user?.id);
         const nextStatus = user.status === "ACTIVE" ? "DISABLED" : "ACTIVE";
         const statusAction = user.status === "ACTIVE" ? "Devre dışı bırak" : "Etkinleştir";
-        const roleActions = ["CUSTOMER", "SELLER", "COURIER"].filter(role => role !== user.role).map(role => `<button data-admin-role="${role}" data-admin-user="${user.id}">${roleLabels[role]} yap</button>`).join("");
-        return `<article class="admin-user-row"><div class="admin-user-avatar">${html(user.email.charAt(0).toUpperCase())}</div><div class="admin-user-copy"><div><span class="status-badge status-${user.status.toLowerCase()}">${user.status === "ACTIVE" ? "Aktif" : "Devre dışı"}</span><small>${html(roleLabels[user.role] || user.role)}</small></div><b>${html(user.email)}</b><strong>ID #${user.id}</strong></div><div class="admin-user-actions">${roleActions}<button data-admin-status="${nextStatus}" data-admin-user="${user.id}">${statusAction}</button><button class="delete-product" data-admin-delete="${user.id}">Sil</button></div></article>`;
+        const roleActions = !isDeleted && !isSelf ? ["CUSTOMER", "SELLER", "COURIER", "ADMIN"].filter(role => role !== user.role).map(role => `<button data-admin-role="${role}" data-admin-user="${user.id}">${roleLabels[role]} yap</button>`).join("") : "";
+        const statusButton = !isDeleted && !isSelf ? `<button data-admin-status="${nextStatus}" data-admin-user="${user.id}">${statusAction}</button>` : "";
+        const deleteButton = !isDeleted && !isSelf && user.role !== "ADMIN" ? `<button class="delete-product" data-admin-delete="${user.id}">Sil</button>` : "";
+        const statusLabel = {ACTIVE: "Aktif", DISABLED: "Devre dışı", LOCKED: "Kilitli", DELETED: "Silinmiş"}[user.status] || user.status;
+        return `<article class="admin-user-row"><div class="admin-user-avatar">${html(user.email.charAt(0).toUpperCase())}</div><div class="admin-user-copy"><div><span class="status-badge status-${user.status.toLowerCase()}">${statusLabel}</span><small>${html(roleLabels[user.role] || user.role)}</small></div><b>${html(user.email)}</b><strong>ID #${user.id}${isSelf ? " · Sen" : ""}</strong></div><div class="admin-user-actions">${roleActions}${statusButton}${deleteButton}</div></article>`;
     }).join("");
     $$('[data-admin-role]').forEach(button => button.addEventListener("click", () => updateAdminUserRole(button.dataset.adminUser, button.dataset.adminRole, button)));
     $$('[data-admin-status]').forEach(button => button.addEventListener("click", () => updateAdminUserStatus(button.dataset.adminUser, button.dataset.adminStatus, button)));
@@ -663,11 +763,11 @@ async function updateAdminUserStatus(userId, status, button) {
 }
 function requestAdminUserDeletion(userId) {
     const user = state.adminUsers.find(item => String(item.id) === String(userId));
-    if (user) askConfirmation("Kullanıcı silinsin mi?", `${user.email} hesabı ve oturumları silinecek. Geçmiş sipariş kayıtları korunur.`, "Kullanıcıyı sil", () => deleteAdminUser(user.id));
+    if (user) askConfirmation("Kullanıcı silinsin mi?", `${user.email} hesabı erişime kapatılacak ve silinmiş olarak işaretlenecek. Geçmiş sipariş kayıtları korunur.`, "Kullanıcıyı sil", () => deleteAdminUser(user.id));
 }
 async function deleteAdminUser(userId) {
     await api(`/api/v1/admin/users/${userId}`, {method: "DELETE"});
-    toast("Kullanıcı silindi.", "success"); await loadAdminUsers();
+    toast("Kullanıcı güvenle silinmiş olarak işaretlendi.", "success"); await loadAdminUsers();
 }
 async function submitAdminUser(event) {
     event.preventDefault(); const submit = $("#adminUserSubmitButton");
@@ -679,42 +779,132 @@ async function submitAdminUser(event) {
     } catch (error) { $("#adminUserMessage").classList.remove("success"); $("#adminUserMessage").textContent = error.message; }
     finally { setBusy(submit, false); }
 }
+
+async function loadAdminOrders() {
+    $("#adminOrders").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>Siparişler hazırlanıyor…</div>`;
+    try { state.adminOrders = await api("/api/v1/orders"); renderAdminOrders(); }
+    catch (error) { state.adminOrders = []; $("#adminOrders").innerHTML = `<div class="inventory-empty"><b>Siparişler yüklenemedi</b><small>${html(error.message)}</small></div>`; }
+}
+
+function renderAdminOrders() {
+    const orders = state.adminOrders || [];
+    $("#adminOrderCount").textContent = `${orders.length} alt sipariş`;
+    if (!orders.length) {
+        $("#adminOrders").innerHTML = `<div class="inventory-empty"><span>▤</span><b>Henüz sipariş yok</b><small>Müşteriler sipariş verdiğinde tüm satıcı parçaları burada görünür.</small></div>`;
+        return;
+    }
+    const couriers = (state.adminUsers || []).filter(user => user.role === "COURIER" && user.status === "ACTIVE");
+    $("#adminOrders").innerHTML = orders.map(order => {
+        const terminal = ["DELIVERED", "CANCELLED", "RETURN_APPROVED", "RETURN_REJECTED"].includes(order.status);
+        const options = `<option value="">Kurye seç</option>${couriers.map(courier => `<option value="${courier.id}" ${String(courier.id) === String(order.courierId) ? "selected" : ""}>${html(courier.email)}</option>`).join("")}`;
+        const assignment = terminal
+            ? `<small class="role-order-note">Kapalı sipariş</small>`
+            : order.courierId
+                ? `<small class="role-order-note"><b>Aktif atama</b><br>Kurye #${order.courierId}<br>Kurye sonuçlandırana kadar değiştirilemez.</small>`
+            : couriers.length
+                ? `<div class="courier-assignment"><select data-courier-select="${order.subOrderId}" aria-label="Kurye seç">${options}</select><button data-assign-courier="${order.subOrderId}">Kurye ata</button></div>`
+                : `<small class="role-order-note">Aktif kurye hesabı yok</small>`;
+        const customerIdentity = order.customerEmail || "Silinmiş kullanıcı";
+        return roleOrderCard(order, `Müşteri: ${customerIdentity} · Satıcı #${order.sellerId}`, assignment);
+    }).join("");
+    $$('[data-assign-courier]').forEach(button => button.addEventListener("click", () => assignCourier(button.dataset.assignCourier, button)));
+}
+
+async function assignCourier(subOrderId, button) {
+    const courierId = Number($(`[data-courier-select="${subOrderId}"]`)?.value);
+    if (!Number.isInteger(courierId) || courierId <= 0) return toast("Önce aktif bir kurye seç.", "error");
+    setBusy(button, true, "Atanıyor");
+    try {
+        await api("/api/v1/admin/deliveries/assign", {method: "POST", body: JSON.stringify({subOrderId, courierId})});
+        toast("Kurye ataması oluşturuldu.", "success"); await Promise.all([loadAdminOrders(), loadAdminDeliveries()]);
+    } catch (error) { toast(error.message, "error"); setBusy(button, false); }
+}
+
+async function loadAdminDeliveries() {
+    $("#adminDeliveries").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>Teslimat geçmişi hazırlanıyor…</div>`;
+    try { state.adminDeliveries = await api("/api/v1/admin/deliveries"); renderAdminDeliveries(); updatePortalOverview(); }
+    catch (error) { state.adminDeliveries = []; $("#adminDeliveries").innerHTML = `<div class="inventory-empty"><b>Teslimatlar yüklenemedi</b><small>${html(error.message)}</small></div>`; }
+}
+
+function renderAdminDeliveries() {
+    const deliveries = state.adminDeliveries || [];
+    $("#adminDeliveryCount").textContent = `${deliveries.length} atama kaydı`;
+    if (!deliveries.length) {
+        $("#adminDeliveries").innerHTML = `<div class="inventory-empty"><span>▣</span><b>Henüz teslimat ataması yok</b><small>Bir siparişe kurye atandığında tüm yaşam döngüsü burada korunur.</small></div>`;
+        return;
+    }
+    $("#adminDeliveries").innerHTML = deliveries.map(item => {
+        const reason = item.rejectionReason || (item.failureReasonCode ? `${failureReasonLabels[item.failureReasonCode] || item.failureReasonCode}: ${item.failureDescription || ""}` : "");
+        const customerIdentity = item.customerEmail || "Silinmiş kullanıcı";
+        return `<article class="delivery-history-card"><div class="delivery-history-head"><span class="status-badge delivery-${String(item.status).toLowerCase()}">${html(deliveryStatusLabels[item.status] || item.status)}</span><small>${item.active ? "Aktif atama" : "Geçmiş kayıt"}</small></div><b>Alt sipariş #${html(String(item.subOrderId).slice(0, 8).toUpperCase())}</b><p>Müşteri: ${html(customerIdentity)} · Satıcı #${item.sellerId} · Kurye #${item.courierId}</p><small>${html(formatOrderDate(item.assignedAt))} · Sipariş: ${html(orderStatusLabels[item.orderStatus] || item.orderStatus)}</small>${reason ? `<em>${html(reason)}</em>` : ""}</article>`;
+    }).join("");
+}
+
 async function loadCourierOrders() {
-    $("#courierOrders").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>Siparişlerin hazırlanıyor…</div>`;
-    try { state.courierOrders = await api("/api/v1/courier/orders"); renderCourierOrders(); }
-    catch (error) { $("#courierOrders").innerHTML = `<div class="inventory-empty"><b>Siparişler yüklenemedi</b><small>${html(error.message)}</small></div>`; }
+    $("#courierOrders").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>Teslimatların hazırlanıyor…</div>`;
+    try { state.courierOrders = await api("/api/v1/courier/deliveries"); renderCourierOrders(); updatePortalOverview(); }
+    catch (error) { state.courierOrders = []; $("#courierOrders").innerHTML = `<div class="inventory-empty"><b>Teslimatlar yüklenemedi</b><small>${html(error.message)}</small></div>`; }
 }
 function formatOrderDate(value) {
     return value ? new Intl.DateTimeFormat("tr-TR", {dateStyle: "medium", timeStyle: "short"}).format(new Date(value)) : "Tarih bilgisi yok";
 }
 function renderCourierOrders() {
-    const orders = state.courierOrders || [];
-    $("#courierOrderCount").textContent = `${orders.length} atanmış sipariş`;
-    if (!orders.length) {
+    const allDeliveries = state.courierOrders || [];
+    const deliveries = allDeliveries.filter(item => {
+        if (state.courierFilter === "assigned") return item.status === "ASSIGNED";
+        if (state.courierFilter === "active") return ["ACCEPTED", "PICKED_UP", "IN_TRANSIT"].includes(item.status);
+        if (state.courierFilter === "history") return ["REJECTED", "DELIVERED", "DELIVERY_FAILED"].includes(item.status);
+        return true;
+    });
+    $$("[data-courier-filter]").forEach(button => button.classList.toggle("active", button.dataset.courierFilter === state.courierFilter));
+    $("#courierOrderCount").textContent = `${deliveries.length} gösteriliyor · toplam ${allDeliveries.length}`;
+    if (!deliveries.length) {
         $("#courierOrders").innerHTML = `<div class="inventory-empty"><span>▣</span><b>Henüz sana atanmış sipariş yok</b><small>Yönetici bir siparişi sana atadığında burada görünecek.</small></div>`;
         return;
     }
-    const labels = {PAID: "Ödeme alındı", PROCESSING: "Hazırlanıyor", SHIPPED: "Kargoda", DELIVERED: "Teslim edildi", CANCELLED: "İptal edildi"};
-    $("#courierOrders").innerHTML = orders.map(order => {
-        const status = labels[order.status] || order.status;
-        const action = order.status === "PROCESSING"
-            ? `<button class="primary-button small" data-courier-status="SHIPPED" data-sub-order-id="${order.subOrderId}">Kargoya ver</button>`
-            : order.status === "SHIPPED"
-                ? `<button class="primary-button small" data-courier-status="DELIVERED" data-sub-order-id="${order.subOrderId}">Teslim edildi</button>`
-                : order.status === "PAID"
-                    ? `<small class="courier-note">Satıcının hazırlaması bekleniyor.</small>`
-                    : `<small class="courier-note">Bu sipariş için işlem tamamlandı.</small>`;
-        return `<article class="courier-order-row"><div class="courier-order-icon">▣</div><div class="courier-order-copy"><div><span class="status-badge status-${String(order.status).toLowerCase()}">${status}</span><small>${formatOrderDate(order.createdAt)}</small></div><b>#${html(String(order.subOrderId).slice(0, 8).toUpperCase())}</b><strong>${currency(order.subtotal)}</strong></div><div class="courier-order-action">${action}</div></article>`;
+    $("#courierOrders").innerHTML = deliveries.map(item => {
+        let actions = "";
+        if (item.status === "ASSIGNED") actions = `<button class="delivery-action accept" data-delivery-action="accept" data-assignment-id="${item.assignmentId}">Atamayı kabul et</button><button class="delivery-action secondary" data-delivery-form="reject" data-assignment-id="${item.assignmentId}">Reddet</button>`;
+        if (item.status === "ACCEPTED") actions = `${item.orderStatus === "PROCESSING" || item.orderStatus === "SHIPPED" ? `<button class="delivery-action accept" data-delivery-action="pickup" data-assignment-id="${item.assignmentId}">Paketi teslim aldım</button>` : `<small class="courier-note">Satıcının hazırlaması bekleniyor.</small>`}<button class="delivery-action danger" data-delivery-form="fail" data-assignment-id="${item.assignmentId}">Sorun bildir</button>`;
+        if (item.status === "PICKED_UP") actions = `<button class="delivery-action accept" data-delivery-action="start" data-assignment-id="${item.assignmentId}">Dağıtıma çık</button><button class="delivery-action danger" data-delivery-form="fail" data-assignment-id="${item.assignmentId}">Sorun bildir</button>`;
+        if (item.status === "IN_TRANSIT") actions = `<button class="delivery-action accept" data-delivery-action="deliver" data-assignment-id="${item.assignmentId}">Teslim edildi</button><button class="delivery-action danger" data-delivery-form="fail" data-assignment-id="${item.assignmentId}">Teslim edilemedi</button>`;
+        if (["REJECTED", "DELIVERED", "DELIVERY_FAILED"].includes(item.status)) actions = `<small class="courier-note">Bu atama kapandı; geçmiş kaydı korunuyor.</small>`;
+        const detail = item.rejectionReason || item.failureDescription;
+        return `<article class="courier-order-row delivery-card"><div class="courier-order-icon">▣</div><div class="courier-order-copy"><div><span class="status-badge delivery-${String(item.status).toLowerCase()}">${html(deliveryStatusLabels[item.status] || item.status)}</span><small>${html(formatOrderDate(item.assignedAt))}</small></div><b>Alt sipariş #${html(String(item.subOrderId).slice(0, 8).toUpperCase())}</b><span>${item.packageCount} paket · Sipariş ${html(orderStatusLabels[item.orderStatus] || item.orderStatus)}</span>${detail ? `<em>${html(detail)}</em>` : ""}</div><div class="courier-order-action delivery-actions">${actions}</div><form class="delivery-inline-form" data-reject-form="${item.assignmentId}" hidden><label>Red gerekçesi<input maxlength="500" required placeholder="Örn. bölge dışında"></label><button type="submit">Reddi kaydet</button><button type="button" data-close-delivery-form>Vazgeç</button></form><form class="delivery-inline-form" data-fail-form="${item.assignmentId}" hidden><label>Sorun türü<select required>${Object.entries(failureReasonLabels).map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select></label><label>Açıklama<input maxlength="1000" required placeholder="Teslimat neden tamamlanamadı?"></label><button type="submit">Sorunu kaydet</button><button type="button" data-close-delivery-form>Vazgeç</button></form></article>`;
     }).join("");
-    $$('[data-courier-status]').forEach(button => button.addEventListener("click", () => updateCourierOrderStatus(button.dataset.subOrderId, button.dataset.courierStatus, button)));
+    $$('[data-delivery-action]').forEach(button => button.addEventListener("click", () => performDeliveryAction(button.dataset.assignmentId, button.dataset.deliveryAction, button)));
+    $$('[data-delivery-form]').forEach(button => button.addEventListener("click", () => {
+        const form = $(`[data-${button.dataset.deliveryForm}-form="${button.dataset.assignmentId}"]`);
+        form.hidden = false; button.closest(".delivery-actions").hidden = true; form.querySelector("input")?.focus();
+    }));
+    $$('[data-close-delivery-form]').forEach(button => button.addEventListener("click", () => { const form = button.closest("form"); form.hidden = true; form.closest(".delivery-card").querySelector(".delivery-actions").hidden = false; }));
+    $$('[data-reject-form]').forEach(form => form.addEventListener("submit", event => submitDeliveryIssue(event, "reject")));
+    $$('[data-fail-form]').forEach(form => form.addEventListener("submit", event => submitDeliveryIssue(event, "fail")));
 }
-async function updateCourierOrderStatus(subOrderId, status, button) {
-    setBusy(button, true, status === "SHIPPED" ? "Kargoya veriliyor" : "Güncelleniyor");
+const failureReasonLabels = {VEHICLE_BREAKDOWN: "Araç arızası", ACCIDENT: "Kaza", HEALTH_ISSUE: "Sağlık sorunu", CUSTOMER_UNREACHABLE: "Müşteriye ulaşılamadı", ADDRESS_PROBLEM: "Adres sorunu", PACKAGE_DAMAGED: "Paket hasarlı", SECURITY_ISSUE: "Güvenlik sorunu", OTHER: "Diğer"};
+
+function setCourierFilter(filter) {
+    state.courierFilter = ["all", "assigned", "active", "history"].includes(filter) ? filter : "all";
+    renderCourierOrders();
+}
+
+async function performDeliveryAction(assignmentId, action, button, body = null) {
+    const labels = {accept: "Kabul ediliyor", reject: "Reddediliyor", pickup: "Teslim alınıyor", start: "Dağıtıma çıkarılıyor", deliver: "Tamamlanıyor", fail: "Kaydediliyor"};
+    setBusy(button, true, labels[action] || "Güncelleniyor");
     try {
-        await api(`/api/v1/courier/orders/${subOrderId}/status`, {method: "PATCH", body: JSON.stringify({status})});
-        toast(status === "SHIPPED" ? "Sipariş kargoya verildi." : "Sipariş teslim edildi.", "success");
+        await api(`/api/v1/courier/deliveries/${assignmentId}/${action}`, {method: "PATCH", body: body ? JSON.stringify(body) : undefined});
+        toast({accept: "Atama kabul edildi.", reject: "Atama reddedildi; yönetici yeniden atayabilir.", pickup: "Paket teslim alındı.", start: "Teslimat dağıtıma çıktı.", deliver: "Teslimat tamamlandı.", fail: "Teslimat sorunu kaydedildi; sipariş iptal edilmedi."}[action], "success");
         await loadCourierOrders();
     } catch (error) { toast(error.message, "error"); setBusy(button, false); }
+}
+
+async function submitDeliveryIssue(event, action) {
+    event.preventDefault();
+    const form = event.currentTarget, assignmentId = form.dataset[action + "Form"], button = form.querySelector('button[type="submit"]');
+    const body = action === "reject"
+        ? {reason: form.querySelector("input").value.trim()}
+        : {reasonCode: form.querySelector("select").value, description: form.querySelector("input").value.trim()};
+    await performDeliveryAction(assignmentId, action, button, body);
 }
 async function ensureCategory(name) {
     const categories = await api("/api/v1/categories");
@@ -790,6 +980,43 @@ async function createProduct(payload, silent = false) {
     if (!silent) toast(normalised.status === "ACTIVE" ? "Ürün vitrinde yayına alındı." : "Ürün taslak olarak kaydedildi.", "success");
     return normalised;
 }
+
+function roleOrderCard(order, ownerText, action = "") {
+    const statusLabel = orderStatusLabels[order.status] || order.status;
+    const courierText = order.courierId ? `Kurye #${order.courierId}` : "Kurye bekleniyor";
+    return `<article class="role-order-card"><div class="role-order-icon">▤</div><div class="role-order-copy"><div><span class="status-badge status-${String(order.status).toLowerCase()}">${html(statusLabel)}</span><small>${html(formatOrderDate(order.createdAt))}</small></div><b>Sipariş #${html(String(order.orderId).slice(0, 8).toUpperCase())}</b><span>Alt sipariş #${html(String(order.subOrderId).slice(0, 8).toUpperCase())} · ${Number(order.itemCount || 0)} ürün</span><small>${html(ownerText)} · ${html(courierText)}</small><strong>${currency(order.subtotal)}</strong></div><div class="role-order-action">${action}</div></article>`;
+}
+
+async function loadSellerOrders() {
+    $("#sellerOrders").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>Siparişler hazırlanıyor…</div>`;
+    try { state.sellerOrders = await api("/api/v1/orders"); renderSellerOrders(); updatePortalOverview(); }
+    catch (error) { state.sellerOrders = []; $("#sellerOrders").innerHTML = `<div class="inventory-empty"><b>Siparişler yüklenemedi</b><small>${html(error.message)}</small></div>`; }
+}
+
+function renderSellerOrders() {
+    const orders = state.sellerOrders || [];
+    $("#sellerOrderCount").textContent = `${orders.length} mağaza siparişi`;
+    if (!orders.length) {
+        $("#sellerOrders").innerHTML = `<div class="inventory-empty"><span>▤</span><b>Henüz mağaza siparişin yok</b><small>Müşteriler ürünlerini satın aldığında yalnızca sana ait alt siparişler burada görünür.</small></div>`;
+        return;
+    }
+    $("#sellerOrders").innerHTML = orders.map(order => {
+        const action = order.status === "PAID"
+            ? `<button class="primary-button small" data-seller-status="PROCESSING" data-sub-order-id="${order.subOrderId}">Hazırlamaya başla</button>`
+            : `<small class="role-order-note">${order.status === "PROCESSING" ? "Kurye teslim alacak" : "Durum güncel"}</small>`;
+        return roleOrderCard(order, `Satıcı #${order.sellerId}`, action);
+    }).join("");
+    $$('[data-seller-status]').forEach(button => button.addEventListener("click", () => updateSellerOrderStatus(button.dataset.subOrderId, button.dataset.sellerStatus, button)));
+}
+
+async function updateSellerOrderStatus(subOrderId, status, button) {
+    setBusy(button, true, "Güncelleniyor");
+    try {
+        await api(`/api/v1/orders/${subOrderId}/status`, {method: "PATCH", body: JSON.stringify({status})});
+        toast("Sipariş hazırlanmaya alındı.", "success"); await loadSellerOrders();
+    } catch (error) { toast(error.message, "error"); setBusy(button, false); }
+}
+
 async function seedCatalog() {
     if (state.user?.role !== "SELLER") { toast("Demo ürünleri eklemek için SELLER hesabı gerekir.", "error"); return; }
     const button = $("#emptySeedButton"); setBusy(button, true, "Seçki hazırlanıyor");
@@ -812,7 +1039,7 @@ async function submitSeller(event) {
 
 async function loadSellerProducts() {
     $("#sellerInventory").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>Ürünlerin hazırlanıyor…</div>`;
-    try { state.sellerProducts = await api("/api/v1/products/seller"); renderSellerProducts(); }
+    try { state.sellerProducts = await api("/api/v1/products/seller"); renderSellerProducts(); updatePortalOverview(); }
     catch (error) { $("#sellerInventory").innerHTML = `<div class="inventory-empty"><b>Ürünler yüklenemedi</b><small>${html(error.message)}</small></div>`; }
 }
 function renderSellerProducts() {
@@ -907,9 +1134,11 @@ async function pay() {
     if (!state.lastOrder) return;
     const button = $("#payButton"); setBusy(button, true, "Ödeme işleniyor"); $("#checkoutMessage").textContent = "";
     try {
+        const purchasedProductIds = state.cart.map(item => item.id);
         const payment = await api("/api/v1/payments", {method: "POST", body: JSON.stringify({orderId: state.lastOrder.id, idempotencyKey: `web-${crypto.randomUUID()}`, walletAmount: 0, cardAmount: state.lastOrder.total.toFixed(2)})});
         if (payment.providerPaymentId) await api(`/mock-payment-provider/payments/${payment.providerPaymentId}/outcomes`, {method: "POST", headers: {Authorization: ""}, body: JSON.stringify({status: "SUCCEEDED", failureReason: null, callbackDelaySeconds: 0, duplicateDeliveries: 1})});
         $("#paymentPanel").hidden = true; $("#successPanel").hidden = false; state.cart = []; saveCart(); renderCart();
+        await refreshCatalogProducts(purchasedProductIds);
     } catch (error) { $("#checkoutMessage").textContent = error.message; } finally { setBusy(button, false); }
 }
 
@@ -948,6 +1177,24 @@ function openHelp(topic) {
     openModal("helpModal");
 }
 
+async function handlePortalAction(action) {
+    $$("#portalNavigation button").forEach(button => button.classList.toggle("active", button.dataset.portalAction === action));
+    if (action === "profile") return openAccount("overview");
+    if (action === "overview") return loadRolePortalData();
+    if (state.user?.role === "SELLER") {
+        if (action === "returns") return openReturnManagement();
+        return openSellerArea();
+    }
+    if (state.user?.role === "COURIER") {
+        setCourierFilter(action === "deliveries" ? "all" : action);
+        return openCourierArea();
+    }
+    if (state.user?.role === "ADMIN") {
+        if (action === "returns") return openReturnManagement();
+        return openAdminPanel();
+    }
+}
+
 function initEvents() {
     $("#cartButton").addEventListener("click", openCart); $$('[data-close-cart]').forEach(button => button.addEventListener("click", closeCart)); $("#overlay").addEventListener("click", closeCart);
     $$('[data-open-seller]').forEach(button => button.addEventListener("click", openSellerArea)); $$('[data-close-modal]').forEach(button => button.addEventListener("click", closeModals));
@@ -959,8 +1206,12 @@ function initEvents() {
     $("#refreshOrdersButton").addEventListener("click", loadOrders); $("#refreshReturnsButton").addEventListener("click", loadCustomerReturns);
     $("#returnRequestForm").addEventListener("submit", submitReturnRequest); $("#returnManagementButton").addEventListener("click", openReturnManagement); $("#refreshManageableReturnsButton").addEventListener("click", loadManageableReturns);
     $("#courierAreaButton").addEventListener("click", openCourierArea); $("#refreshCourierButton").addEventListener("click", loadCourierOrders);
-    $("#adminPanelButton").addEventListener("click", openAdminPanel); $("#refreshAdminUsersButton").addEventListener("click", loadAdminUsers); $("#adminUserForm").addEventListener("submit", submitAdminUser);
+    $$("[data-courier-filter]").forEach(button => button.addEventListener("click", () => setCourierFilter(button.dataset.courierFilter)));
+    $("#adminPanelButton").addEventListener("click", openAdminPanel); $("#refreshAdminUsersButton").addEventListener("click", loadAdminUsers); $("#refreshAdminOrdersButton").addEventListener("click", loadAdminOrders); $("#refreshAdminDeliveriesButton").addEventListener("click", loadAdminDeliveries); $("#adminUserForm").addEventListener("submit", submitAdminUser);
     $("#logoutButton").addEventListener("click", logout); $("#headerLogoutButton").addEventListener("click", logout);
+    $("#portalLogoutButton").addEventListener("click", logout); $("#portalProfileButton").addEventListener("click", () => openAccount("overview"));
+    $("#rolePortal").addEventListener("click", event => { const target = event.target.closest("[data-portal-action]"); if (target) handlePortalAction(target.dataset.portalAction); });
+    window.addEventListener("popstate", () => { applyRoleRoute(); renderRolePortal(); });
     $("#favoritesButton").addEventListener("click", () => { state.favoriteOnly = !state.favoriteOnly; updateFavoritesUI(); renderCatalog(); $("#discover").scrollIntoView({behavior: "smooth"}); });
     $$("[data-auth-tab]").forEach(button => button.addEventListener("click", () => setAuthMode(button.dataset.authTab)));
     $("#resendVerificationButton").addEventListener("click", () => resendVerification(state.pendingVerificationEmail, $("#resendVerificationButton")));
@@ -968,7 +1219,7 @@ function initEvents() {
     $("#verificationCodeForm").addEventListener("submit", event => submitVerificationCode(event, "registration"));
     $("#verificationReminderForm").addEventListener("submit", event => submitVerificationCode(event, "reminder"));
     $("#verificationLoginButton").addEventListener("click", () => { setAuthMode("login"); $("#authEmail").value = state.pendingVerificationEmail; });
-    $("#authForm").addEventListener("submit", submitAuth); $("#sellerForm").addEventListener("submit", submitSeller); $("#sellerImage").addEventListener("change", updateSellerImagePreview); $("#refreshSellerButton").addEventListener("click", loadSellerProducts);
+    $("#authForm").addEventListener("submit", submitAuth); $("#sellerForm").addEventListener("submit", submitSeller); $("#sellerImage").addEventListener("change", updateSellerImagePreview); $("#refreshSellerButton").addEventListener("click", loadSellerProducts); $("#refreshSellerOrdersButton").addEventListener("click", loadSellerOrders);
     $$('[data-password-toggle]').forEach(button => button.addEventListener("click", () => {
         const input = document.getElementById(button.dataset.passwordToggle);
         const isVisible = input.type === "text";
@@ -996,7 +1247,9 @@ function initEvents() {
 
 async function boot() {
     initEvents(); renderCart(); updateAuthUI(); updateFavoritesUI(); renderCatalog();
-    await hydrateUser(); await loadProducts(); await syncCart();
+    await hydrateUser();
+    if (state.user && rolePortalSettings[state.user.role]) await loadRolePortalData();
+    else { await loadProducts(); if (state.user?.role === "CUSTOMER") await syncCart(); }
     if (state.user && !state.user.emailVerified) showVerificationReminder();
 }
 boot();

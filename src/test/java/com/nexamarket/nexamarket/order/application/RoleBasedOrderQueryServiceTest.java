@@ -48,9 +48,12 @@ class RoleBasedOrderQueryServiceTest {
         var adminRows = service.listVisibleOrders(principal(44L, UserRole.ADMIN));
 
         assertThat(customerRows.getFirst().customerId()).isEqualTo(11L);
+        assertThat(customerRows.getFirst().customerEmail()).isEqualTo("Silinmiş kullanıcı #11");
         assertThat(sellerRows.getFirst().customerId()).isNull();
+        assertThat(sellerRows.getFirst().customerEmail()).isNull();
         assertThat(courierRows.getFirst().courierId()).isEqualTo(33L);
         assertThat(adminRows.getFirst().customerId()).isEqualTo(11L);
+        assertThat(adminRows.getFirst().customerEmail()).isEqualTo("Silinmiş kullanıcı #11");
         verify(subOrderRepository).findByCustomerIdWithOrder(11L);
         verify(subOrderRepository).findBySellerIdWithOrder(22L);
         verify(deliveryAssignmentRepository).findByCourierIdWithOrder(33L);

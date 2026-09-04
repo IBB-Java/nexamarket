@@ -6,8 +6,6 @@ import com.nexamarket.nexamarket.order.infrastructure.SubOrderRepository;
 import com.nexamarket.nexamarket.order.domain.CustomerOrder;
 import com.nexamarket.nexamarket.order.domain.SubOrder;
 import com.nexamarket.auth.entity.UserRole;
-import com.nexamarket.users.entity.UserProfile;
-import com.nexamarket.users.repository.UserProfileRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,24 +19,16 @@ public class CustomerOrderHistoryService {
 
     private final CustomerOrderRepository customerOrderRepository;
     private final SubOrderRepository subOrderRepository;
-    private final UserProfileRepository userProfileRepository;
 
     @Autowired
     public CustomerOrderHistoryService(CustomerOrderRepository customerOrderRepository,
-                                       SubOrderRepository subOrderRepository,
-                                       UserProfileRepository userProfileRepository) {
+                                       SubOrderRepository subOrderRepository) {
         this.customerOrderRepository = customerOrderRepository;
         this.subOrderRepository = subOrderRepository;
-        this.userProfileRepository = userProfileRepository;
     }
 
     CustomerOrderHistoryService(CustomerOrderRepository customerOrderRepository) {
-        this(customerOrderRepository, null, null);
-    }
-
-    CustomerOrderHistoryService(CustomerOrderRepository customerOrderRepository,
-                                SubOrderRepository subOrderRepository) {
-        this(customerOrderRepository, subOrderRepository, null);
+        this(customerOrderRepository, null);
     }
 
     @Transactional(readOnly = true)
@@ -78,26 +68,11 @@ public class CustomerOrderHistoryService {
     }
 
     private String customerNameFor(CustomerOrder order) {
-        if (userProfileRepository != null) {
-            String profileName = userProfileRepository.findByUserId(order.getCustomerId())
-                    .map(this::fullName)
-                    .orElse(null);
-            if (profileName != null) {
-                return profileName;
-            }
-        }
         String email = order.getCustomerEmail();
         if (email == null || email.isBlank()) {
             return "Silinmiş kullanıcı";
         }
         int atIndex = email.indexOf('@');
         return atIndex > 0 ? email.substring(0, atIndex) : email;
-    }
-
-    private String fullName(UserProfile profile) {
-        String firstName = profile.getFirstName() == null ? "" : profile.getFirstName().trim();
-        String lastName = profile.getLastName() == null ? "" : profile.getLastName().trim();
-        String name = (firstName + " " + lastName).trim();
-        return name.isEmpty() ? null : name;
     }
 }

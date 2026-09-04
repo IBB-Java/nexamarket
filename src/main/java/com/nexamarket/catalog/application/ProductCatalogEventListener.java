@@ -4,6 +4,7 @@ import com.nexamarket.catalog.config.CatalogIndexingProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -20,6 +21,7 @@ public class ProductCatalogEventListener {
     private final CatalogIndexingProperties indexingProperties;
 
     @Async("catalogIndexTaskExecutor")
+    @CacheEvict(cacheNames = "catalogSearch", allEntries = true)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onProductChanged(ProductCatalogChangedEvent event) {
         Instant deadline = event.occurredAt().plus(indexingProperties.getMaxDelay());

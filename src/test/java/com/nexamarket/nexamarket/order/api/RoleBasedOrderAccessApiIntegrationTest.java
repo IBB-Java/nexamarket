@@ -77,8 +77,8 @@ class RoleBasedOrderAccessApiIntegrationTest {
         UserAccount secondCourier = user(UserRole.COURIER, "scope-courier-2@nexamarket.test");
         UserAccount admin = user(UserRole.ADMIN, "scope-admin@nexamarket.test");
 
-        CustomerOrder firstOrder = paidOrder(firstCustomer.getId(), firstSeller.getId(), "100.00");
-        CustomerOrder secondOrder = paidOrder(secondCustomer.getId(), secondSeller.getId(), "200.00");
+        CustomerOrder firstOrder = paidOrder(firstCustomer.getId(), firstCustomer.getEmail(), firstSeller.getId(), "100.00");
+        CustomerOrder secondOrder = paidOrder(secondCustomer.getId(), secondCustomer.getEmail(), secondSeller.getId(), "200.00");
         String customerToken = login(firstCustomer);
         String secondCustomerToken = login(secondCustomer);
         String sellerToken = login(firstSeller);
@@ -113,7 +113,9 @@ class RoleBasedOrderAccessApiIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].sellerId").value(firstSeller.getId()));
         mockMvc.perform(get("/api/v1/orders").header("Authorization", bearer(adminToken)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].customerEmail").value(secondCustomer.getEmail()))
+                .andExpect(jsonPath("$[1].customerEmail").value(firstCustomer.getEmail()));
 
         // A courier must be active at assignment time.
         mockMvc.perform(post("/api/v1/admin/deliveries/assign")
@@ -222,7 +224,8 @@ class RoleBasedOrderAccessApiIntegrationTest {
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/orders/{id}", firstOrder.getId())
                         .header("Authorization", bearer(adminToken)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].customerEmail").value(firstCustomer.getEmail()));
         assertThat(deliveryAssignmentRepository.count()).isEqualTo(assignmentsBeforeDisable);
 
         mockMvc.perform(post("/api/v1/admin/deliveries/assign")
@@ -259,13 +262,13 @@ class RoleBasedOrderAccessApiIntegrationTest {
         return objectMapper.readTree(body).get("accessToken").asText();
     }
 
-    private CustomerOrder paidOrder(Long customerId, Long sellerId, String unitPrice) {
+    private CustomerOrder paidOrder(Long customerId, String customerEmail, Long sellerId, String unitPrice) {
         var item = new CheckoutOrderRequest.OrderItemRequest(
                 999L, 1, new BigDecimal(unitPrice), UUID.randomUUID().toString(),
                 Instant.parse("2026-09-04T08:00:00Z"));
         var sellerOrder = new CheckoutOrderRequest.SellerOrderRequest(sellerId, List.of(item));
         CustomerOrder order = CustomerOrder.from(new CheckoutOrderRequest(
-                UUID.randomUUID(), customerId, List.of(sellerOrder)));
+                UUID.randomUUID(), customerId, List.of(sellerOrder), BigDecimal.ZERO, List.of(), customerEmail));
         OrderStateMachine stateMachine = new OrderStateMachine();
         order.getSubOrders().forEach(subOrder -> stateMachine.transition(subOrder, OrderStatus.PAID));
         stateMachine.transition(order, OrderStatus.PAID);

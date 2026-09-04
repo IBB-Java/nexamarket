@@ -48,6 +48,30 @@ class FrontendRoleWorkspaceTest {
                 .contains(".modal-close:focus-visible");
     }
 
+    @Test
+    void cartUsesAccessibleQuantityStepperAndRefreshesServerStock() throws IOException {
+        String script = resource("/static/store.js");
+        String styles = resource("/static/store-extra.css");
+
+        assertThat(script)
+                .contains("data-decrease-cart", "data-increase-cart", "refreshCatalogProducts")
+                .contains("aria-live=\"polite\"")
+                .doesNotContain(">1 adet azalt<");
+        assertThat(styles)
+                .contains(".cart-quantity")
+                .contains(".cart-quantity button:focus-visible")
+                .contains("grid-template-columns: 54px minmax(0, 1fr)");
+    }
+
+    @Test
+    void adminOrderViewsRenderCustomerEmailInsteadOfTechnicalCustomerId() throws IOException {
+        String script = resource("/static/store.js");
+
+        assertThat(script)
+                .contains("order.customerEmail", "item.customerEmail", "Müşteri: ${customerIdentity}")
+                .doesNotContain("Müşteri #${order.customerId}", "Müşteri #${item.customerId}");
+    }
+
     private String resource(String path) throws IOException {
         try (var stream = getClass().getResourceAsStream(path)) {
             assertThat(stream).as("classpath resource %s", path).isNotNull();

@@ -13,6 +13,7 @@ public record AdminDeliveryAssignmentResponse(
         UUID subOrderId,
         UUID orderId,
         Long customerId,
+        String customerEmail,
         Long sellerId,
         Long courierId,
         DeliveryAssignmentStatus status,
@@ -33,7 +34,8 @@ public record AdminDeliveryAssignmentResponse(
         var subOrder = assignment.getSubOrder();
         return new AdminDeliveryAssignmentResponse(
                 assignment.getId(), subOrder.getId(), subOrder.getOrder().getId(),
-                subOrder.getOrder().getCustomerId(), subOrder.getSellerId(), assignment.getCourierId(),
+                subOrder.getOrder().getCustomerId(), subOrder.getOrder().getCustomerEmail(),
+                subOrder.getSellerId(), assignment.getCourierId(),
                 assignment.getStatus(), subOrder.getStatus(), assignment.isActive(), assignment.getAssignedAt(),
                 assignment.getAcceptedAt(), assignment.getRejectedAt(), assignment.getPickedUpAt(),
                 assignment.getDeliveryStartedAt(), assignment.getDeliveredAt(), assignment.getFailedAt(),

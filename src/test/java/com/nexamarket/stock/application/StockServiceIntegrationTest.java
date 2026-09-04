@@ -5,6 +5,7 @@ import com.nexamarket.auth.security.AuthPrincipal;
 import com.nexamarket.catalog.entity.Product;
 import com.nexamarket.catalog.entity.ProductStatus;
 import com.nexamarket.catalog.entity.ProductVariant;
+import com.nexamarket.catalog.application.CatalogService;
 import com.nexamarket.catalog.repository.ProductRepository;
 import com.nexamarket.catalog.repository.ProductVariantRepository;
 import com.nexamarket.stock.api.CreateStockReservationRequest;
@@ -47,6 +48,9 @@ class StockServiceIntegrationTest {
 
     @Autowired
     private StockReservationRepository stockReservationRepository;
+
+    @Autowired
+    private CatalogService catalogService;
 
     @AfterEach
     void cleanUp() {
@@ -121,11 +125,15 @@ class StockServiceIntegrationTest {
                 created.reservationCode(), 2);
         assertEquals(3, increased.quantity());
         assertEquals(2, increased.availableStock());
+        assertEquals(2, catalogService.getProduct(variant.getProduct().getId())
+                .variants().getFirst().stockQuantity());
 
         StockReservationResponse decreased = stockService.decreaseReservationInternally(
                 created.reservationCode(), 1);
         assertEquals(2, decreased.quantity());
         assertEquals(3, decreased.availableStock());
+        assertEquals(3, catalogService.getProduct(variant.getProduct().getId())
+                .variants().getFirst().stockQuantity());
 
         stockService.confirmReservationInternally(created.reservationCode());
         stockService.confirmReservationInternally(created.reservationCode());
@@ -133,6 +141,8 @@ class StockServiceIntegrationTest {
 
         assertEquals("CONFIRMED", stockReservationRepository.findAll().getFirst().getStatus().name());
         assertEquals(3, stockService.getStockLevel(variant.getId()).availableStock());
+        assertEquals(3, catalogService.getProduct(variant.getProduct().getId())
+                .variants().getFirst().stockQuantity());
     }
 
     @Test
