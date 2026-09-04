@@ -198,11 +198,11 @@
                 <div class="account-shortcuts"><button data-account-target="orders"><span>▤</span><div><b>Siparişlerini görüntüle</b><small>Kargo ve teslimat durumunu takip et</small></div><i>→</i></button><button data-account-target="returns"><span>↺</span><div><b>İade merkezine git</b><small>Talep oluştur veya durumunu öğren</small></div><i>→</i></button></div>
             </section>
             <section class="account-panel" data-account-panel="orders">
-                <div class="account-panel-heading"><div><p class="eyebrow">SİPARİŞLERİM</p><h2>Tüm siparişlerin</h2></div><button id="refreshOrdersButton">↻ Yenile</button></div>
+                <div class="account-panel-heading"><div><p class="eyebrow">SİPARİŞLERİM</p><h2>Tüm siparişlerin</h2></div><button id="refreshOrdersButton" type="button" aria-label="Siparişleri yenile">↻ Yenile</button></div>
                 <div class="account-order-list" id="accountOrderList"><div class="inventory-loading"><span class="button-spinner"></span>Siparişlerin hazırlanıyor…</div></div>
             </section>
             <section class="account-panel" data-account-panel="returns">
-                <div class="account-panel-heading"><div><p class="eyebrow">İADE MERKEZİ</p><h2>İade taleplerin</h2></div><button id="refreshReturnsButton">↻ Yenile</button></div>
+                <div class="account-panel-heading"><div><p class="eyebrow">İADE MERKEZİ</p><h2>İade taleplerin</h2></div><button id="refreshReturnsButton" type="button" aria-label="İade taleplerini yenile">↻ Yenile</button></div>
                 <div class="return-help"><span>i</span><p><b>İade nasıl yapılır?</b>Teslim edilen veya gönderim sürecindeki siparişinden “İade talebi oluştur” seçeneğini kullan. Talebin ilgili satıcı veya platform yöneticisi tarafından değerlendirildiğinde durum burada güncellenir.</p></div>
                 <div class="return-list" id="customerReturnList"><div class="inventory-loading"><span class="button-spinner"></span>İadelerin hazırlanıyor…</div></div>
             </section>
@@ -224,7 +224,7 @@
 
 <dialog class="modal return-management-modal" id="returnManagementModal">
     <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
-    <div class="account-panel-heading"><div><p class="eyebrow">İADE YÖNETİMİ</p><h2>İade talepleri</h2><p>Bekleyen talepleri incele, onayla veya gerekçeli şekilde reddet.</p></div><button id="refreshManageableReturnsButton">↻ Yenile</button></div>
+    <div class="account-panel-heading"><div><p class="eyebrow">İADE YÖNETİMİ</p><h2>İade talepleri</h2><p>Bekleyen talepleri incele, onayla veya gerekçeli şekilde reddet.</p></div><button id="refreshManageableReturnsButton" type="button" aria-label="Yönetilebilir iade taleplerini yenile">↻ Yenile</button></div>
     <div class="return-list" id="manageableReturnList"><div class="inventory-loading"><span class="button-spinner"></span>Talepler hazırlanıyor…</div></div>
 </dialog>
 

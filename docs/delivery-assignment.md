@@ -135,7 +135,7 @@ senaryosunu tek gerçek HTTP yaşam döngüsünde doğrular. Buna ek olarak
 `RoleBasedOrderQueryServiceTest`, `DeliveryStatusNotificationConsumerTest` ve
 `FrontendRoleWorkspaceTest` birim/regresyon kapsamı sağlar.
 
-Son tam doğrulama sonucu: `./mvnw clean verify` ile **110 test, 0 hata,
+Son tam doğrulama sonucu: `./mvnw clean verify` ile **111 test, 0 hata,
 0 başarısız, 0 atlandı**; JaCoCo'nun bütün genel/kritik kapsam eşikleri geçti.
 Testcontainers, V1–V20 migration'larını PostgreSQL 16.15 üzerinde başarıyla
 uyguladı.

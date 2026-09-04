@@ -33,6 +33,21 @@ class FrontendRoleWorkspaceTest {
                 .doesNotContain("/api/v1/courier/orders/${subOrderId}/status");
     }
 
+    @Test
+    void modalUtilityActionsReserveSpaceForTheCloseControl() throws IOException {
+        String markup = resource("/static/index.html");
+        String styles = resource("/static/store-extra.css");
+
+        assertThat(markup)
+                .contains("aria-label=\"Siparişleri yenile\"")
+                .contains("aria-label=\"İade taleplerini yenile\"")
+                .contains("aria-label=\"Yönetilebilir iade taleplerini yenile\"");
+        assertThat(styles)
+                .contains(".modal .account-panel-heading")
+                .contains("padding-right: 66px")
+                .contains(".modal-close:focus-visible");
+    }
+
     private String resource(String path) throws IOException {
         try (var stream = getClass().getResourceAsStream(path)) {
             assertThat(stream).as("classpath resource %s", path).isNotNull();

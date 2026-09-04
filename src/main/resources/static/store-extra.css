@@ -1670,3 +1670,74 @@ body.role-portal-active > .overlay { display: none !important; }
     .role-portal { display: block; }.portal-sidebar { position: sticky; z-index: 20; width: 100%; height: auto; flex-direction: row; align-items: center; gap: 8px; padding: 10px 14px; border-right: 0; border-bottom: 1px solid rgba(88,78,105,.1); }.portal-brand { margin: 0 auto 0 0; }.portal-brand .brand-mark { width: 34px; height: 34px; }.portal-role-badge { display: none; }#portalNavigation { display: flex; gap: 3px; }#portalNavigation button { width: 35px; padding: 8px; }.portal-logout { width: 35px; margin: 0; padding: 8px; }
     .portal-main { padding: 0 14px 34px; }.portal-header { min-height: 100px; }.portal-header > div p:last-child { display: none; }.portal-profile span:last-child { display: none; }.portal-profile { padding: 7px; }.portal-welcome { min-height: 145px; padding: 23px; }.portal-welcome > span { display: none; }.portal-metrics { grid-template-columns: 1fr; gap: 8px; }.portal-metric { min-height: 82px; padding-block: 15px; }.delivery-card { grid-template-columns: 40px minmax(0, 1fr); }.delivery-actions { grid-column: 1 / -1; min-width: 0; }.delivery-inline-form { grid-template-columns: 1fr; }
 }
+
+/* Modal polish: keep utility actions clear of the close control at every width. */
+.modal-close {
+    z-index: 12;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    line-height: 1;
+    background: rgba(255,253,251,.94);
+    box-shadow: 0 7px 20px rgba(78,69,96,.08);
+    transition: border-color .2s ease, color .2s ease, background .2s ease, transform .2s ease;
+}
+.modal-close:hover {
+    border-color: rgba(169,98,112,.35);
+    color: #a96270;
+    background: #fff7f6;
+    transform: translateY(-1px);
+}
+.modal-close:focus-visible,
+.account-panel-heading > button:focus-visible,
+.courier-toolbar button:focus-visible,
+.inventory-title > button:focus-visible {
+    outline: 3px solid rgba(117,106,134,.25);
+    outline-offset: 2px;
+}
+.modal-header { padding-right: 64px; }
+.modal .account-panel-heading {
+    padding-right: 66px;
+}
+.account-panel-heading > div,
+.return-card > div,
+.courier-order-copy,
+.role-order-copy {
+    min-width: 0;
+}
+.account-panel-heading > button,
+.courier-toolbar button,
+.inventory-title > button {
+    flex: 0 0 auto;
+}
+.return-card b,
+.return-card p,
+.return-card small,
+.courier-order-copy b,
+.courier-order-copy span,
+.delivery-history-card b,
+.delivery-history-card p,
+.delivery-history-card small,
+.delivery-history-card em {
+    overflow-wrap: anywhere;
+}
+.modal:not(.account-center-modal) {
+    max-height: calc(100dvh - 32px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
+@media (max-width: 560px) {
+    .modal { width: calc(100vw - 20px); }
+    .modal-close { right: 12px; top: 12px; }
+    .modal-header,
+    .modal .account-panel-heading { padding-right: 52px; }
+    .account-panel-heading { gap: 12px; }
+    .account-panel-heading h2 { font-size: clamp(1.65rem, 9vw, 2.1rem); }
+    .account-panel-heading p:not(.eyebrow) { margin-bottom: 0; }
+    .courier-toolbar { align-items: flex-start; }
+}

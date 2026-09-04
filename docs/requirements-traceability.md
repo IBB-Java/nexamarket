@@ -86,7 +86,7 @@ harita `docs/architecture.md` dosyasındadır.
 11. Ayrı teslimat state machine'i: `DeliveryAssignmentStateMachineTest` izinli ve `409` üreten geçersiz geçişleri doğrular.
 12. Rol ekranı regresyonu: `FrontendRoleWorkspaceTest`, rol route'larını ve kurye ekranının eski durum-bypass endpoint'ini kullanmadığını doğrular.
 
-Son doğrulama: Docker açıkken `./mvnw clean verify` ile **110 test, 0 hata,
+Son doğrulama: Docker açıkken `./mvnw clean verify` ile **111 test, 0 hata,
 0 başarısız, 0 atlandı**. PostgreSQL Testcontainers testi 20 migration'ın
 tamamını gerçek PostgreSQL 16.15 örneğine uyguladı; JaCoCo genel ve kritik sınıf
 eşiklerinin tamamı geçti.
