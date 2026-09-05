@@ -236,9 +236,9 @@
     <div class="courier-orders" id="courierOrders"><div class="inventory-loading"><span class="button-spinner"></span>Siparişlerin hazırlanıyor…</div></div>
 </dialog>
 
-<dialog class="modal admin-modal" id="adminModal">
+<dialog class="modal admin-modal" id="adminUsersModal">
     <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
-    <div class="modal-header"><p class="eyebrow">YÖNETİM PANELİ</p><h2>Platform yönetimi</h2><p>Kullanıcıları, rolleri ve teslimat atamalarını tek ekrandan yönet.</p></div>
+    <div class="modal-header"><p class="eyebrow">YÖNETİM · KULLANICILAR</p><h2>Kullanıcı yönetimi</h2><p>Platform hesaplarını oluştur, rollerini güncelle ve erişim durumlarını yönet.</p></div>
     <div class="admin-workspace">
         <section class="admin-create-panel">
             <div class="panel-title"><span>01</span><div><b>Yeni kullanıcı</b><small>Platform için yeni hesap oluştur</small></div></div>
@@ -254,20 +254,30 @@
             <div class="panel-title inventory-title"><span>02</span><div><b>Platform kullanıcıları</b><small id="adminUserCount">Kullanıcılar yükleniyor…</small></div><button id="refreshAdminUsersButton" aria-label="Kullanıcıları yenile">↻</button></div>
             <div class="admin-users" id="adminUsers"><div class="inventory-loading"><span class="button-spinner"></span>Kullanıcılar hazırlanıyor…</div></div>
         </section>
-        <section class="admin-orders-panel">
-            <div class="panel-title inventory-title"><span>03</span><div><b>Tüm alt siparişler</b><small id="adminOrderCount">Siparişler yükleniyor…</small></div><button id="refreshAdminOrdersButton" aria-label="Siparişleri yenile">↻</button></div>
-            <div class="role-order-list" id="adminOrders"><div class="inventory-loading"><span class="button-spinner"></span>Siparişler hazırlanıyor…</div></div>
-        </section>
-        <section class="admin-orders-panel admin-deliveries-panel">
-            <div class="panel-title inventory-title"><span>04</span><div><b>Teslimat geçmişi</b><small id="adminDeliveryCount">Atamalar yükleniyor…</small></div><button id="refreshAdminDeliveriesButton" aria-label="Teslimatları yenile">↻</button></div>
-            <div class="role-order-list" id="adminDeliveries"><div class="inventory-loading"><span class="button-spinner"></span>Atamalar hazırlanıyor…</div></div>
-        </section>
     </div>
 </dialog>
 
-<dialog class="modal seller-modal" id="sellerModal">
+<dialog class="modal admin-modal" id="adminOrdersModal">
     <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
-    <div class="modal-header"><p class="eyebrow">SATICI STÜDYOSU</p><h2>Mağazanı tek yerden yönet</h2><p>Yeni ürün ekle, taslaklarını yayınla veya satıştan kaldır.</p></div>
+    <div class="modal-header"><p class="eyebrow">YÖNETİM · SİPARİŞLER</p><h2>Sipariş yönetimi</h2><p>Tüm alt siparişleri incele ve uygun kurye hesabına teslimat ataması oluştur.</p></div>
+    <section class="admin-orders-panel">
+        <div class="panel-title inventory-title"><span>01</span><div><b>Tüm alt siparişler</b><small id="adminOrderCount">Siparişler yükleniyor…</small></div><button id="refreshAdminOrdersButton" aria-label="Siparişleri yenile">↻</button></div>
+        <div class="role-order-list" id="adminOrders"><div class="inventory-loading"><span class="button-spinner"></span>Siparişler hazırlanıyor…</div></div>
+    </section>
+</dialog>
+
+<dialog class="modal admin-modal" id="adminDeliveriesModal">
+    <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
+    <div class="modal-header"><p class="eyebrow">YÖNETİM · TESLİMATLAR</p><h2>Teslimat atamaları</h2><p>Kurye atamalarının aktif durumunu ve teslimat geçmişini ayrı olarak takip et.</p></div>
+    <section class="admin-orders-panel admin-deliveries-panel">
+        <div class="panel-title inventory-title"><span>01</span><div><b>Teslimat geçmişi</b><small id="adminDeliveryCount">Atamalar yükleniyor…</small></div><button id="refreshAdminDeliveriesButton" aria-label="Teslimatları yenile">↻</button></div>
+        <div class="role-order-list" id="adminDeliveries"><div class="inventory-loading"><span class="button-spinner"></span>Atamalar hazırlanıyor…</div></div>
+    </section>
+</dialog>
+
+<dialog class="modal seller-modal" id="sellerProductsModal">
+    <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
+    <div class="modal-header"><p class="eyebrow">SATICI · ÜRÜNLER</p><h2>Ürün yönetimi</h2><p>Yeni ürün ekle, taslaklarını yayınla veya satıştan kaldır.</p></div>
     <div class="seller-workspace">
         <section class="seller-create-panel">
             <div class="panel-title"><span>01</span><div><b>Yeni ürün</b><small>Vitrinine yeni bir seçim ekle</small></div></div>
@@ -286,11 +296,16 @@
             <div class="panel-title inventory-title"><span>02</span><div><b>Ürünlerin</b><small>Yayın durumunu ve ürünlerini yönet</small></div><button id="refreshSellerButton" aria-label="Ürünleri yenile">↻</button></div>
             <div class="seller-inventory" id="sellerInventory"><div class="inventory-loading">Ürünlerin hazırlanıyor…</div></div>
         </section>
-        <section class="seller-orders-panel">
-            <div class="panel-title inventory-title"><span>03</span><div><b>Mağaza siparişleri</b><small id="sellerOrderCount">Siparişler yükleniyor…</small></div><button id="refreshSellerOrdersButton" aria-label="Siparişleri yenile">↻</button></div>
-            <div class="role-order-list" id="sellerOrders"><div class="inventory-loading"><span class="button-spinner"></span>Siparişler hazırlanıyor…</div></div>
-        </section>
     </div>
+</dialog>
+
+<dialog class="modal seller-modal" id="sellerOrdersModal">
+    <button class="modal-close" data-close-modal aria-label="Pencereyi kapat">×</button>
+    <div class="modal-header"><p class="eyebrow">SATICI · SİPARİŞLER</p><h2>Mağaza siparişleri</h2><p>Yalnızca mağazana ait siparişleri gör ve hazırlanma sürecini yönet.</p></div>
+    <section class="seller-orders-panel">
+        <div class="panel-title inventory-title"><span>01</span><div><b>Mağaza siparişlerin</b><small id="sellerOrderCount">Siparişler yükleniyor…</small></div><button id="refreshSellerOrdersButton" aria-label="Siparişleri yenile">↻</button></div>
+        <div class="role-order-list" id="sellerOrders"><div class="inventory-loading"><span class="button-spinner"></span>Siparişler hazırlanıyor…</div></div>
+    </section>
 </dialog>
 
 <dialog class="modal info-modal" id="helpModal">

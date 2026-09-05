@@ -1,5 +1,6 @@
 package com.nexamarket.nexamarket.payment.application;
 
+import com.nexamarket.loyalty.application.LoyaltyService;
 import com.nexamarket.nexamarket.order.domain.CustomerOrder;
 import com.nexamarket.nexamarket.order.domain.OrderStateMachine;
 import com.nexamarket.nexamarket.order.domain.OrderStatus;
@@ -36,6 +37,7 @@ public class PaymentApplicationService {
     private final Duration pollingInterval;
     private final StockReservationCommitGateway stockReservationCommitGateway;
     private final OrderStatusEventPublisher orderStatusEventPublisher;
+    private final LoyaltyService loyaltyService;
 
     @Autowired
     public PaymentApplicationService(CustomerOrderRepository customerOrderRepository,
@@ -44,10 +46,11 @@ public class PaymentApplicationService {
                                      PaymentProviderGateway paymentProviderGateway,
                                      StockReservationCommitGateway stockReservationCommitGateway,
                                      OrderStatusEventPublisher orderStatusEventPublisher,
+                                     LoyaltyService loyaltyService,
                                      @Value("${payment.polling.interval}") Duration pollingInterval) {
         this(customerOrderRepository, paymentTransactionRepository, walletAccountRepository,
                 paymentProviderGateway, stockReservationCommitGateway, orderStatusEventPublisher,
-                pollingInterval, Clock.systemUTC());
+                loyaltyService, pollingInterval, Clock.systemUTC());
     }
 
     PaymentApplicationService(CustomerOrderRepository customerOrderRepository,
@@ -56,7 +59,7 @@ public class PaymentApplicationService {
                               PaymentProviderGateway paymentProviderGateway,
                               Duration pollingInterval, Clock clock) {
         this(customerOrderRepository, paymentTransactionRepository, walletAccountRepository,
-                paymentProviderGateway, null, null, pollingInterval, clock);
+                paymentProviderGateway, null, null, null, pollingInterval, clock);
     }
 
     PaymentApplicationService(CustomerOrderRepository customerOrderRepository,
@@ -65,6 +68,19 @@ public class PaymentApplicationService {
                               PaymentProviderGateway paymentProviderGateway,
                               StockReservationCommitGateway stockReservationCommitGateway,
                               OrderStatusEventPublisher orderStatusEventPublisher,
+                              Duration pollingInterval, Clock clock) {
+        this(customerOrderRepository, paymentTransactionRepository, walletAccountRepository,
+                paymentProviderGateway, stockReservationCommitGateway, orderStatusEventPublisher,
+                null, pollingInterval, clock);
+    }
+
+    PaymentApplicationService(CustomerOrderRepository customerOrderRepository,
+                              PaymentTransactionRepository paymentTransactionRepository,
+                              WalletAccountRepository walletAccountRepository,
+                              PaymentProviderGateway paymentProviderGateway,
+                              StockReservationCommitGateway stockReservationCommitGateway,
+                              OrderStatusEventPublisher orderStatusEventPublisher,
+                              LoyaltyService loyaltyService,
                               Duration pollingInterval, Clock clock) {
         this.customerOrderRepository = customerOrderRepository;
         this.paymentTransactionRepository = paymentTransactionRepository;
@@ -75,6 +91,7 @@ public class PaymentApplicationService {
         this.clock = clock;
         this.stockReservationCommitGateway = stockReservationCommitGateway;
         this.orderStatusEventPublisher = orderStatusEventPublisher;
+        this.loyaltyService = loyaltyService;
     }
 
     /**
@@ -148,6 +165,9 @@ public class PaymentApplicationService {
         }
         for (SubOrder subOrder : order.getSubOrders()) {
             orderStateMachine.transition(subOrder, OrderStatus.PAID);
+            if (loyaltyService != null) {
+                loyaltyService.awardForPaidPurchase(subOrder);
+            }
             publishStatus(order, subOrder);
         }
         orderStateMachine.transition(order, OrderStatus.PAID);

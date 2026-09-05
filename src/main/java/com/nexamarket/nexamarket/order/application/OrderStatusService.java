@@ -5,7 +5,6 @@ import com.nexamarket.nexamarket.order.domain.OrderStatus;
 import com.nexamarket.nexamarket.order.domain.SubOrder;
 import com.nexamarket.nexamarket.order.infrastructure.SubOrderRepository;
 import com.nexamarket.auth.entity.UserRole;
-import com.nexamarket.loyalty.application.LoyaltyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,19 +18,11 @@ public class OrderStatusService {
     private final SubOrderRepository subOrderRepository;
     private final OrderStateMachine orderStateMachine;
     private final OrderStatusEventPublisher orderStatusEventPublisher;
-    private final LoyaltyService loyaltyService;
-
     @Autowired
-    public OrderStatusService(SubOrderRepository subOrderRepository, OrderStatusEventPublisher orderStatusEventPublisher,
-                              LoyaltyService loyaltyService) {
+    public OrderStatusService(SubOrderRepository subOrderRepository, OrderStatusEventPublisher orderStatusEventPublisher) {
         this.subOrderRepository = subOrderRepository;
         this.orderStatusEventPublisher = orderStatusEventPublisher;
-        this.loyaltyService = loyaltyService;
         this.orderStateMachine = new OrderStateMachine();
-    }
-
-    OrderStatusService(SubOrderRepository subOrderRepository, OrderStatusEventPublisher orderStatusEventPublisher) {
-        this(subOrderRepository, orderStatusEventPublisher, null);
     }
 
     @Transactional
@@ -67,9 +58,6 @@ public class OrderStatusService {
     private OrderStatus transitionAndPublish(SubOrder subOrder, OrderStatus targetStatus) {
         orderStateMachine.transition(subOrder, targetStatus);
         OrderStatus status = subOrderRepository.save(subOrder).getStatus();
-        if (status == OrderStatus.DELIVERED && loyaltyService != null) {
-            loyaltyService.awardForDelivery(subOrder);
-        }
         orderStatusEventPublisher.enqueue(new OrderStatusChangedEvent(UUID.randomUUID(),
                 subOrder.getOrder().getCustomerId(), subOrder.getId(), subOrder.getSellerId(), status));
         return status;

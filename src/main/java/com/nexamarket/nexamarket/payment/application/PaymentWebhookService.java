@@ -1,5 +1,6 @@
 package com.nexamarket.nexamarket.payment.application;
 
+import com.nexamarket.loyalty.application.LoyaltyService;
 import com.nexamarket.nexamarket.order.domain.CustomerOrder;
 import com.nexamarket.nexamarket.order.domain.OrderStateMachine;
 import com.nexamarket.nexamarket.order.domain.OrderStatus;
@@ -30,6 +31,7 @@ public class PaymentWebhookService {
     private final OrderStateMachine orderStateMachine;
     private final StockReservationCommitGateway stockReservationCommitGateway;
     private final OrderStatusEventPublisher orderStatusEventPublisher;
+    private final LoyaltyService loyaltyService;
 
     @Autowired
     public PaymentWebhookService(PaymentTransactionRepository paymentTransactionRepository,
@@ -37,7 +39,8 @@ public class PaymentWebhookService {
                                  CustomerOrderRepository customerOrderRepository,
                                  WalletAccountRepository walletAccountRepository,
                                  StockReservationCommitGateway stockReservationCommitGateway,
-                                 OrderStatusEventPublisher orderStatusEventPublisher) {
+                                 OrderStatusEventPublisher orderStatusEventPublisher,
+                                 LoyaltyService loyaltyService) {
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.processedPaymentWebhookRepository = processedPaymentWebhookRepository;
         this.customerOrderRepository = customerOrderRepository;
@@ -45,6 +48,7 @@ public class PaymentWebhookService {
         this.orderStateMachine = new OrderStateMachine();
         this.stockReservationCommitGateway = stockReservationCommitGateway;
         this.orderStatusEventPublisher = orderStatusEventPublisher;
+        this.loyaltyService = loyaltyService;
     }
 
     PaymentWebhookService(PaymentTransactionRepository paymentTransactionRepository,
@@ -52,7 +56,7 @@ public class PaymentWebhookService {
                           CustomerOrderRepository customerOrderRepository,
                           WalletAccountRepository walletAccountRepository) {
         this(paymentTransactionRepository, processedPaymentWebhookRepository, customerOrderRepository,
-                walletAccountRepository, null, null);
+                walletAccountRepository, null, null, null);
     }
 
     /** A provider event id is recorded first, so duplicated callbacks are harmless. */
@@ -94,6 +98,9 @@ public class PaymentWebhookService {
         }
         for (SubOrder subOrder : order.getSubOrders()) {
             orderStateMachine.transition(subOrder, OrderStatus.PAID);
+            if (loyaltyService != null) {
+                loyaltyService.awardForPaidPurchase(subOrder);
+            }
             if (orderStatusEventPublisher != null) {
                 orderStatusEventPublisher.enqueue(new OrderStatusChangedEvent(java.util.UUID.randomUUID(),
                         order.getCustomerId(), subOrder.getId(), subOrder.getSellerId(), subOrder.getStatus()));

@@ -8,12 +8,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Instant;
 
-/** Awards one point per ten currency units only after delivery. */
+/** Awards one loyalty point for every purchased item after a successful payment. */
 @Service
 public class LoyaltyService {
 
@@ -31,16 +29,16 @@ public class LoyaltyService {
     }
 
     @Transactional
-    public void awardForDelivery(SubOrder subOrder) {
+    public void awardForPaidPurchase(SubOrder subOrder) {
         if (loyaltyLedgerRepository.existsBySubOrderIdAndType(subOrder.getId(), LoyaltyEntryType.EARNED)) {
             return;
         }
-        int points = subOrder.getSubtotal().divide(new BigDecimal("10"), 0, RoundingMode.DOWN).intValue();
+        int points = subOrder.getItems().stream().mapToInt(item -> item.getQuantity()).sum();
         if (points == 0) {
             return;
         }
         loyaltyLedgerRepository.save(new LoyaltyLedgerEntry(subOrder.getOrder().getCustomerId(), subOrder.getId(),
-                LoyaltyEntryType.EARNED, points, "Delivered sub-order", Instant.now(clock)));
+                LoyaltyEntryType.EARNED, points, "Paid order items", Instant.now(clock)));
     }
 
     @Transactional
