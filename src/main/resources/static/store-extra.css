@@ -14,6 +14,8 @@
 
 [hidden] { display: none !important; }
 
+html { overflow-x: clip; }
+
 body {
     background:
         radial-gradient(circle at 4% 12%, rgba(214, 233, 223, .48), transparent 26rem),
@@ -895,14 +897,37 @@ footer { display: grid; grid-template-columns: 1.2fr 1fr auto; gap: 60px; align-
 .account-center-user b, .account-center-user small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account-center-user b { font-size: .78rem; }
 .account-center-user small { margin-top: 3px; color: var(--ink-muted); font-size: .61rem; }
-.account-center-nav > button { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border: 0; border-radius: 11px; background: transparent; color: #716a7d; text-align: left; font-size: .73rem; font-weight: 700; }
-.account-center-nav > button span { width: 20px; font-size: 1rem; text-align: center; }
-.account-center-nav > button:hover, .account-center-nav > button.active { color: #514a60; background: rgba(255,255,255,.8); box-shadow: 0 8px 20px rgba(84,75,103,.05); }
+.account-center-navigation { display: grid; gap: 5px; }
+.account-center-navigation button, .account-center-nav > button { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border: 0; border-radius: 11px; background: transparent; color: #716a7d; text-align: left; font-size: .73rem; font-weight: 700; }
+.account-center-navigation button span, .account-center-nav > button span { width: 20px; font-size: 1rem; text-align: center; }
+.account-center-navigation button:hover, .account-center-navigation button.active, .account-center-nav > button:hover, .account-center-nav > button.active { color: #514a60; background: rgba(255,255,255,.8); box-shadow: 0 8px 20px rgba(84,75,103,.05); }
+.account-center-navigation .account-dashboard-link { margin-top: 10px; padding-top: 16px; border-top: 1px solid rgba(109,99,126,.1); border-radius: 0 0 11px 11px; color: #966273; }
+.account-center-navigation .account-dashboard-link i { margin-left: auto; font-size: 1rem; font-style: normal; }
 .account-center-nav > .logout-emphasis { margin-top: auto; color: #ad6572; }
 .account-center-content { min-width: 0; padding: 44px 42px 36px; overflow: auto; }
 .account-panel { display: none; }
 .account-panel.active { display: block; animation: cardIn .2s ease both; }
 .account-panel .modal-header { max-width: 620px; }
+.account-profile-card { margin-top: 26px; padding: 20px; border: 1px solid rgba(109,99,126,.1); border-radius: 20px; background: rgba(255,255,255,.78); box-shadow: 0 14px 34px rgba(84,75,103,.05); }
+.account-profile-card > header { display: flex; align-items: center; gap: 11px; margin-bottom: 17px; }
+.account-profile-card > header > span { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 13px; background: #ebe6f5; color: #756a91; font-size: 1.1rem; }
+.account-profile-card > header b, .account-profile-card > header small { display: block; }
+.account-profile-card > header b { color: #514a60; font-size: .79rem; }
+.account-profile-card > header small { margin-top: 3px; color: var(--ink-muted); font-size: .62rem; }
+.account-profile-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 0; }
+.account-profile-fields > div { min-width: 0; padding: 12px 13px; border-radius: 13px; background: #f7f3f6; }
+.account-profile-fields dt { color: #8a8292; font-size: .57rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.account-profile-fields dd { margin: 5px 0 0; overflow-wrap: anywhere; color: #514a60; font-size: .72rem; font-weight: 800; }
+.account-profile-fields .account-status-active dd { color: #5f806f; }
+.account-profile-fields .account-status-pending dd { color: #a66c55; }
+.account-profile-fields .account-status-inactive dd { color: #a45d6a; }
+.account-overview-loading { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 132px; margin-top: 18px; color: #827989; font-size: .68rem; }
+.account-dashboard-card { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 14px; align-items: center; margin-top: 18px; padding: 18px; border: 1px solid rgba(109,99,126,.1); border-radius: 19px; background: linear-gradient(120deg, #f0ebf5, #f7eeef 55%, #edf4ef); }
+.account-dashboard-card > span { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 15px; background: rgba(255,255,255,.78); color: #756a91; font-size: 1.25rem; }
+.account-dashboard-card b, .account-dashboard-card small { display: block; }
+.account-dashboard-card b { color: #514a60; font-size: .78rem; }
+.account-dashboard-card small { max-width: 390px; margin-top: 4px; color: #7d7584; font-size: .62rem; line-height: 1.45; }
+.account-dashboard-card i { font-style: normal; }
 .account-center-content .account-stats { grid-template-columns: repeat(3, 1fr); margin: 30px 0 20px; }
 .account-center-content .account-stats > div { min-height: 118px; padding: 20px; border-radius: 18px; }
 .account-center-content .account-stats > div:nth-child(3) { background: #f8e9e8; }
@@ -988,12 +1013,18 @@ footer { display: grid; grid-template-columns: 1.2fr 1fr auto; gap: 60px; align-
     .account-center-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
     .account-center-nav { padding: 14px 50px 10px 14px; flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid rgba(109,99,126,.1); }
     .account-center-user { display: none; }
-    .account-center-nav > button { flex: none; }
+    .account-center-navigation { display: flex; gap: 5px; }
+    .account-center-navigation button, .account-center-nav > button { flex: none; }
+    .account-center-navigation .account-dashboard-link { margin: 0; padding-top: 11px; border-top: 0; border-radius: 11px; }
     .account-center-nav > .logout-emphasis { margin: 0 0 0 auto; }
     .account-center-content { padding: 26px 18px; }
+    .account-profile-fields { grid-template-columns: 1fr 1fr; }
     .account-center-content .account-stats { grid-template-columns: 1fr 1fr; }
     .account-center-content .account-stats > div:nth-child(3) { grid-column: 1 / -1; }
     .account-shortcuts { grid-template-columns: 1fr; }
+    .account-dashboard-card { grid-template-columns: 44px minmax(0, 1fr); }
+    .account-dashboard-card > span { width: 44px; height: 44px; }
+    .account-dashboard-card > button { grid-column: 1 / -1; width: 100%; }
 }
 
 @media (max-width: 560px) {
@@ -1011,9 +1042,12 @@ footer { display: grid; grid-template-columns: 1.2fr 1fr auto; gap: 60px; align-
     .footer-links { grid-column: auto; grid-row: auto; }
     .footer-top { justify-self: start; }
     .account-center-nav { gap: 2px; }
-    .account-center-nav > button { padding: 9px; font-size: 0; }
-    .account-center-nav > button span { font-size: 1rem; }
+    .account-center-navigation { gap: 2px; }
+    .account-center-navigation button, .account-center-nav > button { padding: 9px; font-size: 0; }
+    .account-center-navigation button span, .account-center-nav > button span { font-size: 1rem; }
+    .account-center-navigation .account-dashboard-link i { display: none; }
     .account-center-nav > .logout-emphasis { margin-left: auto; }
+    .account-profile-fields { grid-template-columns: 1fr; }
     .account-center-content .account-stats { grid-template-columns: 1fr; }
     .account-center-content .account-stats > div:nth-child(3) { grid-column: auto; }
     .suborder-row { align-items: flex-start; flex-direction: column; }
@@ -1755,4 +1789,413 @@ body.role-portal-active > .overlay { display: none !important; }
     .cart-row { grid-template-columns: 54px minmax(0, 1fr); align-items: start; }
     .cart-row-art { height: 54px; }
     .cart-row-controls { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; width: 100%; padding-left: 68px; }
+}
+
+/* Mobile-first commerce and role workspaces */
+.mobile-bottom-nav { display: none; }
+#portalNavigation .portal-nav-icon { font-size: .96rem; text-align: center; }
+#portalNavigation .portal-nav-text { min-width: 0; overflow: hidden; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+body.role-portal-active > .mobile-bottom-nav { display: none !important; }
+
+@media (min-width: 641px) and (max-width: 900px) {
+    #portalNavigation .portal-nav-text { display: none; }
+}
+
+@media (max-width: 640px) {
+    html,
+    body { max-width: 100%; overflow-x: clip; }
+    body:not(.role-portal-active) { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+    body.cart-open { overflow: hidden; }
+
+    .announcement { height: 28px; min-height: 28px; }
+    .site-header {
+        top: 0;
+        height: auto;
+        min-height: 112px;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 8px 10px;
+        padding: 8px 12px 10px;
+    }
+    .site-header .brand { min-width: 0; font-size: 1rem; }
+    .site-header .brand > span:last-child { display: inline; }
+    .site-header .brand-mark { width: 38px; height: 38px; }
+    .header-actions { min-width: 0; justify-content: flex-end; gap: 6px; }
+    .favorite-header-button,
+    .account-button,
+    .cart-button { width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 0; }
+    .favorite-header-button { font-size: 1.15rem; }
+    .favorite-header-button b,
+    .account-button .account-identity,
+    .account-button .chevron { display: none; }
+    .account-avatar { width: 28px; height: 28px; }
+    .cart-button { position: relative; gap: 0; font-size: 0; }
+    .cart-button .cart-icon { font-size: 1.18rem; }
+    .cart-button b { position: absolute; align-self: flex-start; margin: -8px 0 0 25px; font-size: .62rem; }
+    .account-menu { position: fixed; top: 66px; right: 12px; width: min(282px, calc(100vw - 24px)); }
+    .account-menu > button { min-height: 44px; font-size: .88rem; }
+    .header-search {
+        position: relative;
+        inset: auto;
+        order: initial;
+        grid-column: 1 / -1;
+        grid-row: 2;
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        height: 46px;
+        box-shadow: none;
+    }
+    .header-search input { font-size: 16px; }
+    .header-search kbd { display: none; }
+    .search-suggestions { max-height: min(55dvh, 420px); }
+    .search-suggestion { min-height: 48px; }
+
+    .commerce-nav {
+        top: 112px;
+        min-height: 52px;
+        gap: 7px;
+        padding: 4px 12px;
+        overscroll-behavior-inline: contain;
+    }
+    .commerce-nav button,
+    .commerce-nav a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 12px; border: 1px solid rgba(109,99,126,.1); border-radius: 999px; background: rgba(255,255,255,.7); font-size: .72rem; }
+    .commerce-nav .commerce-sell { margin-left: 0; }
+
+    .mobile-bottom-nav {
+        position: fixed;
+        z-index: 42;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        min-height: calc(64px + env(safe-area-inset-bottom));
+        padding: 5px 5px calc(5px + env(safe-area-inset-bottom));
+        border-top: 1px solid rgba(109,99,126,.13);
+        background: rgba(255,253,251,.96);
+        box-shadow: 0 -12px 32px rgba(71,62,82,.1);
+        backdrop-filter: blur(18px);
+    }
+    .mobile-bottom-nav button {
+        position: relative;
+        min-width: 0;
+        min-height: 54px;
+        display: grid;
+        place-items: center;
+        align-content: center;
+        gap: 3px;
+        padding: 4px 2px;
+        border: 0;
+        border-radius: 12px;
+        background: transparent;
+        color: #746d7c;
+    }
+    .mobile-bottom-nav button:active,
+    .mobile-bottom-nav button:focus-visible { color: #9f6070; background: #f5eaed; }
+    .mobile-bottom-nav span { font-size: 1.15rem; line-height: 1; }
+    .mobile-bottom-nav small { overflow: hidden; max-width: 100%; font-size: .57rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+    .mobile-bottom-nav b { position: absolute; top: 2px; left: calc(50% + 7px); min-width: 17px; height: 17px; display: grid; place-items: center; padding: 0 4px; border-radius: 999px; background: #c77f8c; color: #fff; font-size: .56rem; }
+
+    .hero { min-height: auto; margin: 8px 8px 0; padding: 42px 18px 30px; border-radius: 24px; }
+    .hero h1 { font-size: clamp(2.45rem, 13vw, 3.35rem); }
+    .hero-text { margin: 18px 0; font-size: .95rem; }
+    .hero-art { display: none; }
+    .hero-actions .primary-button,
+    .hero-actions .secondary-button { width: 100%; min-height: 48px; }
+    .hero-proof { gap: 5px; margin-top: 18px; }
+    .hero-proof span { padding: 7px 8px; font-size: .68rem; }
+    .trust-strip { grid-template-columns: 1fr; gap: 8px; padding: 12px; }
+    .trust-strip div { min-height: 68px; padding: 12px 14px; }
+
+    .campaign-section { padding: 46px 12px 8px; }
+    .campaign-heading { align-items: flex-start; }
+    .campaign-heading h2 { font-size: 2rem; }
+    .campaign-heading a { display: none; }
+    .campaign-grid { grid-template-columns: 1fr; gap: 10px; }
+    .campaign-main,
+    .campaign-home { grid-column: auto; }
+    .campaign-card { min-height: 200px; padding: 20px; border-radius: 22px; }
+    .campaign-card h3 { font-size: 1.75rem; }
+    .campaign-card b { left: 20px; bottom: 20px; }
+
+    .catalog-section { padding: 54px 12px; }
+    .section-heading { display: block; margin-bottom: 20px; }
+    .section-heading h2 { font-size: 2.25rem; }
+    .seller-cta { min-height: 44px; margin-top: 9px; }
+    .catalog-controls { padding: 10px; border-radius: 18px; }
+    .catalog-actions { width: 100%; }
+    .category-pills { width: 100%; padding-bottom: 2px; overscroll-behavior-inline: contain; }
+    .pill { min-height: 44px; padding-inline: 15px; font-size: .8rem; }
+    .sort-control { width: 100%; font-size: .78rem; }
+    .sort-control select { min-height: 44px; flex: 1; font-size: 16px; }
+    .catalog-meta { align-items: center; min-height: 48px; font-size: .82rem; }
+    .catalog-meta button { min-width: 44px; min-height: 44px; font-size: .78rem; }
+    .product-grid { grid-template-columns: 1fr; gap: 15px; }
+    .product-card { border-radius: 22px; }
+    .product-card:hover { transform: none; }
+    .product-image { aspect-ratio: 16 / 10; }
+    .product-image > small { font-size: .65rem; }
+    .favorite-button { width: 44px; height: 44px; top: 10px; right: 10px; }
+    .product-info { padding: 16px; }
+    .stock-line,
+    .product-seller { font-size: .8rem !important; }
+    .product-name { min-height: 44px; display: flex; align-items: center; font-size: 1.08rem; overflow-wrap: anywhere; }
+    .product-excerpt { min-height: 0; font-size: .88rem; }
+    .product-bottom { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; margin-top: 16px; }
+    .price { display: block; max-width: 100%; font-size: clamp(1.25rem, 7vw, 1.65rem); overflow-wrap: anywhere; }
+    .product-card .add-button { min-width: 128px; min-height: 46px; }
+    .product-card .add-button em { display: inline; font-size: .75rem; }
+    .empty-catalog { min-height: 190px; padding: 30px 18px; border-radius: 20px; }
+
+    .process-section { margin: 0 8px 16px; padding: 46px 18px; border-radius: 24px; }
+    .process-steps { grid-template-columns: 1fr; }
+    .process-steps article,
+    .process-steps article:nth-child(2),
+    .process-steps article:nth-child(3) { min-height: 0; margin-top: 0; padding: 20px; }
+    .process-steps p { font-size: .88rem; }
+    .process-more { min-height: 44px; font-size: .78rem; }
+    footer { grid-template-columns: 1fr; gap: 28px; padding: 38px 18px; }
+    .footer-links { grid-column: auto; grid-row: auto; gap: 25px; }
+    .footer-links a,
+    .footer-links button { min-height: 38px; display: flex; align-items: center; font-size: .8rem; }
+    .footer-top { justify-self: start; min-height: 44px; display: flex; align-items: center; }
+
+    .cart-drawer {
+        top: auto;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: min(92dvh, 760px);
+        border: 0;
+        border-radius: 26px 26px 0 0;
+        transform: translateY(105%);
+    }
+    .cart-drawer.open { transform: translateY(0); }
+    .drawer-header { flex: none; padding: 20px 18px 16px; }
+    .drawer-header h2 { font-size: 1.75rem; }
+    .icon-button { width: 44px; height: 44px; }
+    .cart-items { padding: 8px 16px; overscroll-behavior: contain; }
+    .cart-row { grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 14px 0; }
+    .cart-row-art { width: 64px; height: 64px; }
+    .cart-row-copy h3 { font-size: .94rem; overflow-wrap: anywhere; white-space: normal; }
+    .cart-row-copy p,
+    .cart-row-copy small { font-size: .78rem; }
+    .cart-row-controls { grid-column: 1 / -1; width: 100%; display: flex; align-items: center; justify-content: space-between; padding-left: 76px; }
+    .cart-row-controls > strong { max-width: 48%; overflow-wrap: anywhere; font-size: .95rem; }
+    .cart-quantity { grid-template-columns: 44px minmax(44px, auto) 44px; min-height: 44px; }
+    .cart-quantity button { min-width: 44px; min-height: 44px; font-size: 1.2rem; }
+    .cart-quantity output { min-width: 44px; }
+    .cart-quantity output b { font-size: .82rem; }
+    .cart-summary { flex: none; padding: 16px 18px calc(16px + env(safe-area-inset-bottom)); background: rgba(255,253,251,.98); box-shadow: 0 -10px 28px rgba(71,62,82,.08); }
+    .cart-summary .primary-button { min-height: 50px; }
+
+    .modal:not(.account-center-modal),
+    .seller-modal,
+    .admin-modal,
+    .courier-modal,
+    .return-management-modal,
+    .product-modal {
+        width: calc(100vw - 16px);
+        max-width: none;
+        max-height: calc(100dvh - 16px);
+        padding: 24px 18px;
+        border-radius: 22px;
+    }
+    .product-modal { padding: 0; overflow-y: auto; }
+    .product-detail-layout { min-height: 0; }
+    .detail-art { min-height: min(36dvh, 280px); }
+    .detail-copy { padding: 28px 18px 22px; }
+    .detail-copy h2 { font-size: 2rem; overflow-wrap: anywhere; }
+    .detail-buy { display: grid; width: 100%; }
+    .detail-buy .primary-button { width: 100%; min-height: 48px; }
+    .modal-close { width: 44px; height: 44px; right: 10px; top: 10px; }
+    .modal-header,
+    .modal .account-panel-heading { padding-right: 50px; }
+    .modal h2 { font-size: clamp(1.75rem, 9vw, 2.15rem); overflow-wrap: anywhere; }
+    .modal input,
+    .modal textarea,
+    .modal select,
+    .seller-form select,
+    .admin-create-panel select,
+    #authRole,
+    .coupon-field input { min-height: 44px; font-size: 16px; }
+    .password-toggle { right: 2px; width: 44px; height: 44px; }
+    .primary-button,
+    .secondary-button,
+    .danger-button { min-height: 44px; }
+    .confirm-actions { grid-template-columns: 1fr; }
+    .seller-workspace,
+    .admin-workspace { grid-template-columns: minmax(0, 1fr); margin-top: 18px; }
+    .seller-create-panel,
+    .seller-inventory-panel,
+    .admin-create-panel,
+    .admin-users-panel,
+    .admin-orders-panel,
+    .seller-orders-panel { padding: 14px; border-radius: 17px; }
+    .seller-form .form-row { grid-template-columns: 1fr; }
+
+    .account-center-modal { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; border-radius: 0; }
+    .account-center-layout { height: 100%; display: flex; flex-direction: column; }
+    .account-center-nav { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 16px 58px 12px 14px; overflow: visible; border-right: 0; border-bottom: 1px solid rgba(109,99,126,.1); }
+    .account-center-user { display: flex; margin: 0; padding: 2px 0 10px; }
+    .account-center-user b { font-size: .9rem; }
+    .account-center-user small { max-width: calc(100vw - 100px); overflow-wrap: anywhere; font-size: .76rem; white-space: normal; }
+    .account-center-navigation { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 2px; }
+    .account-center-navigation button,
+    .account-center-nav > button { min-height: 44px; flex: none; padding: 9px 11px; font-size: .76rem; }
+    .account-center-navigation button span,
+    .account-center-nav > button span { font-size: 1rem; }
+    .account-center-navigation .account-dashboard-link { margin: 0; padding-top: 9px; border-top: 0; border-radius: 11px; }
+    .account-center-nav > .logout-emphasis { width: 100%; margin: 0; justify-content: center; border: 1px solid rgba(185,65,59,.16); }
+    .account-center-content { flex: 1; padding: 24px 14px calc(28px + env(safe-area-inset-bottom)); overflow-y: auto; }
+    .account-profile-card { margin-top: 19px; padding: 16px; }
+    .account-profile-fields { grid-template-columns: 1fr; }
+    .account-profile-fields dt { font-size: .68rem; }
+    .account-profile-fields dd { font-size: .88rem; }
+    .account-center-content .account-stats { grid-template-columns: 1fr; gap: 9px; margin: 18px 0 14px; }
+    .account-center-content .account-stats > div,
+    .account-center-content .account-stats > div:nth-child(3) { grid-column: auto; min-height: 94px; }
+    .account-shortcuts { grid-template-columns: 1fr; }
+    .account-shortcuts button { min-height: 76px; }
+    .account-dashboard-card { grid-template-columns: 44px minmax(0, 1fr); padding: 15px; }
+    .account-dashboard-card > button { grid-column: 1 / -1; width: 100%; }
+    .account-panel-heading { align-items: flex-start; gap: 8px; }
+    .account-panel-heading > button { min-width: 44px; min-height: 44px; padding: 8px; font-size: .7rem; }
+    .account-order-card { padding: 15px; }
+    .account-order-card > header { align-items: flex-start; }
+    .account-order-card > header strong { max-width: 42%; overflow-wrap: anywhere; text-align: right; }
+    .suborder-row { align-items: stretch; flex-direction: column; }
+    .order-return-button { min-height: 44px; width: 100%; }
+    .return-help { padding: 13px; }
+    .return-help p { font-size: .78rem; }
+
+    .role-portal { min-height: 100dvh; display: block; padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+    .portal-sidebar {
+        position: fixed;
+        z-index: 70;
+        inset: auto 0 0;
+        width: 100%;
+        height: calc(66px + env(safe-area-inset-bottom));
+        display: block;
+        padding: 5px 5px calc(5px + env(safe-area-inset-bottom));
+        border: 0;
+        border-top: 1px solid rgba(88,78,105,.12);
+        background: rgba(249,245,246,.97);
+        box-shadow: 0 -12px 32px rgba(71,62,82,.1);
+        backdrop-filter: blur(18px);
+    }
+    .portal-brand,
+    .portal-role-badge,
+    .portal-logout { display: none; }
+    #portalNavigation { width: 100%; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; }
+    #portalNavigation button {
+        width: 100%;
+        min-width: 0;
+        min-height: 54px;
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: 23px auto;
+        justify-items: center;
+        align-content: center;
+        gap: 2px;
+        padding: 4px 2px;
+        border-radius: 12px;
+    }
+    #portalNavigation button[data-portal-action="returns"] { display: none; }
+    #portalNavigation button i { display: none; }
+    #portalNavigation .portal-nav-icon { font-size: 1.08rem; }
+    #portalNavigation .portal-nav-text { display: block; max-width: 100%; font-size: 0; text-align: center; }
+    #portalNavigation .portal-nav-text::after { content: attr(data-mobile-label); font-size: .57rem; font-weight: 800; }
+    .portal-main { padding: 0 12px calc(24px + env(safe-area-inset-bottom)); }
+    .portal-header { min-height: 88px; gap: 10px; }
+    .portal-header > div { min-width: 0; }
+    .portal-header h1 { font-size: 1.75rem; overflow-wrap: anywhere; }
+    .portal-header > div p:last-child,
+    .portal-profile span:last-child { display: none; }
+    .portal-profile { min-width: 44px; min-height: 44px; padding: 7px; }
+    .portal-content { padding-top: 16px; }
+    .portal-welcome { min-height: 132px; padding: 20px; border-radius: 22px; }
+    .portal-welcome > span { display: none; }
+    .portal-welcome p:last-child { font-size: .82rem; }
+    .portal-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 10px 0; }
+    .portal-metric { min-height: 94px; padding: 48px 8px 10px; text-align: center; }
+    .portal-metric > span { top: 10px; left: 50%; width: 32px; height: 32px; transform: translateX(-50%); }
+    .portal-metric strong { font-size: 1.25rem; }
+    .portal-metric small { font-size: .62rem; line-height: 1.25; }
+    .portal-grid { grid-template-columns: 1fr; gap: 10px; }
+    .portal-panel { padding: 16px; border-radius: 19px; }
+    .portal-panel > header > button { width: 44px; height: 44px; }
+    .portal-quick-actions button { min-height: 64px; }
+    .portal-quick-actions b { font-size: .84rem; }
+    .portal-quick-actions small { font-size: .72rem; line-height: 1.35; }
+    .portal-recent > div { min-height: 55px; }
+    .portal-recent b { font-size: .78rem; }
+    .portal-recent small { font-size: .68rem; white-space: normal; }
+
+    .role-order-list,
+    .courier-orders,
+    .seller-inventory,
+    .admin-users { max-height: none; overflow: visible; padding-right: 0; }
+    .role-order-card,
+    .admin-user-row,
+    .inventory-row,
+    .delivery-card { grid-template-columns: 44px minmax(0, 1fr); padding: 13px; }
+    .role-order-copy b,
+    .inventory-copy b,
+    .admin-user-copy b,
+    .courier-order-copy b { font-size: .88rem; overflow-wrap: anywhere; white-space: normal; }
+    .role-order-copy > span,
+    .role-order-copy > small,
+    .courier-order-copy > span,
+    .courier-order-copy > em { font-size: .75rem; }
+    .role-order-copy > strong { font-size: .98rem; overflow-wrap: anywhere; }
+    .role-order-action,
+    .admin-user-actions,
+    .inventory-actions,
+    .delivery-actions { grid-column: 1 / -1; width: 100%; }
+    .role-order-action .primary-button { width: 100%; min-height: 46px; font-size: .78rem; }
+    .admin-user-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .admin-user-actions button,
+    .inventory-actions button,
+    .product-save-button { min-height: 44px; font-size: .72rem; }
+    .inventory-actions { grid-template-columns: 1fr 1fr; }
+    .inventory-product-editor,
+    .inventory-variant-editor { min-width: 0; }
+    .inventory-variant-editor { grid-template-columns: 1fr 1fr; }
+    .inventory-product-editor input,
+    .inventory-product-editor button { width: 100%; min-height: 44px; font-size: 16px; }
+
+    .courier-filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; }
+    .courier-filters button { min-height: 44px; flex: none; padding-inline: 15px; font-size: .76rem; }
+    .courier-order-row { align-items: start; }
+    .courier-order-icon { width: 44px; height: 44px; }
+    .courier-order-copy > div { flex-wrap: wrap; }
+    .delivery-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-width: 0; }
+    .delivery-action { min-height: 48px; padding: 10px; font-size: .8rem; }
+    .courier-note { grid-column: 1 / -1; max-width: none; font-size: .76rem; text-align: left; }
+    .delivery-inline-form { grid-template-columns: 1fr; gap: 10px; padding: 13px; }
+    .delivery-inline-form label { font-size: .76rem; }
+    .delivery-inline-form input,
+    .delivery-inline-form select { min-height: 44px; font-size: 16px; }
+    .delivery-inline-form button { min-height: 44px; font-size: .78rem; }
+    .delivery-history-card > b { font-size: .84rem; overflow-wrap: anywhere; }
+    .delivery-history-card > p,
+    .delivery-history-card > small,
+    .delivery-history-card > em { font-size: .74rem; }
+    .inventory-loading,
+    .inventory-empty { min-height: 160px; padding: 20px 12px; font-size: .82rem; }
+    .toast { bottom: calc(78px + env(safe-area-inset-bottom)); width: calc(100vw - 24px); border-radius: 14px; font-size: .82rem; }
+    body.cart-open .toast { top: 92px; bottom: auto; }
+}
+
+@media (max-width: 360px) {
+    .site-header .brand > span:last-child { display: none; }
+    .header-actions { gap: 4px; }
+    .product-bottom { grid-template-columns: 1fr; }
+    .product-card .add-button { width: 100%; margin-top: 10px; }
+    .cart-row-controls { padding-left: 0; }
+    .portal-metric { padding-inline: 5px; }
+    .portal-metric small { font-size: .56rem; }
 }

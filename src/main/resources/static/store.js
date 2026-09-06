@@ -20,7 +20,7 @@ const state = {
     favorites: readFavorites(initialUser),
     sellerProducts: [], sellerCategories: [], sellerImagePreviewUrl: "", sellerOrders: [], courierOrders: [], adminUsers: [], adminOrders: [], adminDeliveries: [], authMode: "login", activeCategory: "all", sort: "featured",
     favoriteOnly: false, coupon: "", lastOrder: null, selectedProduct: null, courierFilter: "all",
-    catalogLoading: true, confirmAction: null, pendingVerificationEmail: ""
+    catalogLoading: true, confirmAction: null, pendingVerificationEmail: "", accountProfile: null, accountSellerProfile: null
 };
 
 const demoProducts = [
@@ -339,7 +339,8 @@ async function addToCart(productId, button = null) {
 
 function renderCart() {
     const total = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    $("#cartCount").textContent = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+    const itemCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+    $("#cartCount").textContent = itemCount; $("#mobileCartCount").textContent = itemCount;
     $("#cartItems").innerHTML = state.cart.map(item => `<div class="cart-row"><div class="cart-row-art">${productVisual(item)}</div><div class="cart-row-copy"><small>${html(item.category)}</small><h3>${html(item.name)}</h3><p>${currency(item.price)} / adet</p></div><div class="cart-row-controls"><strong>${currency(item.price * item.quantity)}</strong><div class="cart-quantity" role="group" aria-label="${html(item.name)} adedi"><button type="button" data-decrease-cart="${item.cartItemId || item.id}" aria-label="${html(item.name)} ürününü bir adet azalt" title="${item.quantity === 1 ? "Sepetten çıkar" : "Bir adet azalt"}">−</button><output aria-live="polite"><b>${item.quantity}</b><span>adet</span></output><button type="button" data-increase-cart="${item.cartItemId || item.id}" aria-label="${html(item.name)} ürününü bir adet artır" title="Bir adet artır">+</button></div></div></div>`).join("");
     $("#cartTotal").textContent = currency(total); $("#cartEmpty").hidden = state.cart.length > 0; $("#cartSummary").hidden = state.cart.length === 0;
     $$('[data-decrease-cart]').forEach(button => button.addEventListener("click", () => requestCartDecrease(button.dataset.decreaseCart, button)));
@@ -371,8 +372,8 @@ async function removeFromCart(item, button = null) {
     } catch (error) { toast(error.message, "error"); } finally { setBusy(button, false); }
 }
 
-function openCart() { closeAccountMenu(); $("#cartDrawer").classList.add("open"); $("#cartDrawer").setAttribute("aria-hidden", "false"); $("#overlay").hidden = false; }
-function closeCart() { $("#cartDrawer").classList.remove("open"); $("#cartDrawer").setAttribute("aria-hidden", "true"); $("#overlay").hidden = true; }
+function openCart() { closeAccountMenu(); document.body.classList.add("cart-open"); $("#cartDrawer").classList.add("open"); $("#cartDrawer").setAttribute("aria-hidden", "false"); $("#overlay").hidden = false; }
+function closeCart() { document.body.classList.remove("cart-open"); $("#cartDrawer").classList.remove("open"); $("#cartDrawer").setAttribute("aria-hidden", "true"); $("#overlay").hidden = true; }
 function closeModals() { $$("dialog[open]").forEach(dialog => dialog.close()); }
 function openModal(id) { closeCart(); closeAccountMenu(); closeModals(); document.getElementById(id).showModal(); }
 function closeAccountMenu() { $("#accountMenu").hidden = true; $("#authButton").setAttribute("aria-expanded", "false"); }
@@ -402,17 +403,17 @@ const rolePortalSettings = {
     SELLER: {
         route: "/seller/dashboard", icon: "◇", label: "Satıcı paneli", title: "Mağaza merkezi",
         subtitle: "Ürünlerini, siparişlerini ve iadelerini tek çalışma alanından yönet.",
-        navigation: [["overview", "⌂", "Genel bakış"], ["products", "◇", "Ürün yönetimi"], ["orders", "▤", "Mağaza siparişleri"], ["returns", "↺", "İade talepleri"], ["profile", "◎", "Profil"]]
+        navigation: [["overview", "⌂", "Genel bakış", "Panel"], ["orders", "▤", "Mağaza siparişleri", "Siparişler"], ["products", "◇", "Ürün yönetimi", "Ürünlerim"], ["store", "✦", "Mağazam", "Mağazam"], ["profile", "◎", "Profil", "Hesabım"]]
     },
     COURIER: {
         route: "/courier/deliveries", icon: "▣", label: "Kurye paneli", title: "Teslimat merkezi",
         subtitle: "Sadece sana atanan teslimatları güvenli durum adımlarıyla yönet.",
-        navigation: [["overview", "⌂", "Genel bakış"], ["assigned", "◌", "Yeni atananlar"], ["active", "▣", "Devam edenler"], ["history", "✓", "Teslimat geçmişi"], ["profile", "◎", "Profil"]]
+        navigation: [["overview", "⌂", "Genel bakış", "Panel"], ["assigned", "◌", "Yeni atananlar", "Yeni"], ["active", "▣", "Devam edenler", "Aktif"], ["history", "✓", "Teslimat geçmişi", "Geçmiş"], ["profile", "◎", "Profil", "Hesabım"]]
     },
     ADMIN: {
         route: "/admin/dashboard", icon: "◫", label: "Yönetim paneli", title: "Platform merkezi",
         subtitle: "Kullanıcıları, siparişleri ve teslimat geçmişini denetle.",
-        navigation: [["overview", "⌂", "Genel bakış"], ["users", "◎", "Kullanıcılar"], ["orders", "▤", "Siparişler"], ["deliveries", "▣", "Teslimat atamaları"], ["returns", "↺", "İade yönetimi"], ["profile", "◦", "Profil"]]
+        navigation: [["overview", "⌂", "Genel bakış", "Panel"], ["users", "◎", "Kullanıcılar", "Kullanıcılar"], ["orders", "▤", "Siparişler", "Siparişler"], ["deliveries", "▣", "Teslimat atamaları", "Teslimatlar"], ["returns", "↺", "İade yönetimi", "İadeler"], ["profile", "◦", "Profil", "Hesabım"]]
     }
 };
 
@@ -449,7 +450,7 @@ function renderRolePortal() {
     $("#portalRoleIcon").textContent = config.icon; $("#portalRoleLabel").textContent = config.label;
     $("#portalTitle").textContent = config.title; $("#portalSubtitle").textContent = config.subtitle;
     $("#portalUserName").textContent = displayName; $("#portalUserEmail").textContent = state.user.email;
-    $("#portalNavigation").innerHTML = config.navigation.map(([action, icon, label], index) => `<button class="${index === 0 ? "active" : ""}" data-portal-action="${action}"><span>${icon}</span>${label}<i>›</i></button>`).join("");
+    $("#portalNavigation").innerHTML = config.navigation.map(([action, icon, label, mobileLabel], index) => `<button class="${index === 0 ? "active" : ""}" data-portal-action="${action}"><span class="portal-nav-icon">${icon}</span><span class="portal-nav-text" data-mobile-label="${html(mobileLabel || label)}">${html(label)}</span><i>›</i></button>`).join("");
     updatePortalOverview();
 }
 
@@ -486,36 +487,127 @@ async function loadRolePortalData() {
 const orderStatusLabels = {PAYMENT_PENDING: "Ödeme bekleniyor", PAID: "Ödeme alındı", PROCESSING: "Hazırlanıyor", SHIPPED: "Kargoda", DELIVERED: "Teslim edildi", CANCELLED: "İptal edildi", RETURN_REQUESTED: "İade inceleniyor", RETURN_APPROVED: "İade onaylandı", RETURN_REJECTED: "İade reddedildi"};
 const returnStatusLabels = {REQUESTED: "İnceleniyor", APPROVED: "Onaylandı", REJECTED: "Reddedildi"};
 const deliveryStatusLabels = {ASSIGNED: "Atandı", ACCEPTED: "Kabul edildi", REJECTED: "Reddedildi", PICKED_UP: "Teslim alındı", IN_TRANSIT: "Dağıtımda", DELIVERED: "Teslim edildi", DELIVERY_FAILED: "Teslim edilemedi"};
+const accountStatusLabels = {ACTIVE: "Aktif", DISABLED: "Devre dışı", DELETED: "Silinmiş"};
+const sellerProfileStatusLabels = {ACTIVE: "Aktif mağaza", PENDING_APPROVAL: "Onay bekliyor", REJECTED: "Başvuru reddedildi", SUSPENDED: "Askıya alındı"};
+const accountRoleSettings = Object.freeze({
+    CUSTOMER: {
+        eyebrow: "MÜŞTERİ HESABI", roleName: "Alıcı", icon: "◦",
+        description: "Alışverişlerin, iadelerin ve hesabın tek yerde.",
+        navigation: [["overview", "⌂", "Genel bakış"], ["orders", "▤", "Siparişlerim"], ["returns", "↺", "İadelerim"]]
+    },
+    SELLER: {
+        eyebrow: "SATICI HESABI", roleName: "Satıcı", icon: "◇",
+        description: "Satıcı hesabını ve mağaza bilgilerini buradan yönetebilirsin.",
+        navigation: [["overview", "◎", "Profil"]], dashboardLabel: "Satıcı Paneline Git",
+        dashboardText: "Ürün, sipariş ve mağaza işlemlerine ayrı çalışma alanından devam et."
+    },
+    COURIER: {
+        eyebrow: "KURYE HESABI", roleName: "Kurye", icon: "▣",
+        description: "Teslimat hesabını ve profil bilgilerini buradan yönetebilirsin.",
+        navigation: [["overview", "◎", "Profil"]], dashboardLabel: "Kurye Paneline Git",
+        dashboardText: "Atanan ve devam eden teslimatları kurye çalışma alanında yönet."
+    },
+    ADMIN: {
+        eyebrow: "YÖNETİCİ HESABI", roleName: "Yönetici", icon: "◫",
+        description: "Yönetici hesabını ve güvenlik bilgilerini buradan yönetebilirsin.",
+        navigation: [["overview", "◎", "Profil"]], dashboardLabel: "Admin Paneline Git",
+        dashboardText: "Kullanıcı, sipariş ve teslimat yönetimine platform panelinden devam et."
+    }
+});
 
 function switchAccountTab(tab) {
     $$("[data-account-tab]").forEach(button => button.classList.toggle("active", button.dataset.accountTab === tab));
     $$("[data-account-panel]").forEach(panel => panel.classList.toggle("active", panel.dataset.accountPanel === tab));
 }
 
+function renderAccountNavigation(config) {
+    const navigation = config.navigation.map(([tab, icon, label], index) => `<button class="${index === 0 ? "active" : ""}" data-account-tab="${tab}"><span>${icon}</span>${label}</button>`).join("");
+    const dashboard = config.dashboardLabel ? `<button class="account-dashboard-link" data-account-dashboard><span>${config.icon}</span>${html(config.dashboardLabel)}<i>›</i></button>` : "";
+    $("#accountNavigation").innerHTML = navigation + dashboard;
+}
+
+function accountProfileField(label, value, tone = "") {
+    return `<div class="${tone}"><dt>${html(label)}</dt><dd>${html(value)}</dd></div>`;
+}
+
+function renderAccountIdentity(config) {
+    const profile = state.accountProfile;
+    const email = profile?.email || state.user?.email || "";
+    const username = email.split("@")[0];
+    const status = accountStatusLabels[profile?.status || state.user?.status] || profile?.status || state.user?.status;
+    const fullName = [profile?.firstName, profile?.lastName].filter(Boolean).join(" ");
+    const fields = [
+        accountProfileField("Kullanıcı adı", username),
+        accountProfileField("E-posta", email),
+        accountProfileField("Rol", config.roleName)
+    ];
+    if (status) fields.push(accountProfileField("Hesap durumu", status, (profile?.status || state.user?.status) === "ACTIVE" ? "account-status-active" : "account-status-inactive"));
+    if (fullName) fields.push(accountProfileField("Ad soyad", fullName));
+    if (profile?.phoneNumber) fields.push(accountProfileField("Telefon", profile.phoneNumber));
+    if (typeof state.user?.emailVerified === "boolean") fields.push(accountProfileField("E-posta güvenliği", state.user.emailVerified ? "Doğrulandı" : "Doğrulama bekliyor", state.user.emailVerified ? "account-status-active" : "account-status-pending"));
+    if (state.user?.role === "SELLER" && state.accountSellerProfile) {
+        if (state.accountSellerProfile.storeName) fields.push(accountProfileField("Mağaza", state.accountSellerProfile.storeName));
+        if (state.accountSellerProfile.status) fields.push(accountProfileField("Mağaza durumu", sellerProfileStatusLabels[state.accountSellerProfile.status] || state.accountSellerProfile.status));
+    }
+    $("#accountProfileFields").innerHTML = fields.join("");
+}
+
+function renderCustomerAccountOverview(summary = null) {
+    const target = $("#accountRoleOverview");
+    if (!summary) {
+        target.innerHTML = `<div class="account-overview-loading"><span class="button-spinner"></span>Alışveriş özetin hazırlanıyor…</div>`;
+        return;
+    }
+    const stats = [];
+    if (summary.loyaltyPoints !== null) stats.push(`<div><span>✦</span><p><b>${summary.loyaltyPoints}</b> puan</p><small>Sadakat bakiyen</small></div>`);
+    if (summary.ordersLoaded) stats.push(`<div><span>◌</span><p><b>${state.orders.length}</b> sipariş</p><small>Toplam alışverişin</small></div>`);
+    if (summary.returnsLoaded) stats.push(`<div><span>↺</span><p><b>${state.returns.length}</b> iade</p><small>İade taleplerin</small></div>`);
+    target.innerHTML = `${stats.length ? `<div class="account-stats">${stats.join("")}</div>` : ""}<div class="account-shortcuts"><button data-account-target="orders"><span>▤</span><div><b>Siparişlerini görüntüle</b><small>Kargo ve teslimat durumunu takip et</small></div><i>→</i></button><button data-account-target="returns"><span>↺</span><div><b>İade merkezine git</b><small>Talep oluştur veya durumunu öğren</small></div><i>→</i></button></div>`;
+}
+
+function renderOperationalAccountOverview(config) {
+    $("#accountRoleOverview").innerHTML = `<section class="account-dashboard-card"><span>${config.icon}</span><div><b>${html(config.dashboardLabel)}</b><small>${html(config.dashboardText)}</small></div><button class="secondary-button small" data-account-dashboard>${html(config.dashboardLabel)} <i>→</i></button></section>`;
+}
+
+async function loadAccountProfile() {
+    state.accountProfile = null; state.accountSellerProfile = null;
+    try { state.accountProfile = await api("/api/v1/users/me"); } catch { /* Auth kimliği ortak alanlar için yeterlidir. */ }
+    if (state.user?.role === "SELLER") {
+        try { state.accountSellerProfile = await api("/api/v1/sellers/me"); } catch { /* Mağaza profili yoksa alan hiç render edilmez. */ }
+    }
+}
+
+async function openAccountDashboard() {
+    const portal = rolePortalSettings[state.user?.role];
+    if (!portal) return;
+    closeModals();
+    if (location.pathname !== portal.route) history.pushState({}, "", portal.route);
+    renderRolePortal();
+    await loadRolePortalData();
+}
+
 async function openAccount(initialTab = "overview") {
     if (!state.token) return openModal("authModal");
+    const config = accountRoleSettings[state.user?.role] || accountRoleSettings.CUSTOMER;
     const displayName = state.user?.email?.split("@")[0] || "NexaMarketli";
     $("#accountName").textContent = `Merhaba, ${displayName}`; $("#accountNavName").textContent = displayName; $("#accountNavEmail").textContent = state.user?.email || "";
-    $$("[data-account-tab='orders'], [data-account-tab='returns']").forEach(button => button.hidden = state.user?.role !== "CUSTOMER");
-    $$("[data-account-target]").forEach(button => button.hidden = state.user?.role !== "CUSTOMER");
-    if (state.user?.role !== "CUSTOMER") {
-        $("#loyaltyPoints").textContent = "—"; $("#loyaltyUnit").textContent = ""; $("#loyaltyLabel").textContent = "Sadakat programı CUSTOMER hesapları içindir";
-        $("#orderCount").textContent = "—"; $("#orderUnit").textContent = ""; $("#orderLabel").textContent = "Alışveriş yalnızca CUSTOMER hesapları içindir";
-        $("#returnCount").textContent = "—"; switchAccountTab("overview"); return openModal("accountModal");
-    }
-    $("#loyaltyUnit").textContent = "puan"; $("#loyaltyLabel").textContent = "Sadakat bakiyen";
-    $("#orderUnit").textContent = "sipariş"; $("#orderLabel").textContent = "Toplam alışverişin";
-    openModal("accountModal"); switchAccountTab(initialTab);
-    await Promise.all([loadOrders(), loadCustomerReturns()]);
-    $("#orderCount").textContent = state.orders.length;
-    $("#returnCount").textContent = state.returns.length;
-    try { $("#loyaltyPoints").textContent = (await api("/api/v1/loyalty/me")).points ?? 0; } catch { $("#loyaltyPoints").textContent = "0"; }
+    $("#accountEyebrow").textContent = config.eyebrow; $("#accountDescription").textContent = config.description;
+    renderAccountNavigation(config); renderAccountIdentity(config);
+    if (state.user?.role === "CUSTOMER") renderCustomerAccountOverview(); else renderOperationalAccountOverview(config);
+    const availableTab = config.navigation.some(([tab]) => tab === initialTab) ? initialTab : "overview";
+    openModal("accountModal"); switchAccountTab(availableTab);
+    await loadAccountProfile(); renderAccountIdentity(config);
+    if (state.user?.role !== "CUSTOMER") return renderOperationalAccountOverview(config);
+    const [ordersLoaded, returnsLoaded, loyalty] = await Promise.all([
+        loadOrders(), loadCustomerReturns(), api("/api/v1/loyalty/me").catch(() => null)
+    ]);
+    renderCustomerAccountOverview({ordersLoaded, returnsLoaded, loyaltyPoints: loyalty?.points ?? null});
 }
 
 async function loadOrders() {
     $("#accountOrderList").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>Siparişlerin hazırlanıyor…</div>`;
-    try { state.orders = await api("/api/v1/orders/me"); renderAccountOrders(); }
-    catch (error) { state.orders = []; $("#accountOrderList").innerHTML = `<div class="inventory-empty"><b>Siparişler yüklenemedi</b><small>${html(error.message)}</small></div>`; }
+    try { state.orders = await api("/api/v1/orders/me"); renderAccountOrders(); return true; }
+    catch (error) { state.orders = []; $("#accountOrderList").innerHTML = `<div class="inventory-empty"><b>Siparişler yüklenemedi</b><small>${html(error.message)}</small></div>`; return false; }
 }
 
 function renderAccountOrders() {
@@ -539,12 +631,11 @@ function renderAccountOrders() {
 
 async function loadCustomerReturns() {
     $("#customerReturnList").innerHTML = `<div class="inventory-loading"><span class="button-spinner"></span>İadelerin hazırlanıyor…</div>`;
-    try { state.returns = await api("/api/v1/returns/me"); renderCustomerReturns(); }
-    catch (error) { state.returns = []; $("#customerReturnList").innerHTML = `<div class="inventory-empty"><b>İadeler yüklenemedi</b><small>${html(error.message)}</small></div>`; }
+    try { state.returns = await api("/api/v1/returns/me"); renderCustomerReturns(); return true; }
+    catch (error) { state.returns = []; $("#customerReturnList").innerHTML = `<div class="inventory-empty"><b>İadeler yüklenemedi</b><small>${html(error.message)}</small></div>`; return false; }
 }
 
 function renderCustomerReturns() {
-    $("#returnCount").textContent = state.returns.length;
     if (!state.returns.length) { $("#customerReturnList").innerHTML = `<div class="inventory-empty"><span>↺</span><b>Henüz iade talebin yok</b><small>İade edilebilir siparişlerini “Siparişlerim” alanından seçebilirsin.</small></div>`; return; }
     $("#customerReturnList").innerHTML = state.returns.map(item => `<article class="return-card"><div class="return-card-icon">↺</div><div><span class="status-badge return-${item.status.toLowerCase()}">${html(returnStatusLabels[item.status] || item.status)}</span><b>Sipariş #${html(String(item.orderId).slice(0, 8).toUpperCase())}</b><small>${html(formatOrderDate(item.createdAt))} · ${currency(item.amount)}</small><p>${html(item.reason)}</p></div></article>`).join("");
 }
@@ -590,7 +681,7 @@ async function resolveReturn(returnId, status, button) {
     catch (error) { toast(error.message, "error"); setBusy(button, false); }
 }
 function clearLocalSession() {
-    state.token = ""; state.refreshToken = ""; state.user = null; state.cart = []; state.orders = []; state.returns = []; state.manageableReturns = []; state.sellerOrders = []; state.courierOrders = []; state.adminOrders = []; state.adminDeliveries = []; state.adminUsers = []; state.favorites = readFavorites(null);
+    state.token = ""; state.refreshToken = ""; state.user = null; state.accountProfile = null; state.accountSellerProfile = null; state.cart = []; state.orders = []; state.returns = []; state.manageableReturns = []; state.sellerOrders = []; state.courierOrders = []; state.adminOrders = []; state.adminDeliveries = []; state.adminUsers = []; state.favorites = readFavorites(null);
     saveSession(); saveCart(); renderCart(); updateFavoritesUI(); renderCatalog(); updateAuthUI(); closeModals();
     applyRoleRoute();
 }
@@ -1097,7 +1188,7 @@ function renderSellerProducts() {
         const stock = (product.variants || []).reduce((sum, variant) => sum + Number(variant.stockQuantity || 0), 0), active = product.status === "ACTIVE";
         const visual = normaliseProduct(product);
         const variants = product.variants || [];
-        const variantEditors = variants.map((variant, index) => `<div class="inventory-variant-editor"><small>${variants.length > 1 ? `Seçenek ${index + 1}` : "Ürün bilgileri"}</small><label>Fiyat (₺)<input type="number" min="0.01" step="0.01" value="${Number(variant.price ?? product.basePrice ?? 0).toFixed(2)}" data-variant-price="${variant.id}" aria-label="${html(product.name)} fiyatı"></label><label>Stok<input type="number" min="0" step="1" value="${Number(variant.stockQuantity ?? 0)}" data-variant-stock="${variant.id}" aria-label="${html(product.name)} stok adedi"></label></div>`).join("");
+        const variantEditors = variants.map((variant, index) => `<div class="inventory-variant-editor"><small>${variants.length > 1 ? `Seçenek ${index + 1}` : "Ürün bilgileri"}</small><label>Fiyat (₺)<input type="number" inputmode="decimal" min="0.01" step="0.01" value="${Number(variant.price ?? product.basePrice ?? 0).toFixed(2)}" data-variant-price="${variant.id}" aria-label="${html(product.name)} fiyatı"></label><label>Stok<input type="number" inputmode="numeric" min="0" step="1" value="${Number(variant.stockQuantity ?? 0)}" data-variant-stock="${variant.id}" aria-label="${html(product.name)} stok adedi"></label></div>`).join("");
         return `<article class="inventory-row"><div class="inventory-art">${visual.imageUrl ? `<img src="${html(visual.imageUrl)}" alt="${html(product.name)}" loading="lazy">` : emojiFor(product.name)}</div><div class="inventory-copy"><div><span class="status-badge status-${product.status.toLowerCase()}">${labels[product.status] || product.status}</span><small>${stock} stok</small></div><b>${html(product.name)}</b><div class="inventory-product-editor">${variantEditors}<label class="inventory-image-editor">Yeni görsel <input type="file" accept="image/jpeg,image/png" data-product-image="${product.id}"></label><button class="product-save-button" data-save-product="${product.id}">Değişiklikleri kaydet</button></div></div><div class="inventory-actions"><button data-toggle-product="${product.id}" data-target-status="${active ? "PASSIVE" : "ACTIVE"}">${active ? "Yayından kaldır" : "Yayınla"}</button><button class="delete-product" data-delete-product="${product.id}">Sil</button></div></article>`;
     }).join("");
     $$('[data-toggle-product]').forEach(button => button.addEventListener("click", () => changeProductPublication(button.dataset.toggleProduct, button.dataset.targetStatus, button)));
@@ -1248,14 +1339,32 @@ async function handlePortalAction(action) {
     }
 }
 
+function handleMobileAction(action) {
+    if (action === "home") return document.getElementById("home").scrollIntoView({behavior: "smooth"});
+    if (action === "search") {
+        document.getElementById("discover").scrollIntoView({behavior: "smooth"});
+        window.setTimeout(() => $("#globalSearchInput").focus(), 350);
+        return;
+    }
+    if (action === "cart") return openCart();
+    if (!state.token) return openModal("authModal");
+    if (action === "orders") return openAccount("orders");
+    if (action === "account") return openAccount("overview");
+}
+
 function initEvents() {
     $("#cartButton").addEventListener("click", openCart); $$('[data-close-cart]').forEach(button => button.addEventListener("click", closeCart)); $("#overlay").addEventListener("click", closeCart);
     $$('[data-open-seller]').forEach(button => button.addEventListener("click", openSellerArea)); $$('[data-close-modal]').forEach(button => button.addEventListener("click", closeModals));
     $("#authButton").addEventListener("click", event => { event.stopPropagation(); toggleAccountMenu(); }); $("#accountOverviewButton").addEventListener("click", () => openAccount("overview"));
     $("#footerReturnsButton").addEventListener("click", () => openAccount("returns"));
     $("#footerHowItWorksButton").addEventListener("click", () => openHelp("discover")); $("#footerDeliveryButton").addEventListener("click", () => openHelp("delivery"));
-    $$("[data-account-tab]").forEach(button => button.addEventListener("click", () => switchAccountTab(button.dataset.accountTab)));
-    $$("[data-account-target]").forEach(button => button.addEventListener("click", () => switchAccountTab(button.dataset.accountTarget)));
+    $("#accountModal").addEventListener("click", event => {
+        const tab = event.target.closest("[data-account-tab]");
+        if (tab) return switchAccountTab(tab.dataset.accountTab);
+        const target = event.target.closest("[data-account-target]");
+        if (target) return switchAccountTab(target.dataset.accountTarget);
+        if (event.target.closest("[data-account-dashboard]")) openAccountDashboard();
+    });
     $("#refreshOrdersButton").addEventListener("click", loadOrders); $("#refreshReturnsButton").addEventListener("click", loadCustomerReturns);
     $("#returnRequestForm").addEventListener("submit", submitReturnRequest); $("#returnManagementButton").addEventListener("click", openReturnManagement); $("#refreshManageableReturnsButton").addEventListener("click", loadManageableReturns);
     $("#courierAreaButton").addEventListener("click", openCourierArea); $("#refreshCourierButton").addEventListener("click", loadCourierOrders);
@@ -1264,6 +1373,7 @@ function initEvents() {
     $("#logoutButton").addEventListener("click", logout); $("#headerLogoutButton").addEventListener("click", logout);
     $("#portalLogoutButton").addEventListener("click", logout); $("#portalProfileButton").addEventListener("click", () => openAccount("overview"));
     $("#rolePortal").addEventListener("click", event => { const target = event.target.closest("[data-portal-action]"); if (target) handlePortalAction(target.dataset.portalAction); });
+    $("#mobileBottomNav").addEventListener("click", event => { const target = event.target.closest("[data-mobile-action]"); if (target) handleMobileAction(target.dataset.mobileAction); });
     window.addEventListener("popstate", () => { applyRoleRoute(); renderRolePortal(); });
     $("#favoritesButton").addEventListener("click", () => { state.favoriteOnly = !state.favoriteOnly; updateFavoritesUI(); renderCatalog(); $("#discover").scrollIntoView({behavior: "smooth"}); });
     $$("[data-auth-tab]").forEach(button => button.addEventListener("click", () => setAuthMode(button.dataset.authTab)));

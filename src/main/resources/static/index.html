@@ -22,7 +22,7 @@
     <div class="header-actions">
         <button class="favorite-header-button" id="favoritesButton" aria-label="Favorileri göster" aria-pressed="false">♡ <b id="favoriteCount">0</b></button>
         <div class="account-shell">
-            <button class="account-button" id="authButton" aria-expanded="false"><span class="account-avatar">◦</span><span class="account-identity"><span id="authButtonLabel">Giriş yap</span><small id="authButtonRole" hidden></small></span><span class="chevron">⌄</span></button>
+            <button class="account-button" id="authButton" aria-label="Hesap menüsünü aç" aria-expanded="false"><span class="account-avatar">◦</span><span class="account-identity"><span id="authButtonLabel">Giriş yap</span><small id="authButtonRole" hidden></small></span><span class="chevron">⌄</span></button>
             <div class="account-menu" id="accountMenu" hidden>
                 <div class="account-menu-user"><span class="account-avatar">◦</span><div><b id="menuUserName">NexaMarketli</b><small id="menuUserRole" hidden></small><small id="menuUserEmail">Hesabına giriş yap</small></div></div>
                 <button id="accountOverviewButton"><span>◎</span> Hesabım</button>
@@ -137,6 +137,14 @@
 
 <footer><div class="footer-brand"><div class="brand"><span class="brand-mark">N</span><span>Nexa<span>Market</span></span></div><p>Günlük hayatına iyi gelen seçimler burada.</p></div><div class="footer-links"><div><b>Alışveriş</b><a href="#discover">Tüm ürünler</a><a href="#campaigns">Fırsatlar</a></div><div><b>Destek</b><button id="footerReturnsButton">İade merkezi</button><button id="footerHowItWorksButton">Nasıl çalışır?</button><button id="footerDeliveryButton">Teslimat &amp; iade</button></div></div><a class="footer-top" href="#home">Yukarı dön ↑</a></footer>
 
+<nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Mobil alışveriş menüsü">
+    <button type="button" data-mobile-action="home" aria-label="Ana sayfaya git"><span aria-hidden="true">⌂</span><small>Ana sayfa</small></button>
+    <button type="button" data-mobile-action="search" aria-label="Ürün ara"><span aria-hidden="true">⌕</span><small>Ara</small></button>
+    <button type="button" data-mobile-action="orders" aria-label="Siparişlerimi aç"><span aria-hidden="true">▤</span><small>Siparişler</small></button>
+    <button type="button" data-mobile-action="cart" aria-label="Sepeti aç"><span aria-hidden="true">⌑</span><small>Sepet</small><b id="mobileCartCount">0</b></button>
+    <button type="button" data-mobile-action="account" aria-label="Hesabımı aç"><span aria-hidden="true">◎</span><small>Hesabım</small></button>
+</nav>
+
 <aside class="cart-drawer" id="cartDrawer" aria-label="Alışveriş sepeti" aria-hidden="true">
     <div class="drawer-header"><div><p class="eyebrow">SEPETİN</p><h2>Seçtiklerin</h2></div><button class="icon-button" data-close-cart aria-label="Sepeti kapat">×</button></div>
     <div class="cart-items" id="cartItems"></div>
@@ -186,16 +194,17 @@
     <div class="account-center-layout">
         <aside class="account-center-nav">
             <div class="account-center-user"><span class="account-avatar">◦</span><div><b id="accountNavName">NexaMarketli</b><small id="accountNavEmail"></small></div></div>
-            <button class="active" data-account-tab="overview"><span>⌂</span> Genel bakış</button>
-            <button data-account-tab="orders"><span>▤</span> Siparişlerim</button>
-            <button data-account-tab="returns"><span>↺</span> İadelerim</button>
+            <div class="account-center-navigation" id="accountNavigation"></div>
             <button class="logout-emphasis" id="logoutButton"><span>↗</span> Güvenli çıkış</button>
         </aside>
         <div class="account-center-content">
             <section class="account-panel active" data-account-panel="overview">
-                <div class="modal-header"><p class="eyebrow">HESABIM</p><h2 id="accountName">Merhaba</h2><p>Alışverişlerin, iadelerin ve kazandığın avantajlar tek yerde.</p></div>
-                <div class="account-stats"><div><span>✦</span><p><b id="loyaltyPoints">0</b> <span id="loyaltyUnit">puan</span></p><small id="loyaltyLabel">Sadakat bakiyen</small></div><div><span>◌</span><p><b id="orderCount">0</b> <span id="orderUnit">sipariş</span></p><small id="orderLabel">Toplam alışverişin</small></div><div><span>↺</span><p><b id="returnCount">0</b> iade</p><small>İade taleplerin</small></div></div>
-                <div class="account-shortcuts"><button data-account-target="orders"><span>▤</span><div><b>Siparişlerini görüntüle</b><small>Kargo ve teslimat durumunu takip et</small></div><i>→</i></button><button data-account-target="returns"><span>↺</span><div><b>İade merkezine git</b><small>Talep oluştur veya durumunu öğren</small></div><i>→</i></button></div>
+                <div class="modal-header"><p class="eyebrow" id="accountEyebrow">HESABIM</p><h2 id="accountName">Merhaba</h2><p id="accountDescription">Hesap bilgilerini buradan yönetebilirsin.</p></div>
+                <section class="account-profile-card" aria-labelledby="accountIdentityTitle">
+                    <header><span>◎</span><div><b id="accountIdentityTitle">Hesap bilgileri</b><small>Kimlik, rol ve güvenlik durumu</small></div></header>
+                    <dl class="account-profile-fields" id="accountProfileFields"></dl>
+                </section>
+                <div id="accountRoleOverview"></div>
             </section>
             <section class="account-panel" data-account-panel="orders">
                 <div class="account-panel-heading"><div><p class="eyebrow">SİPARİŞLERİM</p><h2>Tüm siparişlerin</h2></div><button id="refreshOrdersButton" type="button" aria-label="Siparişleri yenile">↻ Yenile</button></div>
@@ -283,7 +292,7 @@
             <div class="panel-title"><span>01</span><div><b>Yeni ürün</b><small>Vitrinine yeni bir seçim ekle</small></div></div>
             <form id="sellerForm" class="seller-form">
                 <div class="form-row"><label>Ürün adı<input id="sellerProductName" required maxlength="255" placeholder="Örn. Seramik Kahve Fincanı"></label><label>Kategori<select id="sellerCategory" required disabled><option value="">Kategoriler yükleniyor…</option></select></label></div>
-                <div class="form-row"><label>Fiyat (₺)<input id="sellerPrice" type="number" min="1" step="0.01" required value="249.90"></label><label>Stok adedi<input id="sellerStock" type="number" min="0" max="100000" required value="12"></label></div>
+                <div class="form-row"><label>Fiyat (₺)<input id="sellerPrice" type="number" inputmode="decimal" min="1" step="0.01" required value="249.90"></label><label>Stok adedi<input id="sellerStock" type="number" inputmode="numeric" min="0" max="100000" required value="12"></label></div>
                 <div class="form-row"><label>Stok kodu <small>(isteğe bağlı)</small><input id="sellerSku" maxlength="80" placeholder="Boş bırakırsan otomatik oluşur"></label></div>
                 <label>Açıklama<textarea id="sellerDescription" rows="3" maxlength="1000" placeholder="Ürünün malzemesini, kullanımını ve öne çıkan yönünü anlat"></textarea></label>
                 <label class="seller-image-field">Ürün görseli <small>İsteğe bağlı · JPG veya PNG · en fazla 5 MB</small><input id="sellerImage" type="file" accept="image/jpeg,image/png"><span class="seller-image-preview" id="sellerImagePreview" hidden></span></label>
